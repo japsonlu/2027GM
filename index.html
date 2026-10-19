@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>競賽評分系統 - 分配隊伍測試</title>
+  <title>競賽評分系統</title>
   <style>
     :root {
       --primary: #007aff;
@@ -15,66 +15,184 @@
       --border: #d1d1d6;
       --text: #1c1c1e;
     }
-    * { box-sizing: border-box; -webkit-touch-callout: none; }
+    * {
+      box-sizing: border-box;
+      -webkit-touch-callout: none;
+    }
     html, body {
-      margin: 0; padding: 0; width: 100vw; height: 100vh;
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
       overflow-x: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Helvetica Neue", sans-serif;
-      background-color: var(--bg); color: var(--text);
+      background-color: var(--bg);
+      color: var(--text);
     }
-    .view-screen { display: none; width: 100%; min-height: 100vh; padding: 16px 24px; }
-    .view-screen.active { display: block; }
+    .view-screen {
+      display: none;
+      width: 100%;
+      min-height: 100vh;
+      padding: 16px 24px;
+    }
+    .view-screen.active {
+      display: block;
+    }
 
+    /* 登入畫面置中 */
     #pageLogin {
-      display: none; align-items: center; justify-content: center; min-height: 100vh;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
     }
-    #pageLogin.active { display: flex; }
+    #pageLogin.active {
+      display: flex;
+    }
     .login-card {
-      background: #fff; padding: 36px 32px; border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 380px; text-align: center;
+      background: #fff;
+      padding: 36px 32px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
     }
     .login-input {
-      width: 100%; padding: 12px 14px; margin-bottom: 14px;
-      border: 1px solid var(--border); border-radius: 10px; font-size: 16px; background: #fafafa;
+      width: 100%;
+      padding: 12px 14px;
+      margin-bottom: 14px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 16px;
+      background: #fafafa;
     }
     .error-box {
-      color: var(--danger); font-size: 14px; margin-top: 12px; font-weight: bold;
-      background: #ffe5e5; padding: 8px; border-radius: 6px; display: none;
+      color: var(--danger);
+      font-size: 14px;
+      margin-top: 12px;
+      font-weight: bold;
+      background: #ffe5e5;
+      padding: 8px;
+      border-radius: 6px;
+      display: none;
     }
 
+    /* 頂部導覽 */
     header {
-      display: flex; justify-content: space-between; align-items: center;
-      margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
     }
     h1, h2, h3 { margin: 0; }
     .card {
-      background: var(--card-bg); border-radius: 12px; padding: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 16px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      margin-bottom: 16px;
     }
-    .btn-group { display: flex; gap: 8px; align-items: center; }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
     button {
-      padding: 9px 15px; font-size: 14px; font-weight: 600; border: none;
-      border-radius: 8px; background: var(--primary); color: #fff; cursor: pointer;
+      padding: 9px 15px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      background: var(--primary);
+      color: #fff;
+      cursor: pointer;
     }
     button.btn-warning { background: var(--warning); }
     button.btn-success { background: var(--success); }
     button.btn-danger { background: var(--danger); }
     button.btn-gray { background: #8e8e93; }
 
-    table { width: 100%; border-collapse: collapse; text-align: center; background: #fff; border-radius: 8px; overflow: hidden; }
-    th, td { padding: 12px 8px; border-bottom: 1px solid var(--border); font-size: 15px; }
-    th { background: #f8f8fa; font-weight: 600; }
-    tr.clickable-row:hover { background: #f1f7ff; cursor: pointer; }
-    .masked-score { letter-spacing: 2px; color: #8e8e93; font-weight: bold; }
+    /* 表格樣式 */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      background: #fff;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+    }
+    th {
+      background: #f8f8fa;
+      font-weight: 600;
+    }
+    tr.clickable-row:hover {
+      background: #f1f7ff;
+      cursor: pointer;
+    }
+    .masked-score {
+      letter-spacing: 2px;
+      color: #8e8e93;
+      font-weight: bold;
+    }
 
-    .form-section { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px dashed var(--border); }
-    .form-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
-    .input-box { font-size: 18px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; width: 120px; text-align: center; }
-    .calculated-badge { display: inline-block; font-size: 18px; font-weight: 700; color: var(--primary); background: #eaf2ff; padding: 6px 14px; border-radius: 8px; }
-    .sync-status { font-size: 13px; font-weight: 600; padding: 4px 8px; border-radius: 6px; background: #e5e5ea; }
+    /* 評分表單佈局 */
+    .form-section {
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px dashed var(--border);
+    }
+    .form-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+    .input-box {
+      font-size: 18px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 130px;
+      text-align: center;
+    }
+    .calculated-badge {
+      display: inline-block;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      background: #eaf2ff;
+      padding: 6px 14px;
+      border-radius: 8px;
+    }
+    .sync-status {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: #e5e5ea;
+    }
 
-    .sig-container { border: 2px dashed var(--border); border-radius: 8px; background: #fff; margin: 10px 0; touch-action: none; }
-    canvas#signaturePad { width: 100%; height: 180px; display: block; }
+    /* 手寫簽名板 */
+    .sig-container {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      background: #fff;
+      margin: 10px 0;
+      touch-action: none;
+    }
+    canvas#signaturePad {
+      width: 100%;
+      height: 180px;
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -83,15 +201,15 @@
   <div id="pageLogin" class="view-screen active">
     <div class="login-card">
       <h2 style="margin-bottom: 6px;">評審評分登入</h2>
-      <p style="color: #666; font-size: 13px; margin-bottom: 20px;">登入後將只會載入您負責的評分隊伍</p>
+      <p style="color: #666; font-size: 13px; margin-bottom: 20px;">登入後將載入您在「評審名單」中負責的隊伍</p>
       <input type="text" id="loginUsername" class="login-input" placeholder="評審帳號" autocomplete="off">
       <input type="password" id="loginPassword" class="login-input" placeholder="密碼">
-      <button id="btnLogin" style="width: 100%; padding: 13px; font-size: 16px;" onclick="handleLogin()">登入系統</button>
+      <button id="btnLogin" style="width: 100%; padding: 13px; font-size: 16px;" onclick="CompetitionGrader.handleLogin()">登入系統</button>
       <div id="loginErrorMsg" class="error-box"></div>
     </div>
   </div>
 
-  <!-- 1. 總表頁面 -->
+  <!-- 1. 總表頁 -->
   <div id="pageSummary" class="view-screen">
     <header>
       <div>
@@ -103,9 +221,10 @@
         </div>
       </div>
       <div class="btn-group">
-        <button class="btn-warning" onclick="fetchTeamsFromCloud()">🔄 重新整理隊伍</button>
-        <button class="btn-gray" onclick="toggleMask()">🔒 隱藏/顯示成績</button>
-        <button class="btn-danger" onclick="handleLogout()">登出</button>
+        <button class="btn-warning" onclick="CompetitionGrader.reloadFromCloud()">🔄 重新整理隊伍</button>
+        <button class="btn-gray" onclick="CompetitionGrader.toggleMask()">🔒 隱藏/顯示成績</button>
+        <button class="btn-success" onclick="CompetitionGrader.exportCSV()">匯出總成績(CSV)</button>
+        <button class="btn-danger" onclick="CompetitionGrader.handleLogout()">登出</button>
       </div>
     </header>
 
@@ -113,9 +232,8 @@
       <table>
         <thead>
           <tr>
-            <th>編號</th>
-            <th>賽區</th>
             <th>組別</th>
+            <th>隊伍編號</th>
             <th>學校名稱</th>
             <th>隊伍名稱</th>
             <th>關卡數量<br><small style="font-size:12px;color:#888">(16分)</small></th>
@@ -128,13 +246,13 @@
           </tr>
         </thead>
         <tbody id="summaryTableBody">
-          <tr><td colspan="12" style="padding: 24px; color:#888;">正在載入被分配的隊伍名單...</td></tr>
+          <tr><td colspan="11" style="padding: 24px; color:#888;">正在載入隊伍名單...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- 2. 主評分頁面 -->
+  <!-- 2. 主評分頁 -->
   <div id="pageTeamGrading" class="view-screen">
     <header>
       <div>
@@ -145,7 +263,7 @@
           <span id="gradingSyncStatus" class="sync-status">🟢 準備就緒</span>
         </div>
       </div>
-      <button class="btn-gray" onclick="navigate('pageSummary')">返回總表</button>
+      <button class="btn-gray" onclick="CompetitionGrader.navigate('pageSummary')">返回總表</button>
     </header>
 
     <div class="card">
@@ -153,7 +271,7 @@
         <h3>1. 關卡數量輸入（滿分 16 分）</h3>
         <div class="form-row">
           <span>請填入關卡數量得分 (0 - 16)：</span>
-          <input type="number" id="inputStageCount" class="input-box" min="0" max="16" oninput="updateMainScores()">
+          <input type="number" id="inputStageCount" class="input-box" min="0" max="16" oninput="CompetitionGrader.updateMainScores()">
         </div>
       </div>
 
@@ -161,7 +279,7 @@
         <h3>2. 流暢度輸入（滿分 100 分，加權佔 20 分）</h3>
         <div class="form-row">
           <span>流暢度原始得分 (0 - 100)：</span>
-          <input type="number" id="inputFluencyRaw" class="input-box" min="0" max="100" oninput="updateMainScores()">
+          <input type="number" id="inputFluencyRaw" class="input-box" min="0" max="100" oninput="CompetitionGrader.updateMainScores()">
         </div>
         <div class="form-row" style="margin-top:10px;">
           <span>流暢度加權分數 (原始分 × 20%)：</span>
@@ -173,11 +291,11 @@
         <h3>3. 關卡內容輸入（滿分 10 分）</h3>
         <div class="form-row">
           <span>關卡內容一 (0 - 5 分)：</span>
-          <input type="number" id="inputContent1" class="input-box" min="0" max="5" oninput="updateMainScores()">
+          <input type="number" id="inputContent1" class="input-box" min="0" max="5" oninput="CompetitionGrader.updateMainScores()">
         </div>
         <div class="form-row">
           <span>關卡內容二 (0 - 5 分)：</span>
-          <input type="number" id="inputContent2" class="input-box" min="0" max="5" oninput="updateMainScores()">
+          <input type="number" id="inputContent2" class="input-box" min="0" max="5" oninput="CompetitionGrader.updateMainScores()">
         </div>
         <div class="form-row" style="margin-top:10px;">
           <span>關卡內容合計：</span>
@@ -189,7 +307,7 @@
         <h3>4. 指定任務評分（滿分 54 分）</h3>
         <div class="form-row">
           <span>指定任務當前總得分：<strong id="labelTaskTotalScore" style="color:var(--primary); font-size:18px;">0.0</strong> / 54 分</span>
-          <button class="btn-warning" onclick="navigate('pageTaskGrading')">進入指定任務評分 ➔</button>
+          <button class="btn-warning" onclick="CompetitionGrader.navigate('pageTaskGrading')">進入指定任務評分 ➔</button>
         </div>
       </div>
 
@@ -199,37 +317,37 @@
           <canvas id="signaturePad"></canvas>
         </div>
         <div style="display:flex; justify-content:space-between; align-items:center;">
-          <button class="btn-gray" onclick="clearSignature()">清除簽名</button>
-          <button class="btn-success" style="font-size:17px; padding:12px 24px;" onclick="saveAndReturn()">確認送出成績並返回總表</button>
+          <button class="btn-gray" onclick="CompetitionGrader.clearSignature()">清除簽名</button>
+          <button class="btn-success" style="font-size:17px; padding:12px 24px;" onclick="CompetitionGrader.saveAndReturn()">確認送出成績並返回總表</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- 3. 指定任務評分頁面 -->
+  <!-- 3. 指定任務評分頁 -->
   <div id="pageTaskGrading" class="view-screen">
     <header>
       <h2>指定任務評分（滿分 54 分）</h2>
-      <button class="btn-success" onclick="navigate('pageTeamGrading')">完成任務評分並返回</button>
+      <button class="btn-success" onclick="CompetitionGrader.navigate('pageTeamGrading')">完成任務評分並返回</button>
     </header>
 
     <div class="card">
       <div class="form-section">
         <div class="form-row">
           <span>任務一：指定動作精準度 (0 - 18 分)</span>
-          <input type="number" id="taskSub1" class="input-box" min="0" max="18" oninput="updateTaskScores()">
+          <input type="number" id="taskSub1" class="input-box" min="0" max="18" oninput="CompetitionGrader.updateTaskScores()">
         </div>
       </div>
       <div class="form-section">
         <div class="form-row">
           <span>任務二：指定機構互動性 (0 - 18 分)</span>
-          <input type="number" id="taskSub2" class="input-box" min="0" max="18" oninput="updateTaskScores()">
+          <input type="number" id="taskSub2" class="input-box" min="0" max="18" oninput="CompetitionGrader.updateTaskScores()">
         </div>
       </div>
       <div class="form-section">
         <div class="form-row">
           <span>任務三：指定得分達標率 (0 - 18 分)</span>
-          <input type="number" id="taskSub3" class="input-box" min="0" max="18" oninput="updateTaskScores()">
+          <input type="number" id="taskSub3" class="input-box" min="0" max="18" oninput="CompetitionGrader.updateTaskScores()">
         </div>
       </div>
       <div class="form-section" style="border-bottom:none;">
@@ -241,364 +359,6 @@
     </div>
   </div>
 
-  <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbw4komcpTZy_HsaGxKwmurc_EQwljB4bCPup8vswuEryHqPAM_PauEEftN-1Qc3OmZS/exec";
-
-    let currentJudgeName = sessionStorage.getItem("ASSIGN_JUDGE_NAME") || null;
-    let currentAssignedRule = sessionStorage.getItem("ASSIGN_JUDGE_RULE") || "ALL";
-
-    let teams = [];
-    let currentTeamIndex = 0;
-    let isMasked = false;
-    let syncTimer = null;
-
-    let canvas, ctx;
-    let isDrawing = false;
-
-    window.addEventListener("DOMContentLoaded", () => {
-      initCanvas();
-      if (currentJudgeName) {
-        onLoginSuccess(currentJudgeName, currentAssignedRule);
-      } else {
-        navigate("pageLogin");
-      }
-    });
-
-    async function handleLogin() {
-      const u = document.getElementById("loginUsername").value.trim();
-      const p = document.getElementById("loginPassword").value.trim();
-      const err = document.getElementById("loginErrorMsg");
-      const btn = document.getElementById("btnLogin");
-
-      if (!u || !p) {
-        err.innerText = "請輸入帳號與密碼！";
-        err.style.display = "block";
-        return;
-      }
-
-      btn.disabled = true;
-      btn.innerText = "正在連線驗證...";
-      err.style.display = "none";
-
-      try {
-        const url = `${GAS_URL}?action=login&username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if (data.status === "success") {
-          currentJudgeName = data.judgeName;
-          currentAssignedRule = data.assignedRule || "ALL";
-
-          sessionStorage.setItem("ASSIGN_JUDGE_NAME", currentJudgeName);
-          sessionStorage.setItem("ASSIGN_JUDGE_RULE", currentAssignedRule);
-
-          onLoginSuccess(currentJudgeName, currentAssignedRule);
-        } else {
-          err.innerText = data.message || "帳號或密碼錯誤！";
-          err.style.display = "block";
-        }
-      } catch (e) {
-        console.error(e);
-        err.innerText = "連線失敗，請確認網路！";
-        err.style.display = "block";
-      } finally {
-        btn.disabled = false;
-        btn.innerText = "登入系統";
-      }
-    }
-
-    function onLoginSuccess(name, rule) {
-      document.getElementById("judgeNameBadge").innerText = `評審：${name}`;
-      document.getElementById("judgeRuleBadge").innerText = `負責隊伍：${rule}`;
-      document.getElementById("gradingJudgeBadge").innerText = `評審：${name}`;
-      navigate("pageSummary");
-      fetchTeamsFromCloud();
-    }
-
-    function handleLogout() {
-      if (confirm("確定要登出嗎？")) {
-        sessionStorage.removeItem("ASSIGN_JUDGE_NAME");
-        sessionStorage.removeItem("ASSIGN_JUDGE_RULE");
-        currentJudgeName = null;
-        currentAssignedRule = "ALL";
-        document.getElementById("loginUsername").value = "";
-        document.getElementById("loginPassword").value = "";
-        document.getElementById("loginErrorMsg").style.display = "none";
-        navigate("pageLogin");
-      }
-    }
-
-    // 依「評分隊伍」規則向雲端索取指定隊伍
-    async function fetchTeamsFromCloud() {
-      updateStatusBadge("🟡 同步隊伍名單中...");
-      try {
-        const url = `${GAS_URL}?assignedRule=${encodeURIComponent(currentAssignedRule)}`;
-        const res = await fetch(url);
-        const data = await res.json();
-
-        if (data.teams && data.teams.length > 0) {
-          teams = data.teams.map(t => ({
-            ...t,
-            stageCount: 0, fluencyRaw: 0, c1: 0, c2: 0,
-            taskSub1: 0, taskSub2: 0, taskSub3: 0,
-            signature: null, submitted: false,
-            judgeName: ""
-          }));
-          renderSummary();
-          updateStatusBadge(`🟢 名單已同步 (共 ${teams.length} 隊)`);
-        } else {
-          teams = [];
-          renderSummary();
-          updateStatusBadge("⚠️ 無指派給您的隊伍");
-        }
-      } catch (err) {
-        updateStatusBadge("🔴 抓取名單失敗");
-      }
-    }
-
-    function triggerAutoSync(team) {
-      setGradingStatus("🟡 上傳成績中...");
-      clearTimeout(syncTimer);
-      syncTimer = setTimeout(async () => {
-        await sendScoreToCloud(team);
-      }, 1200);
-    }
-
-    async function sendScoreToCloud(team) {
-      const s = calcTeamScores(team);
-      team.judgeName = currentJudgeName || "未具名評審";
-
-      const payload = {
-        action: "saveScore",
-        judgeName: team.judgeName,
-        data: {
-          region: team.region || "",
-          category: team.category || "",
-          id: team.id,
-          school: team.school,
-          name: team.name,
-          stageCount: team.stageCount,
-          fluencyRaw: team.fluencyRaw,
-          fluencyWeighted: s.fluency,
-          contentTotal: s.content,
-          taskTotal: s.task,
-          total: s.total,
-          submitted: team.submitted
-        }
-      };
-
-      try {
-        await fetch(GAS_URL, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload)
-        });
-        setGradingStatus(`🟢 雲端已記錄 (評審：${team.judgeName})`);
-        renderSummary();
-      } catch (err) {
-        setGradingStatus("🔴 上傳失敗");
-      }
-    }
-
-    function calcTeamScores(t) {
-      const stage = Math.min(16, Math.max(0, Number(t.stageCount) || 0));
-      const fluencyWeighted = (Math.min(100, Math.max(0, Number(t.fluencyRaw) || 0)) * 0.20);
-      const content = Math.min(5, Math.max(0, Number(t.c1) || 0)) + Math.min(5, Math.max(0, Number(t.c2) || 0));
-      const task = Math.min(18, Math.max(0, Number(t.taskSub1) || 0)) +
-                   Math.min(18, Math.max(0, Number(t.taskSub2) || 0)) +
-                   Math.min(18, Math.max(0, Number(t.taskSub3) || 0));
-      const total = stage + fluencyWeighted + content + task;
-      return {
-        stage: stage.toFixed(1),
-        fluency: fluencyWeighted.toFixed(1),
-        content: content.toFixed(1),
-        task: task.toFixed(1),
-        total: total.toFixed(1)
-      };
-    }
-
-    function renderSummary() {
-      const tbody = document.getElementById("summaryTableBody");
-      if (!tbody) return;
-      if (teams.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="12" style="padding: 24px; color:#888;">查無分配給您的評分隊伍。</td></tr>`;
-        return;
-      }
-
-      tbody.innerHTML = teams.map((t, idx) => {
-        const s = calcTeamScores(t);
-        const display = val => isMasked ? `<span class="masked-score">•••</span>` : val;
-        const statusBadge = t.submitted ? `<span style="color:var(--success); font-weight:bold;">已完成</span>` : `<span style="color:#888;">評分中</span>`;
-        const judgeDisplay = t.judgeName ? `<span style="font-weight:600; color:#333;">${t.judgeName}</span>` : `<span style="color:#aaa;">-</span>`;
-
-        return `
-          <tr class="clickable-row" onclick="openTeam(${idx})">
-            <td><strong>${t.id}</strong></td>
-            <td>${t.region || "-"}</td>
-            <td>${t.category || "-"}</td>
-            <td>${t.school}</td>
-            <td><strong>${t.name}</strong></td>
-            <td>${display(s.stage)}</td>
-            <td>${display(s.fluency)}</td>
-            <td>${display(s.content)}</td>
-            <td>${display(s.task)}</td>
-            <td style="color:var(--primary); font-weight:800; font-size:16px;">${display(s.total)}</td>
-            <td>${judgeDisplay}</td>
-            <td>${statusBadge}</td>
-          </tr>
-        `;
-      }).join("");
-    }
-
-    function openTeam(idx) {
-      currentTeamIndex = idx;
-      navigate("pageTeamGrading");
-    }
-
-    function loadTeamToGradingPage() {
-      const t = teams[currentTeamIndex];
-      document.getElementById("gradingTeamTitle").innerText = `【${t.id}】${t.name}`;
-      document.getElementById("gradingTeamMeta").innerText = `${t.region || ''} ｜ ${t.category || ''} ｜ 學校：${t.school}`;
-
-      document.getElementById("inputStageCount").value = t.stageCount;
-      document.getElementById("inputFluencyRaw").value = t.fluencyRaw;
-      document.getElementById("inputContent1").value = t.c1;
-      document.getElementById("inputContent2").value = t.c2;
-
-      document.getElementById("taskSub1").value = t.taskSub1;
-      document.getElementById("taskSub2").value = t.taskSub2;
-      document.getElementById("taskSub3").value = t.taskSub3;
-
-      updateMainScores();
-      updateTaskScores();
-
-      clearSignature();
-      if (t.signature) {
-        const img = new Image();
-        img.onload = () => ctx.drawImage(img, 0, 0);
-        img.src = t.signature;
-      }
-      setGradingStatus(t.submitted ? `🟢 已簽名完成 (評審：${t.judgeName || currentJudgeName})` : "🟡 評分中 (即時同步)");
-    }
-
-    function updateMainScores() {
-      const t = teams[currentTeamIndex];
-      t.stageCount = document.getElementById("inputStageCount").value;
-      t.fluencyRaw = document.getElementById("inputFluencyRaw").value;
-      t.c1 = document.getElementById("inputContent1").value;
-      t.c2 = document.getElementById("inputContent2").value;
-      t.judgeName = currentJudgeName;
-
-      const s = calcTeamScores(t);
-      document.getElementById("labelFluencyWeighted").innerText = `${s.fluency} 分`;
-      document.getElementById("labelContentTotal").innerText = `${s.content} 分`;
-
-      triggerAutoSync(t);
-    }
-
-    function updateTaskScores() {
-      const t = teams[currentTeamIndex];
-      t.taskSub1 = document.getElementById("taskSub1").value;
-      t.taskSub2 = document.getElementById("taskSub2").value;
-      t.taskSub3 = document.getElementById("taskSub3").value;
-      t.judgeName = currentJudgeName;
-
-      const s = calcTeamScores(t);
-      document.getElementById("labelTaskTotalScore").innerText = s.task;
-      document.getElementById("labelTaskSubTotal").innerText = `${s.task} / 54 分`;
-
-      triggerAutoSync(t);
-    }
-
-    function navigate(viewId) {
-      document.querySelectorAll(".view-screen").forEach(el => el.classList.remove("active"));
-      const target = document.getElementById(viewId);
-      if (target) target.classList.add("active");
-
-      if (viewId === "pageTeamGrading") {
-        resizeCanvas();
-        loadTeamToGradingPage();
-      }
-    }
-
-    function toggleMask() {
-      isMasked = !isMasked;
-      renderSummary();
-    }
-
-    function initCanvas() {
-      canvas = document.getElementById("signaturePad");
-      if (!canvas) return;
-      ctx = canvas.getContext("2d");
-
-      function getPos(e) {
-        const rect = canvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        return { x: clientX - rect.left, y: clientY - rect.top };
-      }
-
-      function startDraw(e) {
-        isDrawing = true;
-        const pos = getPos(e);
-        ctx.beginPath();
-        ctx.moveTo(pos.x, pos.y);
-        e.preventDefault();
-      }
-      function draw(e) {
-        if (!isDrawing) return;
-        const pos = getPos(e);
-        ctx.lineWidth = 3;
-        ctx.lineCap = "round";
-        ctx.strokeStyle = "#000";
-        ctx.lineTo(pos.x, pos.y);
-        ctx.stroke();
-        e.preventDefault();
-      }
-      function stopDraw() { isDrawing = false; }
-
-      canvas.addEventListener("touchstart", startDraw, { passive: false });
-      canvas.addEventListener("touchmove", draw, { passive: false });
-      canvas.addEventListener("touchend", stopDraw);
-
-      canvas.addEventListener("mousedown", startDraw);
-      canvas.addEventListener("mousemove", draw);
-      canvas.addEventListener("mouseup", stopDraw);
-    }
-
-    function resizeCanvas() {
-      if (!canvas) return;
-      const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width = rect.width;
-      canvas.height = 180;
-    }
-
-    function clearSignature() {
-      if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-
-    function saveAndReturn() {
-      const t = teams[currentTeamIndex];
-      t.signature = canvas.toDataURL();
-      t.submitted = true;
-      t.judgeName = currentJudgeName;
-
-      clearTimeout(syncTimer);
-      sendScoreToCloud(t);
-
-      renderSummary();
-      navigate("pageSummary");
-    }
-
-    function updateStatusBadge(txt) {
-      const el = document.getElementById("cloudStatusBadge");
-      if (el) el.innerText = txt;
-    }
-
-    function setGradingStatus(txt) {
-      const el = document.getElementById("gradingSyncStatus");
-      if (el) el.innerText = txt;
-    }
-  </script>
+  <script src="app.js"></script>
 </body>
 </html>
