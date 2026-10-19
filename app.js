@@ -2,7 +2,7 @@
  * 競賽評分系統核心邏輯 (修正即時跳轉、錯誤提示、總表帶入評審姓名)
  */
 const CompetitionGrader = (function () {
-  const GAS_URL = "https://script.google.com/macros/s/AKfycbzIg6Yr_CgIZySCRuu_J_4QVxNnzDms_I5e0g4hfLcGO8MhrDb7YfwuW-plvoY3MuTK/exec";
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbw4komcpTZy_HsaGxKwmurc_EQwljB4bCPup8vswuEryHqPAM_PauEEftN-1Qc3OmZS/exec";
 
   let currentJudgeName = sessionStorage.getItem("CURRENT_JUDGE_NAME") || null;
   let teams = [];
