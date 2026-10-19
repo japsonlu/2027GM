@@ -1,5 +1,5 @@
 /**
- * 競賽評分系統核心邏輯 (身分驗證 + 自動帶入評審姓名)
+ * 競賽評分系統核心邏輯 (修正即時跳轉、錯誤提示、總表帶入評審姓名)
  */
 const CompetitionGrader = (function () {
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzIg6Yr_CgIZySCRuu_J_4QVxNnzDms_I5e0g4hfLcGO8MhrDb7YfwuW-plvoY3MuTK/exec";
@@ -16,7 +16,6 @@ const CompetitionGrader = (function () {
   async function init() {
     initCanvas();
 
-    // 檢查是否有儲存登入狀態
     if (currentJudgeName) {
       onLoginSuccess(currentJudgeName);
     } else {
@@ -24,7 +23,7 @@ const CompetitionGrader = (function () {
     }
   }
 
-  // 1. 登入處理 (向 GAS 送出驗證)
+  // 1. 登入函式：改用 GET 傳遞驗證參數，徹底解決跨域 302 卡住不跳轉問題
   async function handleLogin() {
     const u = document.getElementById("loginUsername").value.trim();
     const p = document.getElementById("loginPassword").value.trim();
@@ -38,28 +37,26 @@ const CompetitionGrader = (function () {
     }
 
     btn.disabled = true;
-    btn.innerText = "正在驗證中...";
+    btn.innerText = "驗證中，請稍候...";
     err.style.display = "none";
 
     try {
-      const res = await fetch(GAS_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "login", username: u, password: p })
-      });
+      const loginUrl = `${GAS_URL}?action=login&username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`;
+      const res = await fetch(loginUrl, { method: "GET" });
       const data = await res.json();
 
-      if (data.status === "success") {
+      if (data && data.status === "success") {
         currentJudgeName = data.judgeName;
         sessionStorage.setItem("CURRENT_JUDGE_NAME", currentJudgeName);
         onLoginSuccess(currentJudgeName);
       } else {
-        err.innerText = data.message || "帳號或密碼錯誤！";
+        err.innerText = data.message || "帳號或密碼錯誤，請重新確認！";
         err.style.display = "block";
+        alert(data.message || "帳號或密碼錯誤，請重新確認！");
       }
     } catch (e) {
-      console.error(e);
-      err.innerText = "連線失敗，請檢查網路或 API 部署設定！";
+      console.error("登入錯誤：", e);
+      err.innerText = "連線失敗，請檢查網路連線或 Apps Script 部署設定！";
       err.style.display = "block";
     } finally {
       btn.disabled = false;
@@ -69,15 +66,17 @@ const CompetitionGrader = (function () {
 
   function onLoginSuccess(name) {
     document.getElementById("judgeNameBadge").innerText = `評審：${name}`;
+    document.getElementById("gradingJudgeBadge").innerText = `評審：${name}`;
+    
+    // 立即跳轉至總表
     navigate("pageSummary");
 
-    // 讀取本地暫存
+    // 載入暫存並向雲端拉取隊伍
     const cached = localStorage.getItem("LOCAL_COMPETITION_TEAMS");
     if (cached) {
       teams = JSON.parse(cached);
       renderSummary();
     }
-    // 從試算表抓取最新隊伍
     fetchTeamsFromCloud();
   }
 
@@ -87,11 +86,12 @@ const CompetitionGrader = (function () {
       currentJudgeName = null;
       document.getElementById("loginUsername").value = "";
       document.getElementById("loginPassword").value = "";
+      document.getElementById("loginErrorMsg").style.display = "none";
       navigate("pageLogin");
     }
   }
 
-  // 2. GET 請求：從 Google 試算表抓取隊伍名單
+  // 2. 抓取隊伍名單
   async function fetchTeamsFromCloud() {
     updateStatusBadge("🟡 同步隊伍名單中...");
     try {
@@ -105,7 +105,8 @@ const CompetitionGrader = (function () {
             ...cloudTeam,
             stageCount: 0, fluencyRaw: 0, c1: 0, c2: 0,
             taskSub1: 0, taskSub2: 0, taskSub3: 0,
-            signature: null, submitted: false
+            signature: null, submitted: false,
+            judgeName: ""
           };
         });
 
@@ -119,7 +120,7 @@ const CompetitionGrader = (function () {
     }
   }
 
-  // 3. POST 請求：背景自動上傳（攜帶目前登入評審的姓名）
+  // 3. 上傳成績至 Google 試算表（帶入評審姓名）
   function triggerAutoSync(team) {
     setGradingStatus("🟡 正在上傳至成績總表...");
     clearTimeout(syncTimer);
@@ -131,9 +132,11 @@ const CompetitionGrader = (function () {
 
   async function sendScoreToCloud(team) {
     const s = calcTeamScores(team);
+    team.judgeName = currentJudgeName || "未具名評審"; // 綁定評審姓名到隊伍物件
+
     const payload = {
       action: "saveScore",
-      judgeName: currentJudgeName || "未具名評審", // 將評審姓名打包送出
+      judgeName: team.judgeName,
       data: {
         region: team.region || "",
         category: team.category || "",
@@ -156,7 +159,8 @@ const CompetitionGrader = (function () {
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(payload)
       });
-      setGradingStatus(`🟢 雲端已記錄 (評審：${currentJudgeName})`);
+      setGradingStatus(`🟢 雲端已記錄 (評審：${team.judgeName})`);
+      renderSummary(); // 同步更新總表畫面上的評審姓名
     } catch (err) {
       setGradingStatus("🔴 上傳失敗，已暫存本機");
     }
@@ -180,11 +184,12 @@ const CompetitionGrader = (function () {
     };
   }
 
-  // 渲染總表
+  // 4. 渲染總表（包含評審姓名欄位）
   function renderSummary() {
     const tbody = document.getElementById("summaryTableBody");
+    if (!tbody) return;
     if (teams.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="11" style="padding: 24px; color:#888;">尚未載入隊伍名單...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="12" style="padding: 24px; color:#888;">尚未載入隊伍名單...</td></tr>`;
       return;
     }
 
@@ -192,6 +197,8 @@ const CompetitionGrader = (function () {
       const s = calcTeamScores(t);
       const display = val => isMasked ? `<span class="masked-score">•••</span>` : val;
       const statusBadge = t.submitted ? `<span style="color:var(--success); font-weight:bold;">已簽名</span>` : `<span style="color:#888;">評分中</span>`;
+      const judgeDisplay = t.judgeName ? `<span style="font-weight:600; color:#333;">${t.judgeName}</span>` : `<span style="color:#aaa;">-</span>`;
+
       return `
         <tr class="clickable-row" onclick="CompetitionGrader.openTeam(${idx})">
           <td><strong>${t.id}</strong></td>
@@ -204,6 +211,7 @@ const CompetitionGrader = (function () {
           <td>${display(s.content)}</td>
           <td>${display(s.task)}</td>
           <td style="color:var(--primary); font-weight:800; font-size:16px;">${display(s.total)}</td>
+          <td>${judgeDisplay}</td>
           <td>${statusBadge}</td>
         </tr>
       `;
@@ -238,7 +246,7 @@ const CompetitionGrader = (function () {
       img.onload = () => ctx.drawImage(img, 0, 0);
       img.src = t.signature;
     }
-    setGradingStatus(t.submitted ? "🟢 已完成簽名送出" : "🟡 評分中 (即時同步)");
+    setGradingStatus(t.submitted ? `🟢 已簽名 (評審：${t.judgeName || currentJudgeName})` : "🟡 評分中 (即時同步)");
   }
 
   function updateMainScores() {
@@ -247,6 +255,7 @@ const CompetitionGrader = (function () {
     t.fluencyRaw = document.getElementById("inputFluencyRaw").value;
     t.c1 = document.getElementById("inputContent1").value;
     t.c2 = document.getElementById("inputContent2").value;
+    t.judgeName = currentJudgeName;
 
     const s = calcTeamScores(t);
     document.getElementById("labelFluencyWeighted").innerText = `${s.fluency} 分`;
@@ -261,6 +270,7 @@ const CompetitionGrader = (function () {
     t.taskSub1 = document.getElementById("taskSub1").value;
     t.taskSub2 = document.getElementById("taskSub2").value;
     t.taskSub3 = document.getElementById("taskSub3").value;
+    t.judgeName = currentJudgeName;
 
     const s = calcTeamScores(t);
     document.getElementById("labelTaskTotalScore").innerText = s.task;
@@ -272,7 +282,9 @@ const CompetitionGrader = (function () {
 
   function navigate(viewId) {
     document.querySelectorAll(".view-screen").forEach(el => el.classList.remove("active"));
-    document.getElementById(viewId).classList.add("active");
+    const target = document.getElementById(viewId);
+    if (target) target.classList.add("active");
+
     if (viewId === "pageTeamGrading") {
       resizeCanvas();
       loadTeamToGradingPage();
@@ -284,8 +296,10 @@ const CompetitionGrader = (function () {
     renderSummary();
   }
 
+  // 觸控手寫板
   function initCanvas() {
     canvas = document.getElementById("signaturePad");
+    if (!canvas) return;
     ctx = canvas.getContext("2d");
 
     function getPos(e) {
@@ -324,19 +338,22 @@ const CompetitionGrader = (function () {
   }
 
   function resizeCanvas() {
+    if (!canvas) return;
     const rect = canvas.parentElement.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = 180;
   }
 
   function clearSignature() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   }
 
+  // 簽名完成送出
   function saveAndReturn() {
     const t = teams[currentTeamIndex];
     t.signature = canvas.toDataURL();
     t.submitted = true;
+    t.judgeName = currentJudgeName;
     saveToStorage();
 
     clearTimeout(syncTimer);
@@ -364,11 +381,12 @@ const CompetitionGrader = (function () {
     await fetchTeamsFromCloud();
   }
 
+  // 匯出 CSV 報表（包含評審姓名欄位）
   function exportCSV() {
     let csv = "\uFEFF編號,賽區,組別,學校,隊伍名稱,關卡數量(16),流暢度加權(20),關卡內容(10),指定任務(54),總分(100),評審姓名,完成狀態\n";
     teams.forEach(t => {
       const s = calcTeamScores(t);
-      csv += `"${t.id}","${t.region || ''}","${t.category || ''}","${t.school}","${t.name}",${s.stage},${s.fluency},${s.content},${s.task},${s.total},"${currentJudgeName || ''}","${t.submitted ? '已簽名' : '評分中'}"\n`;
+      csv += `"${t.id}","${t.region || ''}","${t.category || ''}","${t.school}","${t.name}",${s.stage},${s.fluency},${s.content},${s.task},${s.total},"${t.judgeName || currentJudgeName || ''}","${t.submitted ? '已簽名' : '評分中'}"\n`;
     });
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
