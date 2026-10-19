@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>競賽評分系統 - 10隊防窺版</title>
+  <style>
+    :root {
+      --primary: #007aff;
+      --success: #34c759;
+      --purple: #af52de;
+      --danger: #ff3b30;
+      --gray: #8e8e93;
+      --bg: #f2f2f7;
+      --card: #ffffff;
+      --text: #1c1c1e;
+      --border: #e5e5ea;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 16px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .container {
+      max-width: 1150px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    h1 {
+      margin: 0 0 6px 0;
+      font-size: 24px;
+    }
+    .status-text {
+      font-size: 13px;
+      color: var(--gray);
+    }
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px 18px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      margin-bottom: 16px;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .btn-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    button.btn-cloud { background: var(--purple); }
+    button.btn-success { background: var(--success); }
+    button.btn-dark { background: #3a3a3c; }
+    button.btn-gray { background: var(--gray); }
+    button:active { opacity: 0.8; }
+
+    .table-container {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: center;
+      min-width: 860px;
+    }
+    th, td {
+      padding: 10px 6px;
+      border-bottom: 1px solid var(--border);
+      font-size: 15px;
+    }
+    th {
+      color: #6c6c70;
+      font-weight: 600;
+      background: #fafafa;
+    }
+    .team-input {
+      font-weight: bold;
+      width: 110px;
+      padding: 6px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 15px;
+      text-align: center;
+    }
+    .score-input {
+      width: 55px;
+      padding: 8px 4px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 16px; /* 防止 iPad 聚焦時縮放 */
+      text-align: center;
+      background: #fbfbfd;
+    }
+    .score-input:focus {
+      background: #fff;
+      border-color: var(--primary);
+      outline: none;
+    }
+    .total-col {
+      font-weight: 800;
+      color: var(--primary);
+      font-size: 17px;
+    }
+
+    /* 鎖定隱藏模式的樣式 */
+    tr.is-locked {
+      background-color: #fafafc;
+    }
+    tr.is-locked .score-input {
+      background: #e5e5ea;
+      color: transparent;
+      text-shadow: 0 0 8px rgba(0,0,0,0.4);
+      user-select: none;
+      pointer-events: none;
+    }
+    tr.is-locked .total-col {
+      color: var(--gray);
+      letter-spacing: 2px;
+    }
+
+    .btn-lock {
+      background: #e5e5ea;
+      color: #1c1c1e;
+      padding: 6px 10px;
+      font-size: 13px;
+      border-radius: 6px;
+    }
+    .btn-lock.locked {
+      background: #ffebe9;
+      color: var(--danger);
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .no-print { display: none !important; }
+      .card { box-shadow: none; border-radius: 0; padding: 0; }
+      .score-input, .team-input { border: none; background: transparent; font-weight: normal; color: #000 !important; text-shadow: none !important; }
+      th, td { border: 1px solid #ccc; font-size: 13px; padding: 6px; }
+      tr.is-locked .total-col { color: #000; letter-spacing: normal; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>10隊競賽評分系統（防窺安全版）</h1>
+    <div class="status-text" id="statusMessage">資料將即時自動暫存於 iPad</div>
+  </header>
+
+  <div class="card no-print">
+    <div class="toolbar">
+      <div style="font-size: 14px; color: #555;">
+        5項各佔 20% ｜ 滿分 100 分
+      </div>
+      <div class="btn-group">
+        <button class="btn-dark" onclick="toggleAllLock(true)">🔒 全部遮蔽</button>
+        <button class="btn-dark" onclick="toggleAllLock(false)">🔓 全部解鎖</button>
+        <button class="btn-cloud" onclick="uploadToGoogleSheet()">上傳雲端</button>
+        <button class="btn-success" onclick="exportCSV()">匯出 Excel</button>
+        <button onclick="window.print()">列印 / PDF</button>
+        <button class="btn-gray" onclick="resetScores()">清零</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 45px;">編號</th>
+            <th>隊伍名稱</th>
+            <th>1. 流暢度<br><small style="font-size:11px; color:#888;">(20%)</small></th>
+            <th>2. 關卡內容<br><small style="font-size:11px; color:#888;">(20%)</small></th>
+            <th>3. 關卡數量<br><small style="font-size:11px; color:#888;">(20%)</small></th>
+            <th>4. 指定內容<br><small style="font-size:11px; color:#888;">(20%)</small></th>
+            <th>5. 指定得分<br><small style="font-size:11px; color:#888;">(20%)</small></th>
+            <th>總分</th>
+            <th class="no-print">防窺操作</th>
+          </tr>
+        </thead>
+        <tbody id="teamTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script>
+  const GOOGLE_SCRIPT_URL = ""; 
+
+  const DEFAULT_TEAMS = Array.from({ length: 10 }, (_, i) => ({
+    id: i + 1,
+    name: `第 ${i + 1} 隊`,
+    s1: 0,
+    s2: 0,
+    s3: 0,
+    s4: 0,
+    s5: 0,
+    isLocked: false
+  }));
+
+  let teams = JSON.parse(localStorage.getItem('competition_teams_10_secure')) || DEFAULT_TEAMS;
+
+  function calcTotal(t) {
+    const total = (Number(t.s1) * 0.2) + (Number(t.s2) * 0.2) + (Number(t.s3) * 0.2) + (Number(t.s4) * 0.2) + (Number(t.s5) * 0.2);
+    return Math.round(total * 10) / 10;
+  }
+
+  function saveLocal() {
+    localStorage.setItem('competition_teams_10_secure', JSON.stringify(teams));
+    document.getElementById('statusMessage').innerText = `已自動暫存 (${new Date().toLocaleTimeString('zh-TW')})`;
+  }
+
+  function updateScore(id, field, val) {
+    const team = teams.find(t => t.id === id);
+    if (team) {
+      let num = parseFloat(val);
+      if (isNaN(num)) num = 0;
+      team[field] = Math.min(100, Math.max(0, num));
+      saveLocal();
+      render();
+    }
+  }
+
+  function updateName(id, val) {
+    const team = teams.find(t => t.id === id);
+    if (team) {
+      team.name = val.trim() || `第 ${id} 隊`;
+      saveLocal();
+    }
+  }
+
+  // 切換單隊鎖定/遮蔽狀態
+  function toggleLock(id) {
+    const team = teams.find(t => t.id === id);
+    if (team) {
+      team.isLocked = !team.isLocked;
+      saveLocal();
+      render();
+    }
+  }
+
+  // 全部遮蔽 / 全部解鎖
+  function toggleAllLock(lockState) {
+    teams.forEach(t => t.isLocked = lockState);
+    saveLocal();
+    render();
+  }
+
+  function resetScores() {
+    if (confirm('確定要將所有隊伍的評分清零嗎？')) {
+      teams.forEach(t => {
+        t.s1 = 0; t.s2 = 0; t.s3 = 0; t.s4 = 0; t.s5 = 0; t.isLocked = false;
+      });
+      saveLocal();
+      render();
+    }
+  }
+
+  function render() {
+    const tbody = document.getElementById('teamTableBody');
+    tbody.innerHTML = teams.map(t => {
+      const total = calcTotal(t);
+      const isLocked = t.isLocked;
+      const totalDisplay = isLocked ? '••••' : total.toFixed(1);
+      const rowClass = isLocked ? 'is-locked' : '';
+
+      return `
+        <tr class="${rowClass}">
+          <td><strong>${t.id}</strong></td>
+          <td><input type="text" class="team-input" value="${t.name}" ${isLocked ? 'disabled' : ''} onchange="updateName(${t.id}, this.value)"></td>
+          <td><input type="number" class="score-input" min="0" max="100" value="${t.s1}" ${isLocked ? 'readonly' : ''} onfocus="this.select()" onchange="updateScore(${t.id}, 's1', this.value)"></td>
+          <td><input type="number" class="score-input" min="0" max="100" value="${t.s2}" ${isLocked ? 'readonly' : ''} onfocus="this.select()" onchange="updateScore(${t.id}, 's2', this.value)"></td>
+          <td><input type="number" class="score-input" min="0" max="100" value="${t.s3}" ${isLocked ? 'readonly' : ''} onfocus="this.select()" onchange="updateScore(${t.id}, 's3', this.value)"></td>
+          <td><input type="number" class="score-input" min="0" max="100" value="${t.s4}" ${isLocked ? 'readonly' : ''} onfocus="this.select()" onchange="updateScore(${t.id}, 's4', this.value)"></td>
+          <td><input type="number" class="score-input" min="0" max="100" value="${t.s5}" ${isLocked ? 'readonly' : ''} onfocus="this.select()" onchange="updateScore(${t.id}, 's5', this.value)"></td>
+          <td class="total-col">${totalDisplay}</td>
+          <td class="no-print">
+            <button class="btn-lock ${isLocked ? 'locked' : ''}" onclick="toggleLock(${t.id})">
+              ${isLocked ? '🔓 解鎖檢視' : '🔒 鎖定隱藏'}
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function exportCSV() {
+    let csv = '\uFEFF隊伍編號,隊伍名稱,流暢度(20%),關卡內容(20%),關卡數量(20%),指定內容(20%),指定得分(20%),總分\n';
+    teams.forEach(t => {
+      csv += `${t.id},"${t.name}",${t.s1},${t.s2},${t.s3},${t.s4},${t.s5},${calcTotal(t)}\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `競賽評分完整報表_${new Date().toISOString().slice(0,10)}.csv`;
+    link.click();
+  }
+
+  async function uploadToGoogleSheet() {
+    if (!GOOGLE_SCRIPT_URL) {
+      alert('請先在程式碼中的 GOOGLE_SCRIPT_URL 填入您的 Google Apps Script 網址！');
+      return;
+    }
+    const statusMsg = document.getElementById('statusMessage');
+    statusMsg.innerText = '正在上傳至雲端試算表...';
+
+    const payload = teams.map(t => ({
+      name: t.name,
+      s1: t.s1,
+      s2: t.s2,
+      s3: t.s3,
+      s4: t.s4,
+      s5: t.s5,
+      total: calcTotal(t)
+    }));
+
+    try {
+      await fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      statusMsg.innerText = '成功上傳至雲端試算表！';
+      alert('資料已成功同步至雲端！');
+    } catch (err) {
+      statusMsg.innerText = '上傳失敗，請檢查網路連線。';
+      alert('上傳失敗：' + err.message);
+    }
+  }
+
+  render();
+</script>
+
+</body>
+</html>
