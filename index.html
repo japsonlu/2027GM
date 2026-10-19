@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>競賽評分系統 (雲端同步版)</title>
+  <title>競賽評分系統</title>
   <style>
     :root {
       --primary: #007aff;
@@ -15,161 +15,108 @@
       --border: #d1d1d6;
       --text: #1c1c1e;
     }
-    * {
-      box-sizing: border-box;
-      -webkit-touch-callout: none;
-    }
+    * { box-sizing: border-box; -webkit-touch-callout: none; }
     html, body {
-      margin: 0;
-      padding: 0;
-      width: 100vw;
-      height: 100vh;
+      margin: 0; padding: 0; width: 100vw; height: 100vh;
       overflow-x: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Helvetica Neue", sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
+      background-color: var(--bg); color: var(--text);
     }
-    .view-screen {
+    .view-screen { display: none; width: 100%; min-height: 100vh; padding: 16px 24px; }
+    .view-screen.active { display: block; }
+
+    /* 登入畫面置中 */
+    #pageLogin {
       display: none;
-      width: 100%;
-      min-height: 100vh;
-      padding: 16px 24px;
-    }
-    .view-screen.active {
-      display: block;
-    }
-    header {
-      display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
+      justify-content: center;
+      min-height: 100vh;
+    }
+    #pageLogin.active { display: flex; }
+
+    .login-card {
+      background: #fff;
+      padding: 36px 32px;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .login-input {
+      width: 100%;
+      padding: 12px 14px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 16px;
+      background: #fafafa;
+    }
+
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
     }
     h1, h2, h3 { margin: 0; }
     .card {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-      margin-bottom: 16px;
+      background: var(--card-bg); border-radius: 12px; padding: 16px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.06); margin-bottom: 16px;
     }
-    .btn-group {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-    }
+    .btn-group { display: flex; gap: 8px; align-items: center; }
     button {
-      padding: 10px 16px;
-      font-size: 15px;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      background: var(--primary);
-      color: #fff;
-      cursor: pointer;
+      padding: 9px 15px; font-size: 14px; font-weight: 600; border: none;
+      border-radius: 8px; background: var(--primary); color: #fff; cursor: pointer;
     }
     button.btn-warning { background: var(--warning); }
     button.btn-success { background: var(--success); }
+    button.btn-danger { background: var(--danger); }
     button.btn-gray { background: #8e8e93; }
 
-    /* 表格樣式 */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      text-align: center;
-      background: #fff;
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    th, td {
-      padding: 12px 8px;
-      border-bottom: 1px solid var(--border);
-      font-size: 15px;
-    }
-    th {
-      background: #f8f8fa;
-      font-weight: 600;
-    }
-    tr.clickable-row:hover {
-      background: #f1f7ff;
-      cursor: pointer;
-    }
-    .masked-score {
-      letter-spacing: 2px;
-      color: #8e8e93;
-      font-weight: bold;
-    }
+    table { width: 100%; border-collapse: collapse; text-align: center; background: #fff; border-radius: 8px; overflow: hidden; }
+    th, td { padding: 12px 8px; border-bottom: 1px solid var(--border); font-size: 15px; }
+    th { background: #f8f8fa; font-weight: 600; }
+    tr.clickable-row:hover { background: #f1f7ff; cursor: pointer; }
+    .masked-score { letter-spacing: 2px; color: #8e8e93; font-weight: bold; }
 
-    /* 評分表單佈局 */
-    .form-section {
-      margin-bottom: 16px;
-      padding-bottom: 14px;
-      border-bottom: 1px dashed var(--border);
-    }
-    .form-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 8px;
-    }
-    .input-box {
-      font-size: 18px;
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      width: 130px;
-      text-align: center;
-    }
-    .calculated-badge {
-      display: inline-block;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--primary);
-      background: #eaf2ff;
-      padding: 6px 14px;
-      border-radius: 8px;
-    }
+    .form-section { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px dashed var(--border); }
+    .form-row { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+    .input-box { font-size: 18px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; width: 120px; text-align: center; }
+    .calculated-badge { display: inline-block; font-size: 18px; font-weight: 700; color: var(--primary); background: #eaf2ff; padding: 6px 14px; border-radius: 8px; }
+    .sync-status { font-size: 13px; font-weight: 600; padding: 4px 8px; border-radius: 6px; background: #e5e5ea; }
 
-    /* 雲端狀態燈 */
-    .sync-status {
-      font-size: 13px;
-      font-weight: 600;
-      padding: 4px 8px;
-      border-radius: 6px;
-      background: #e5e5ea;
-    }
-
-    /* 手寫簽名板 */
-    .sig-container {
-      border: 2px dashed var(--border);
-      border-radius: 8px;
-      background: #fff;
-      margin: 10px 0;
-      touch-action: none;
-    }
-    canvas#signaturePad {
-      width: 100%;
-      height: 180px;
-      display: block;
-    }
+    .sig-container { border: 2px dashed var(--border); border-radius: 8px; background: #fff; margin: 10px 0; touch-action: none; }
+    canvas#signaturePad { width: 100%; height: 180px; display: block; }
   </style>
 </head>
 <body>
 
-  <!-- Page 1: 總表頁 -->
-  <div id="pageSummary" class="view-screen active">
+  <!-- 0. 登入畫面 (未登入前強制停在此頁) -->
+  <div id="pageLogin" class="view-screen active">
+    <div class="login-card">
+      <h2 style="margin-bottom: 6px;">評審評分登入</h2>
+      <p style="color: #666; font-size: 14px; margin-bottom: 24px;">請輸入「評審名單」中所屬的帳號與密碼</p>
+      <input type="text" id="loginUsername" class="login-input" placeholder="請輸入評審帳號">
+      <input type="password" id="loginPassword" class="login-input" placeholder="請輸入密碼">
+      <button id="btnLogin" style="width: 100%; padding: 13px; font-size: 16px;" onclick="CompetitionGrader.handleLogin()">登入系統</button>
+      <div id="loginErrorMsg" style="color: var(--danger); font-size: 14px; margin-top: 12px; display: none;"></div>
+    </div>
+  </div>
+
+  <!-- 1. 總表頁 -->
+  <div id="pageSummary" class="view-screen">
     <header>
       <div>
-        <h1 style="font-size: 22px;">競賽評分總表 (100分制)</h1>
-        <div style="margin-top: 5px;">
+        <h1 style="font-size: 22px;">競賽評分總表</h1>
+        <div style="margin-top: 5px; display: flex; align-items: center; gap: 8px;">
+          <span id="judgeNameBadge" style="background:#007aff; color:#fff; font-size:13px; padding:3px 10px; border-radius:12px; font-weight:bold;">評審：載入中</span>
           <span id="cloudStatusBadge" class="sync-status">🟢 雲端連線就緒</span>
         </div>
       </div>
       <div class="btn-group">
-        <button class="btn-warning" onclick="CompetitionGrader.reloadFromCloud()">🔄 從試算表重整名單</button>
+        <button class="btn-warning" onclick="CompetitionGrader.reloadFromCloud()">🔄 重整試算表名單</button>
         <button class="btn-gray" onclick="CompetitionGrader.toggleMask()">🔒 隱藏/顯示成績</button>
-        <button class="btn-success" onclick="CompetitionGrader.exportCSV()">匯出總成績報表</button>
+        <button class="btn-success" onclick="CompetitionGrader.exportCSV()">匯出總成績</button>
+        <button class="btn-danger" onclick="CompetitionGrader.handleLogout()">登出</button>
       </div>
     </header>
 
@@ -190,14 +137,12 @@
             <th>狀態</th>
           </tr>
         </thead>
-        <tbody id="summaryTableBody">
-          <tr><td colspan="11" style="padding: 24px; color:#888;">正在連線讀取 Google 試算表隊伍名單...</td></tr>
-        </tbody>
+        <tbody id="summaryTableBody"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- Page 2: 主評分頁 -->
+  <!-- 2. 主評分頁 -->
   <div id="pageTeamGrading" class="view-screen">
     <header>
       <div>
@@ -211,7 +156,6 @@
     </header>
 
     <div class="card">
-      <!-- 關卡數量 -->
       <div class="form-section">
         <h3>1. 關卡數量輸入（滿分 16 分）</h3>
         <div class="form-row">
@@ -220,7 +164,6 @@
         </div>
       </div>
 
-      <!-- 流暢度 -->
       <div class="form-section">
         <h3>2. 流暢度輸入（滿分 100 分，加權佔 20 分）</h3>
         <div class="form-row">
@@ -233,7 +176,6 @@
         </div>
       </div>
 
-      <!-- 關卡內容 -->
       <div class="form-section">
         <h3>3. 關卡內容輸入（滿分 10 分）</h3>
         <div class="form-row">
@@ -250,16 +192,14 @@
         </div>
       </div>
 
-      <!-- 指定任務評分按鈕 -->
       <div class="form-section">
         <h3>4. 指定任務評分（滿分 54 分）</h3>
         <div class="form-row">
           <span>指定任務當前總得分：<strong id="labelTaskTotalScore" style="color:var(--primary); font-size:18px;">0.0</strong> / 54 分</span>
-          <button class="btn-warning" onclick="CompetitionGrader.navigate('pageTaskGrading')">進入指定任務評分網頁 ➔</button>
+          <button class="btn-warning" onclick="CompetitionGrader.navigate('pageTaskGrading')">進入指定任務評分 ➔</button>
         </div>
       </div>
 
-      <!-- 觸控簽名確認 -->
       <div class="form-section" style="border-bottom:none;">
         <h3>5. 評審手寫簽名確認</h3>
         <div class="sig-container">
@@ -273,7 +213,7 @@
     </div>
   </div>
 
-  <!-- Page 3: 指定任務評分頁 -->
+  <!-- 3. 指定任務評分頁 -->
   <div id="pageTaskGrading" class="view-screen">
     <header>
       <h2>指定任務評分（滿分 54 分）</h2>
@@ -299,9 +239,11 @@
           <input type="number" id="taskSub3" class="input-box" min="0" max="18" oninput="CompetitionGrader.updateTaskScores()">
         </div>
       </div>
-      <div class="form-row" style="margin-top: 14px;">
-        <h3>指定任務總計：</h3>
-        <span id="labelTaskSubTotal" class="calculated-badge">0.0 / 54 分</span>
+      <div class="form-section" style="border-bottom:none;">
+        <div class="form-row">
+          <h3>指定任務總計：</h3>
+          <span id="labelTaskSubTotal" class="calculated-badge">0.0 / 54 分</span>
+        </div>
       </div>
     </div>
   </div>
