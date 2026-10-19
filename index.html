@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>iPad 競賽評分系統</title>
+  <title>競賽評分系統 (雲端同步版)</title>
   <style>
     :root {
       --primary: #007aff;
@@ -71,9 +71,9 @@
     }
     button.btn-warning { background: var(--warning); }
     button.btn-success { background: var(--success); }
-    button.btn-danger { background: var(--danger); }
     button.btn-gray { background: #8e8e93; }
 
+    /* 表格樣式 */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -101,6 +101,7 @@
       font-weight: bold;
     }
 
+    /* 評分表單佈局 */
     .form-section {
       margin-bottom: 16px;
       padding-bottom: 14px;
@@ -113,11 +114,11 @@
       margin-top: 8px;
     }
     .input-box {
-      font-size: 17px;
+      font-size: 18px;
       padding: 8px 12px;
       border: 1px solid var(--border);
       border-radius: 8px;
-      width: 120px;
+      width: 130px;
       text-align: center;
     }
     .calculated-badge {
@@ -130,6 +131,16 @@
       border-radius: 8px;
     }
 
+    /* 雲端狀態燈 */
+    .sync-status {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: #e5e5ea;
+    }
+
+    /* 手寫簽名板 */
     .sig-container {
       border: 2px dashed var(--border);
       border-radius: 8px;
@@ -146,12 +157,17 @@
 </head>
 <body>
 
-  <!-- Page 1: 總表 -->
+  <!-- Page 1: 總表頁 -->
   <div id="pageSummary" class="view-screen active">
     <header>
-      <h1>競賽評分總表 (滿分 100 分)</h1>
+      <div>
+        <h1 style="font-size: 22px;">競賽評分總表 (100分制)</h1>
+        <div style="margin-top: 5px;">
+          <span id="cloudStatusBadge" class="sync-status">🟢 雲端連線就緒</span>
+        </div>
+      </div>
       <div class="btn-group">
-        <button class="btn-warning" onclick="CompetitionGrader.reloadCSV()">🔄 重新載入 teams.csv</button>
+        <button class="btn-warning" onclick="CompetitionGrader.reloadFromCloud()">🔄 從試算表重整名單</button>
         <button class="btn-gray" onclick="CompetitionGrader.toggleMask()">🔒 隱藏/顯示成績</button>
         <button class="btn-success" onclick="CompetitionGrader.exportCSV()">匯出總成績報表</button>
       </div>
@@ -162,6 +178,8 @@
         <thead>
           <tr>
             <th>編號</th>
+            <th>賽區</th>
+            <th>組別</th>
             <th>學校名稱</th>
             <th>隊伍名稱</th>
             <th>關卡數量<br><small style="font-size:12px;color:#888">(16分)</small></th>
@@ -172,7 +190,9 @@
             <th>狀態</th>
           </tr>
         </thead>
-        <tbody id="summaryTableBody"></tbody>
+        <tbody id="summaryTableBody">
+          <tr><td colspan="11" style="padding: 24px; color:#888;">正在連線讀取 Google 試算表隊伍名單...</td></tr>
+        </tbody>
       </table>
     </div>
   </div>
@@ -182,12 +202,16 @@
     <header>
       <div>
         <h2 id="gradingTeamTitle">隊伍評分</h2>
-        <span id="gradingTeamSchool" style="color:#666; font-size:14px;"></span>
+        <span id="gradingTeamMeta" style="color:#666; font-size:14px;"></span>
+        <div style="margin-top: 4px;">
+          <span id="gradingSyncStatus" class="sync-status">🟢 準備就緒</span>
+        </div>
       </div>
       <button class="btn-gray" onclick="CompetitionGrader.navigate('pageSummary')">返回總表</button>
     </header>
 
     <div class="card">
+      <!-- 關卡數量 -->
       <div class="form-section">
         <h3>1. 關卡數量輸入（滿分 16 分）</h3>
         <div class="form-row">
@@ -196,6 +220,7 @@
         </div>
       </div>
 
+      <!-- 流暢度 -->
       <div class="form-section">
         <h3>2. 流暢度輸入（滿分 100 分，加權佔 20 分）</h3>
         <div class="form-row">
@@ -208,6 +233,7 @@
         </div>
       </div>
 
+      <!-- 關卡內容 -->
       <div class="form-section">
         <h3>3. 關卡內容輸入（滿分 10 分）</h3>
         <div class="form-row">
@@ -224,6 +250,7 @@
         </div>
       </div>
 
+      <!-- 指定任務評分按鈕 -->
       <div class="form-section">
         <h3>4. 指定任務評分（滿分 54 分）</h3>
         <div class="form-row">
@@ -232,6 +259,7 @@
         </div>
       </div>
 
+      <!-- 觸控簽名確認 -->
       <div class="form-section" style="border-bottom:none;">
         <h3>5. 評審手寫簽名確認</h3>
         <div class="sig-container">
