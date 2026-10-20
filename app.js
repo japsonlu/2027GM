@@ -25,7 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-clear-sign").addEventListener("click", clearCanvas);
   document.getElementById("btn-submit").addEventListener("click", submitScore);
 
-  // 視窗尺寸改變時重新校準 Canvas
   window.addEventListener("resize", resizeCanvas);
 });
 
@@ -79,7 +78,7 @@ function renderTeamList() {
   teamListBody.innerHTML = "";
 
   if (assignedTeams.length === 0) {
-    teamListBody.innerHTML = `<tr><td colspan="11" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認《評審名單》D 欄是否有填入正確的隊伍編號！</td></tr>`;
+    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認《評審名單》D 欄是否有填入正確的隊伍編號！</td></tr>`;
     return;
   }
 
@@ -90,6 +89,7 @@ function renderTeamList() {
     const stageVal = score.stageScore ?? "-";
     const fluencyVal = score.fluencyScore ?? "-";
     const taskVal = score.taskScore ?? "-";
+    const stdVal = score.stdScore ?? "-";
     const missionVal = score.missionScore ?? "-";
     const totalVal = score.totalScore ?? "-";
 
@@ -101,6 +101,7 @@ function renderTeamList() {
       <td class="score-col">${stageVal}</td>
       <td class="score-col">${fluencyVal}</td>
       <td class="score-col">${taskVal}</td>
+      <td class="score-col">${stdVal}</td>
       <td class="score-col">${missionVal}</td>
       <td class="score-col" style="font-weight:bold; color:var(--primary);">${totalVal}</td>
       <td>
@@ -139,22 +140,42 @@ window.openScoring = function(teamId) {
   document.getElementById("current-team-info").textContent = 
     `評分對象：[${currentTeam.teamId}] ${currentTeam.school} - ${currentTeam.teamName}`;
 
-  resetAllFormSelections();
+  resetFormToDefaults();
   calculateAllScores();
   switchPage("scoring");
 
-  // 切換至評分頁後校準畫布
   setTimeout(() => {
     resizeCanvas();
     clearCanvas();
   }, 100);
 };
 
-// 一開始都不選取，全部重設為白色
-function resetAllFormSelections() {
-  document.querySelectorAll(".selectable").forEach(cell => {
+// 只有任務得分加總（區域分數與加分）重設為白色，其他區塊恢復預設藍色
+function resetFormToDefaults() {
+  // 1. 只有 .toggleable（任務得分欄位）移除 active，一開始全部為白色
+  document.querySelectorAll(".toggleable").forEach(cell => {
     cell.classList.remove("active");
   });
+
+  // 2. 關卡數量預設 8
+  document.querySelectorAll("#row-stage .selectable").forEach(c => c.classList.remove("active"));
+  document.querySelector('#row-stage .selectable[data-val="8"]').classList.add("active");
+
+  // 3. 流暢度預設 0
+  document.querySelectorAll("#row-fluency .selectable").forEach(c => c.classList.remove("active"));
+  document.querySelector('#row-fluency .selectable[data-val="0"]').classList.add("active");
+
+  // 4. 關卡任務預設（內容符合 3、運作 2）
+  ["row-task-1", "row-task-2"].forEach(rowId => {
+    const row = document.getElementById(rowId);
+    row.querySelectorAll(".selectable").forEach(c => c.classList.remove("active"));
+    row.querySelector('.selectable[data-val="3"]').classList.add("active");
+    row.querySelector('.selectable[data-val="2"]').classList.add("active");
+  });
+
+  // 5. 任務規範預設全部選「是」
+  document.querySelectorAll("#row-mission-std .selectable").forEach(c => c.classList.remove("active"));
+  document.querySelectorAll('#row-mission-std .selectable[data-val="2.3333"], #row-mission-std .selectable[data-val="2.3334"]').forEach(c => c.classList.add("active"));
 }
 
 function switchPage(page) {
@@ -170,18 +191,24 @@ function switchPage(page) {
   }
 }
 
-// 點選變藍、再點一次取消變白（Toggle 邏輯）
+// 點選切換邏輯
 function setupSelectionHandlers() {
   document.querySelectorAll(".selectable").forEach(cell => {
     cell.addEventListener("click", function() {
       const parentRow = this.closest("tr");
       const group = this.dataset.group;
+      const isToggleable = this.classList.contains("toggleable");
 
-      if (this.classList.contains("active")) {
-        // 若已經是藍色，再點一次變回白色（取消選取）
-        this.classList.remove("active");
+      if (isToggleable) {
+        // 只有任務得分加總區塊支援反選（再次點擊取消變白為 0 分）
+        if (this.classList.contains("active")) {
+          this.classList.remove("active");
+        } else {
+          parentRow.querySelectorAll(`.selectable[data-group="${group}"]`).forEach(c => c.classList.remove("active"));
+          this.classList.add("active");
+        }
       } else {
-        // 同一組別（例如同一列或同項目）其他格取消藍色
+        // 其他預設區塊維持單選切換（必定有一格被選中）
         if (group) {
           parentRow.querySelectorAll(`.selectable[data-group="${group}"]`).forEach(c => c.classList.remove("active"));
         } else {
@@ -197,28 +224,27 @@ function setupSelectionHandlers() {
 
 // 核心計分運算
 function calculateAllScores() {
-  // 1. 關卡數量 (若未選則為 0 分)
+  // 1. 關卡數量 (滿分 16，預設 8 * 2 = 16)
   const stageEl = document.querySelector("#row-stage .selectable.active");
-  const stageCount = stageEl ? parseFloat(stageEl.dataset.val) : 0;
+  const stageCount = stageEl ? parseFloat(stageEl.dataset.val) : 8;
   const stageScore = stageCount * 2;
   document.getElementById("score-stage").textContent = stageScore;
 
-  // 2. 流暢度與加權 (若未選次數則為 0 分)
+  // 2. 流暢度與加權 (滿分 20，預設 0 次 = 20)
   const fluencyEl = document.querySelector("#row-fluency .selectable.active");
-  let fluencyRaw = 0;
-  let fluencyWeighted = 0;
+  let fluencyRaw = 20;
+  let fluencyWeighted = 20;
 
   if (fluencyEl) {
     const drops = parseFloat(fluencyEl.dataset.val);
     fluencyRaw = Math.max(0, 20 - drops * 2);
-    // 加權公式：(20 - 次數*2) * 關卡數量 / 8
-    fluencyWeighted = stageCount > 0 ? Number(((fluencyRaw * stageCount) / 8).toFixed(2)) : 0;
+    fluencyWeighted = Number(((fluencyRaw * stageCount) / 8).toFixed(2));
   }
 
   document.getElementById("score-fluency-raw").textContent = fluencyRaw;
   document.getElementById("score-fluency-weighted").textContent = fluencyWeighted;
 
-  // 3. 關卡任務 (任務一、任務二)
+  // 3. 關卡任務 (滿分 10，預設 10)
   let taskTotal = 0;
   ["row-task-1", "row-task-2"].forEach(rowId => {
     const row = document.getElementById(rowId);
@@ -231,15 +257,16 @@ function calculateAllScores() {
   });
   document.getElementById("score-task-total").textContent = taskTotal;
 
-  // 4. 指定任務
-  // 4.1 標準規範 (未選為 0)
+  // 4. 指定任務 (滿分 54 分 = 任務規範 21 分 + 任務得分 33 分)
+  // 4.1 任務規範總分 (滿分 21，預設 21)
   let stdSum = 0;
   document.querySelectorAll("#row-mission-std .selectable.active").forEach(cell => {
     stdSum += parseFloat(cell.dataset.val);
   });
-  document.getElementById("score-mission-std-sum").textContent = stdSum;
+  const stdTotal = Math.round(stdSum);
+  document.getElementById("score-mission-std-sum").textContent = stdTotal;
 
-  // 4.2 區域分數與加分 (未選為 0)
+  // 4.2 任務得分總分 (滿分 33，初始為 0 分，按一下選取計分，再按取消變白為 0)
   let zoneSum = 0;
   ["row-zone-1", "row-zone-2", "row-zone-3"].forEach(rowId => {
     const row = document.getElementById(rowId);
@@ -250,12 +277,11 @@ function calculateAllScores() {
     row.querySelector(".zone-row-total").textContent = rowScore;
     zoneSum += rowScore;
   });
+  const missionScoreTotal = Number(zoneSum.toFixed(2));
+  document.getElementById("score-mission-total").textContent = missionScoreTotal;
 
-  const missionTotal = stdSum + zoneSum;
-  document.getElementById("score-mission-total").textContent = missionTotal;
-
-  // 5. 總分結算
-  const totalScore = Number((stageScore + fluencyWeighted + taskTotal + missionTotal).toFixed(2));
+  // 5. 總分結算 (滿分 100)
+  const totalScore = Number((stageScore + fluencyWeighted + taskTotal + stdTotal + missionScoreTotal).toFixed(2));
   document.getElementById("final-total-score").textContent = totalScore;
 }
 
@@ -269,7 +295,6 @@ function resizeCanvas() {
   const rect = container.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
 
-  // 解決手機高解析螢幕模糊與座標偏移
   canvas.width = rect.width * dpr;
   canvas.height = rect.height * dpr;
   ctx.scale(dpr, dpr);
@@ -319,7 +344,6 @@ function stopDrawing() {
   isDrawing = false;
 }
 
-// 綁定觸控與滑鼠事件
 canvas.addEventListener("touchstart", startDrawing, { passive: false });
 canvas.addEventListener("touchmove", draw, { passive: false });
 canvas.addEventListener("touchend", stopDrawing);
@@ -352,6 +376,7 @@ async function submitScore() {
   const stageScore = parseFloat(document.getElementById("score-stage").textContent);
   const fluencyScore = parseFloat(document.getElementById("score-fluency-weighted").textContent);
   const taskScore = parseFloat(document.getElementById("score-task-total").textContent);
+  const stdScore = parseFloat(document.getElementById("score-mission-std-sum").textContent);
   const missionScore = parseFloat(document.getElementById("score-mission-total").textContent);
   const totalScore = parseFloat(document.getElementById("final-total-score").textContent);
   const signatureData = canvas.toDataURL("image/png");
@@ -364,6 +389,7 @@ async function submitScore() {
     stageScore,
     fluencyScore,
     taskScore,
+    stdScore,
     missionScore,
     totalScore,
     signature: signatureData
