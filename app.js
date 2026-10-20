@@ -25,6 +25,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-clear-sign").addEventListener("click", clearCanvas);
   document.getElementById("btn-submit").addEventListener("click", submitScore);
 
+  // 全部隱藏 / 全部顯示事件綁定
+  document.getElementById("btn-hide-all").addEventListener("click", () => setAllScoresVisibility(true));
+  document.getElementById("btn-show-all").addEventListener("click", () => setAllScoresVisibility(false));
+
   // 螢幕尺寸改變或橫豎向旋轉時校正畫板
   window.addEventListener("resize", () => {
     if (pageScoring.classList.contains("active")) {
@@ -117,11 +121,11 @@ function renderTeamList() {
       <td class="score-col">${missionVal}</td>
       <td class="score-col" style="font-weight:bold; color:var(--primary);">${totalVal}</td>
       <td>
-        <button class="btn btn-secondary" style="padding: 4px 8px; font-size:12px;" onclick="toggleRowScore(this)">隱藏</button>
+        <button class="btn btn-secondary btn-toggle-score" style="padding: 4px 6px; font-size:11px;" onclick="toggleRowScore(this)">隱藏</button>
       </td>
       <td>
-        <button class="btn btn-primary" style="padding: 6px 12px;" onclick="openScoring('${team.teamId}')">
-          ${score.totalScore !== undefined ? "重新評分" : "評分"}
+        <button class="btn btn-primary" style="padding: 5px 8px; font-size:12px;" onclick="openScoring('${team.teamId}')">
+          ${score.totalScore !== undefined ? "重評" : "評分"}
         </button>
       </td>
     `;
@@ -129,6 +133,7 @@ function renderTeamList() {
   });
 }
 
+// 單列切換隱藏/顯示
 window.toggleRowScore = function(btn) {
   const row = btn.closest("tr");
   const scoreCells = row.querySelectorAll(".score-col");
@@ -136,7 +141,9 @@ window.toggleRowScore = function(btn) {
 
   scoreCells.forEach(cell => {
     if (!isHidden) {
-      cell.dataset.realText = cell.textContent;
+      if (!cell.dataset.realText) {
+        cell.dataset.realText = cell.textContent;
+      }
       cell.textContent = "***";
     } else {
       cell.textContent = cell.dataset.realText || cell.textContent;
@@ -146,6 +153,35 @@ window.toggleRowScore = function(btn) {
   btn.dataset.hidden = !isHidden;
   btn.textContent = !isHidden ? "顯示" : "隱藏";
 };
+
+// 全部隱藏 / 全部顯示
+function setAllScoresVisibility(hide) {
+  const rows = teamListBody.querySelectorAll("tr");
+  rows.forEach(row => {
+    const btn = row.querySelector(".btn-toggle-score");
+    const scoreCells = row.querySelectorAll(".score-col");
+    if (!btn || scoreCells.length === 0) return;
+
+    if (hide) {
+      scoreCells.forEach(cell => {
+        if (!cell.dataset.realText) {
+          cell.dataset.realText = cell.textContent;
+        }
+        cell.textContent = "***";
+      });
+      btn.dataset.hidden = "true";
+      btn.textContent = "顯示";
+    } else {
+      scoreCells.forEach(cell => {
+        if (cell.dataset.realText !== undefined) {
+          cell.textContent = cell.dataset.realText;
+        }
+      });
+      btn.dataset.hidden = "false";
+      btn.textContent = "隱藏";
+    }
+  });
+}
 
 window.openScoring = function(teamId) {
   currentTeam = assignedTeams.find(t => t.teamId === teamId);
@@ -293,7 +329,6 @@ function resizeCanvas() {
   const container = canvas.parentElement;
   if (!container || container.offsetParent === null) return;
 
-  // 若已有簽名，先暫存以防尺寸重設清空
   let tempImg = null;
   if (hasSignature) {
     tempImg = canvas.toDataURL();
@@ -311,7 +346,6 @@ function resizeCanvas() {
   ctx.lineJoin = "round";
   ctx.strokeStyle = "#000000";
 
-  // 縮放後繪回原有筆跡
   if (tempImg) {
     const img = new Image();
     img.onload = () => {
