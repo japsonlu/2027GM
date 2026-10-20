@@ -5,7 +5,7 @@ let assignedTeams = [];
 let scoresCache = {};
 let currentTeam = null;
 
-// 關鍵狀態記錄表：記錄每一隊的顯示狀態 ('visible' | 'hidden')
+// 記錄每一隊的顯示狀態 ('visible' | 'hidden')
 const teamDisplayState = {};
 
 const loginView = document.getElementById("login-view");
@@ -32,16 +32,16 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-hide-all").addEventListener("click", hideAllScores);
   document.getElementById("btn-show-all").addEventListener("click", showAllScores);
 
-  // 螢幕尺寸改變或橫豎向旋轉時校正畫板
+  // 螢幕尺寸改變或橫豎向旋轉時校正畫板（僅保留目前正在簽名的筆跡）
   window.addEventListener("resize", () => {
     if (pageScoring.classList.contains("active")) {
-      resizeCanvas();
+      resizeCanvas(true);
     }
   });
   window.addEventListener("orientationchange", () => {
     setTimeout(() => {
       if (pageScoring.classList.contains("active")) {
-        resizeCanvas();
+        resizeCanvas(true);
       }
     }, 200);
   });
@@ -69,7 +69,6 @@ async function handleLogin() {
       assignedTeams = data.teams || [];
       scoresCache = data.existingScores || {};
 
-      // 初始化隊伍顯示狀態
       assignedTeams.forEach(t => {
         if (!teamDisplayState[t.teamId]) {
           teamDisplayState[t.teamId] = "visible";
@@ -108,14 +107,13 @@ function formatScoreVal(val) {
   return String(val);
 }
 
-// 輔助函式：判斷欄位文字在給定 hidden 狀態下應顯現的字串
-// 若原始值為空字串，則隱藏時依然為空白，絕不會補上 ***
+// 輔助函式：若無成績則為空白，有成績時依 hidden 決定顯示或顯示 ***
 function getDisplayScore(valStr, isHidden) {
   if (!valStr) return "";
   return isHidden ? "***" : valStr;
 }
 
-// 根據 teamDisplayState 狀態與「未評分在前、已評分在後」排序渲染
+// 渲染總表隊伍清單：未評分在第一列（前面），已評分沉至後方
 function renderTeamList() {
   teamListBody.innerHTML = "";
 
@@ -124,13 +122,13 @@ function renderTeamList() {
     return;
   }
 
-  // 複製一份隊伍清單進行排序：未評分 (scored=false) 排在前面，已評分 (scored=true) 排在後面
+  // 排序：未評分在前，已評分在後
   const sortedTeams = [...assignedTeams].sort((a, b) => {
     const aScored = scoresCache[a.teamId] && scoresCache[a.teamId].totalScore !== undefined;
     const bScored = scoresCache[b.teamId] && scoresCache[b.teamId].totalScore !== undefined;
 
     if (aScored === bScored) return 0;
-    return aScored ? 1 : -1; // a 已評分則往後放 (1)，未評分則往前放 (-1)
+    return aScored ? 1 : -1;
   });
 
   sortedTeams.forEach(team => {
@@ -202,7 +200,6 @@ function updateRowDisplay(teamId) {
 
   scoreCells.forEach(cell => {
     const rawVal = cell.dataset.val || "";
-    // 只有有成績的才變 ***，沒有成績的永遠保持空白
     cell.textContent = getDisplayScore(rawVal, isHidden);
   });
 
@@ -228,6 +225,7 @@ function showAllScores() {
   });
 }
 
+// 打開評分頁面：徹底清空上一隊的簽名
 window.openScoring = function(teamId) {
   currentTeam = assignedTeams.find(t => t.teamId === teamId);
   document.getElementById("current-team-info").textContent = 
@@ -237,8 +235,12 @@ window.openScoring = function(teamId) {
   calculateAllScores();
   switchPage("scoring");
 
+  // 切換隊伍時，強制清除前一隊的簽名狀態
+  hasSignature = false;
+
   setTimeout(() => {
-    resizeCanvas();
+    // 重新調整畫布尺寸且不保留前一隊的筆跡
+    resizeCanvas(false);
     clearCanvas();
   }, 100);
 };
@@ -271,7 +273,6 @@ function switchPage(page) {
     pageSummary.classList.add("active");
     pageScoring.classList.remove("active");
     document.getElementById("page-title").textContent = "總評分表";
-    // 返回總表時重新渲染排序：已評分隊伍會沉至後方，未評分隊伍在前方
     renderTeamList();
   } else {
     pageSummary.classList.remove("active");
@@ -369,14 +370,14 @@ function calculateAllScores() {
 }
 
 // ---------------------------
-// 簽名板 (支援 Retina 解析度與旋轉保留筆跡)
+// 簽名板 (preserveExisting 控制是否還原目前簽名)
 // ---------------------------
-function resizeCanvas() {
+function resizeCanvas(preserveExisting = false) {
   const container = canvas.parentElement;
   if (!container || container.offsetParent === null) return;
 
   let tempImg = null;
-  if (hasSignature) {
+  if (preserveExisting && hasSignature) {
     tempImg = canvas.toDataURL();
   }
 
@@ -506,7 +507,11 @@ async function submitScore() {
       // 剛評完分的這支隊伍設為顯現 (visible)，其餘原本隱藏的隊伍繼續維持隱藏
       teamDisplayState[currentTeam.teamId] = "visible";
 
-      // 返回總表，renderTeamList() 會自動將這支剛評完分的隊伍排序到未評分隊伍的後方
+      // 清除本隊簽名狀態，避免殘留至下一隊
+      hasSignature = false;
+      clearCanvas();
+
+      // 返回總表，已評分隊伍會自動沉到後面
       switchPage("summary");
     } else {
       alert("儲存失敗：" + result.message);
