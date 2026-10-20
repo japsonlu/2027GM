@@ -6,7 +6,6 @@ let scoresCache = {};
 let currentTeam = null;
 
 // 關鍵狀態記錄表：記錄每一隊的顯示狀態 ('visible' | 'hidden')
-// 只要設為 'hidden'，無論切換頁面、評分、返回總表，都不會被重置
 const teamDisplayState = {};
 
 const loginView = document.getElementById("login-view");
@@ -123,7 +122,7 @@ function renderTeamList() {
     const missionVal = score.missionScore !== undefined ? score.missionScore : "-";
     const totalVal = score.totalScore !== undefined ? score.totalScore : "-";
 
-    // 嚴格判斷：是否已被按過「隱藏」
+    // 嚴格依照該隊伍目前的記錄狀態決定是否隱藏
     const isHidden = (teamDisplayState[team.teamId] === "hidden");
 
     tr.innerHTML = `
@@ -158,19 +157,15 @@ function renderTeamList() {
 // 單一隊伍點擊隱藏/顯示按鈕切換
 window.toggleScoreState = function(teamId) {
   const currentState = teamDisplayState[teamId];
-  // 切換狀態
   if (currentState === "hidden") {
-    // 只有按了「顯示」，才轉為 visible
     teamDisplayState[teamId] = "visible";
   } else {
-    // 按了「隱藏」，轉為 hidden
     teamDisplayState[teamId] = "hidden";
   }
-  // 即時更新畫面該列
   updateRowDisplay(teamId);
 };
 
-// 更新單列畫面，避免重刷整張表
+// 更新單列畫面，避免重刷整張表影響其他行
 function updateRowDisplay(teamId) {
   const row = document.getElementById(`team-row-${teamId}`);
   if (!row) return;
@@ -248,7 +243,7 @@ function switchPage(page) {
     pageSummary.classList.add("active");
     pageScoring.classList.remove("active");
     document.getElementById("page-title").textContent = "總評分表";
-    // 返回總表時重繪，會嚴格依據 teamDisplayState 狀態決定維持隱藏或維持顯示！
+    // 返回總表時重新渲染，嚴格依照各隊伍各自的 teamDisplayState 狀態決定維持隱藏或維持顯示
     renderTeamList();
   } else {
     pageSummary.classList.remove("active");
@@ -479,7 +474,11 @@ async function submitScore() {
     if (result.success) {
       alert("成績已成功同步覆寫至試算表！");
       scoresCache[currentTeam.teamId] = payload;
-      // 送出成功返回總表，此時該隊伍若原本是 hidden，依然維持 hidden 不變！
+
+      // 【核心修改】：只將剛評完分的這支隊伍設為顯現 (visible)，其他隊伍維持原狀態不變
+      teamDisplayState[currentTeam.teamId] = "visible";
+
+      // 返回總表，renderTeamList() 會依照各隊狀態顯示，其他原本隱藏的依然是 ***
       switchPage("summary");
     } else {
       alert("儲存失敗：" + result.message);
