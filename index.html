@@ -236,6 +236,66 @@
       .big-footer-row td { padding: 5px 3px; font-size: 13.5px; }
       .sign-container { height: 115px !important; }
     }
+
+    /* ---------------- 列印/匯出 PDF 專屬樣式 ---------------- */
+    @media print {
+      header,
+      #login-view,
+      #admin-actions,
+      #judge-actions,
+      #summary-heading,
+      .btn,
+      #page-scoring {
+        display: none !important;
+      }
+
+      body, html {
+        background: #fff !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      .page {
+        padding: 0 !important;
+        max-width: 100% !important;
+      }
+
+      .table-responsive {
+        box-shadow: none !important;
+        overflow: visible !important;
+        margin: 0 !important;
+      }
+
+      table {
+        width: 100% !important;
+        font-size: 11pt !important;
+        border-collapse: collapse !important;
+      }
+
+      th, td {
+        border: 1px solid #000 !important;
+        padding: 6px 4px !important;
+        color: #000 !important;
+      }
+
+      th {
+        background-color: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      /* 匯出時隱藏右側操作欄位 */
+      #summary-table th:last-child,
+      #summary-table td:last-child {
+        display: none !important;
+      }
+
+      @page {
+        size: landscape;
+        margin: 1cm;
+      }
+    }
   </style>
 </head>
 <body>
@@ -280,19 +340,22 @@
       </div>
 
       <!-- admin 專屬按鈕組 (預設隱藏) -->
-      <div id="admin-actions" style="display: none; gap: 8px; flex-wrap: wrap; align-items: center;">
-        <!-- 純中文組別按鈕組 -->
-        <div style="display: flex; gap: 4px; border-right: 2px solid #ccc; padding-right: 8px;">
+      <div id="admin-actions" style="display: none; width: 100%; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+        <!-- 左側：組別篩選按鈕與匯出 PDF 按鈕 -->
+        <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
           <button class="btn btn-primary btn-filter-group" data-filter="ALL" style="padding: 5px 10px; font-size: 13px;" id="btn-group-all">全部</button>
           <button class="btn btn-secondary btn-filter-group" data-filter="GAE" style="padding: 5px 10px; font-size: 13px;" id="btn-group-gae">國小</button>
           <button class="btn btn-secondary btn-filter-group" data-filter="GAJ" style="padding: 5px 10px; font-size: 13px;" id="btn-group-gaj">國中</button>
           <button class="btn btn-secondary btn-filter-group" data-filter="GAH" style="padding: 5px 10px; font-size: 13px;" id="btn-group-gah">高中</button>
+          <button class="btn btn-danger" style="padding: 5px 12px; font-size: 13px; margin-left: 4px;" id="btn-export-pdf">📄 匯出 PDF</button>
         </div>
 
-        <!-- 排序與同步按鈕 -->
-        <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px;" id="btn-sort-teamid">🔢 依編號排序 (低→高)</button>
-        <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px; background-color: #673ab7;" id="btn-sort-score">🏆 依總分排序 (高→低)</button>
-        <button class="btn btn-success btn-sync-cloud" style="padding: 5px 10px; font-size: 13px;">🔄 同步雲端成績</button>
+        <!-- 右側：排序與同步按鈕 -->
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px;" id="btn-sort-teamid">🔢 依編號排序 (低→高)</button>
+          <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px; background-color: #673ab7;" id="btn-sort-score">🏆 依總分排序 (高→低)</button>
+          <button class="btn btn-success btn-sync-cloud" style="padding: 5px 10px; font-size: 13px;">🔄 同步雲端成績</button>
+        </div>
       </div>
     </div>
 
