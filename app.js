@@ -4,7 +4,7 @@ let currentJudge = null;
 let currentPass = null;
 let isAdminUser = false;
 let currentSortMode = "teamId"; // "teamId" | "scoreDesc"
-let currentGroupFilter = "ALL"; // "ALL" | "GAE" | "GAJ" | "GAH"
+let currentGroupFilter = "GAE"; // 預設直接指定為國小組 (GAE)
 let assignedTeams = [];
 let scoresCache = {}; 
 let currentTeam = null;
@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTeamList();
   });
 
-  // admin 純中文組別篩選按鈕 (全部 / 國小 / 國中 / 高中)
+  // admin 純中文組別篩選按鈕 (國小 / 國中 / 高中)
   document.querySelectorAll(".btn-filter-group").forEach(btn => {
     btn.addEventListener("click", function() {
       currentGroupFilter = this.dataset.filter;
@@ -144,15 +144,18 @@ function applyUserRoleUI() {
   const judgeActions = document.getElementById("judge-actions");
   const adminActions = document.getElementById("admin-actions");
   const thHideScore = document.querySelector(".th-hide-score");
+  const thLastAction = document.getElementById("th-last-action");
 
   if (isAdminUser) {
     judgeActions.style.display = "none";
     adminActions.style.display = "flex";
     if (thHideScore) thHideScore.style.display = "none";
+    if (thLastAction) thLastAction.textContent = "評分者";
   } else {
     judgeActions.style.display = "flex";
     adminActions.style.display = "none";
     if (thHideScore) thHideScore.style.display = "";
+    if (thLastAction) thLastAction.textContent = "操作";
   }
 }
 
@@ -214,7 +217,7 @@ function renderTeamList() {
 
   // 1. 組別篩選（GAE: 國小, GAJ: 國中, GAH: 高中）
   let filteredTeams = assignedTeams;
-  if (isAdminUser && currentGroupFilter !== "ALL") {
+  if (isAdminUser) {
     filteredTeams = assignedTeams.filter(t => {
       const idUpper = String(t.teamId).toUpperCase();
       return idUpper.startsWith(currentGroupFilter);
@@ -284,6 +287,23 @@ function renderTeamList() {
       </td>
     `;
 
+    // 最後一欄：admin 顯示「評分者姓名」，一般評審顯示「評分/重評按鈕」
+    let lastColumnHtml = "";
+    if (isAdminUser) {
+      const judgeName = score.judgeName || "";
+      lastColumnHtml = `<td style="font-weight: 500; color: #333;">${judgeName}</td>`;
+    } else {
+      lastColumnHtml = `
+        <td>
+          <button class="btn ${isScored ? "btn-danger" : "btn-success"}" 
+                  style="padding: 5px 8px; font-size:12px;" 
+                  onclick="openScoring('${team.teamId}')">
+            ${isScored ? "重評" : "評分"}
+          </button>
+        </td>
+      `;
+    }
+
     tr.innerHTML = `
       <td>${team.group}</td>
       <td style="font-weight:bold;">${team.teamId}</td>
@@ -296,34 +316,44 @@ function renderTeamList() {
       <td class="score-col" data-val="${missionVal}">${getDisplayScore(missionVal, isHidden)}</td>
       <td class="score-col" data-val="${totalVal}" style="font-weight:bold; color:var(--primary);">${getDisplayScore(totalVal, isHidden)}</td>
       ${hideBtnColumn}
-      <td>
-        <button class="btn ${isScored ? "btn-danger" : "btn-success"}" 
-                style="padding: 5px 8px; font-size:12px;" 
-                onclick="openScoring('${team.teamId}')">
-          ${isScored ? "重評" : "評分"}
-        </button>
-      </td>
+      ${lastColumnHtml}
     `;
     teamListBody.appendChild(tr);
   });
 }
 
-// 匯出 PDF 處理函式
+// 匯出 PDF 處理函式：動態縮放以確保強制單張橫向呈現
 function exportSummaryToPdf() {
-  let groupName = "全部組別";
-  if (currentGroupFilter === "GAE") groupName = "國小組";
-  else if (currentGroupFilter === "GAJ") groupName = "國中組";
+  let groupName = "國小組";
+  if (currentGroupFilter === "GAJ") groupName = "國中組";
   else if (currentGroupFilter === "GAH") groupName = "高中組";
 
   const originalTitle = document.title;
   const today = new Date();
   const dateStr = today.getFullYear() + String(today.getMonth() + 1).padStart(2, "0") + String(today.getDate()).padStart(2, "0");
   
-  // 動態修改網頁標題作為匯出 PDF 的預設檔名
   document.title = `機關王評分總表_${groupName}_${dateStr}`;
+
+  // 計算隊伍數量動態計算縮放比例，確保壓縮至單一張 A4
+  const rows = document.querySelectorAll("#team-list-body tr");
+  const count = rows.length;
+  const table = document.getElementById("summary-table");
+
+  let scale = 1.0;
+  if (count > 15 && count <= 25) {
+    scale = 0.85;
+  } else if (count > 25 && count <= 35) {
+    scale = 0.72;
+  } else if (count > 35) {
+    scale = 0.60;
+  }
+
+  table.style.zoom = scale;
 
   window.print();
 
+  // 列印預覽完成後還原畫面縮放與標題
+  table.style.zoom = "";
   document.title = originalTitle;
 }
 
