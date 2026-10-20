@@ -1,33 +1,25 @@
-// Google Apps Script Web App URL
-const API_URL = "https://script.google.com/macros/s/AKfycbxUEJnBa0psphBP_soqpnSXg66ZetsevRUrkRqLKGuJ3WHy97fYzbhMX9ZFYWO2hhvY/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbytvMTqujIoe4T-e5JrpSYr7Yf_X_4E3wlxwXq5ZqwEIh-KUDz1EQwbCHlel62m_P6G/exec";
 
-// 全域狀態
 let currentJudge = null;
 let assignedTeams = [];
 let scoresCache = {};
 let currentTeam = null;
 
-// DOM 元素
 const loginView = document.getElementById("login-view");
 const pageSummary = document.getElementById("page-summary");
 const pageScoring = document.getElementById("page-scoring");
 const judgeDisplay = document.getElementById("judge-display");
 const teamListBody = document.getElementById("team-list-body");
 
-// 簽名畫布狀態
 const canvas = document.getElementById("sign-pad");
 const ctx = canvas.getContext("2d");
 let isDrawing = false;
 let hasSignature = false;
 
-// ---------------------------
-// 1. 初始化與登入流程
-// ---------------------------
 document.addEventListener("DOMContentLoaded", () => {
   initCanvas();
   setupSelectionHandlers();
 
-  // 登入按鈕
   document.getElementById("btn-login").addEventListener("click", handleLogin);
   document.getElementById("btn-logout").addEventListener("click", () => location.reload());
   document.getElementById("btn-back").addEventListener("click", () => switchPage("summary"));
@@ -46,7 +38,7 @@ async function handleLogin() {
 
   const btn = document.getElementById("btn-login");
   btn.disabled = true;
-  btn.textContent = "驗證中...";
+  btn.textContent = "驗證並載入隊伍中...";
 
   try {
     const res = await fetch(`${API_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`);
@@ -54,14 +46,25 @@ async function handleLogin() {
 
     if (data.success) {
       currentJudge = data.judgeName;
-      assignedTeams = data.teams;
+      assignedTeams = data.teams || [];
       scoresCache = data.existingScores || {};
 
       judgeDisplay.textContent = `評審：${currentJudge}`;
       loginView.style.display = "none";
+
+      if (assignedTeams.length === 0) {
+        alert(
+          `【登入成功，但未比對到隊伍】\n\n` +
+          `1. 評審名單 D 欄設定的文字為：\n「${data.rawInputTeams || "(空白)"}」\n\n` +
+          `2. 系統解析出的隊伍代號為：\n${data.parsedTeams.join(", ") || "(無)"}\n\n` +
+          `3. 「隊伍名單」試算表 B 欄抓到的前幾筆代號為：\n${data.sampleTeamsInSheet.join(", ") || "(工作表 B 欄沒有資料)"}\n\n` +
+          `請檢查兩邊的代號格式是否一致（例如 GAE01 vs GAE1）。`
+        );
+      }
+
       renderTeamList();
     } else {
-      alert(data.message || "登入失敗");
+      alert("登入失敗：" + (data.message || "帳號密碼不正確"));
     }
   } catch (err) {
     alert("連線後端錯誤，請確認網路或 API 部署：" + err.message);
@@ -71,11 +74,13 @@ async function handleLogin() {
   }
 }
 
-// ---------------------------
-// 2. 總表渲染 (含個別隱藏成績功能)
-// ---------------------------
 function renderTeamList() {
   teamListBody.innerHTML = "";
+
+  if (assignedTeams.length === 0) {
+    teamListBody.innerHTML = `<tr><td colspan="11" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認《評審名單》D 欄是否有填入正確的隊伍編號！</td></tr>`;
+    return;
+  }
 
   assignedTeams.forEach(team => {
     const tr = document.createElement("tr");
@@ -110,7 +115,6 @@ function renderTeamList() {
   });
 }
 
-// 個別隱藏 / 顯示成績切換
 window.toggleRowScore = function(btn) {
   const row = btn.closest("tr");
   const scoreCells = row.querySelectorAll(".score-col");
@@ -129,9 +133,6 @@ window.toggleRowScore = function(btn) {
   btn.textContent = !isHidden ? "顯示" : "隱藏";
 };
 
-// ---------------------------
-// 3. 評分頁面切換與動態計算
-// ---------------------------
 window.openScoring = function(teamId) {
   currentTeam = assignedTeams.find(t => t.teamId === teamId);
   document.getElementById("current-team-info").textContent = 
@@ -155,7 +156,6 @@ function switchPage(page) {
   }
 }
 
-// 監聽表格單元格點選
 function setupSelectionHandlers() {
   document.querySelectorAll(".selectable").forEach(cell => {
     cell.addEventListener("click", function() {
@@ -163,10 +163,8 @@ function setupSelectionHandlers() {
       const group = this.dataset.group;
 
       if (group) {
-        // 群組單選 (例如任務一內容、區域分數等)
         parentRow.querySelectorAll(`.selectable[data-group="${group}"]`).forEach(c => c.classList.remove("active"));
       } else {
-        // 整行單選 (例如關卡數量、流暢度)
         parentRow.querySelectorAll(".selectable").forEach(c => c.classList.remove("active"));
       }
 
@@ -176,7 +174,6 @@ function setupSelectionHandlers() {
   });
 }
 
-// 核心計分邏輯
 function calculateAllScores() {
   // 1. 關卡數量 (滿分 16)
   const stageEl = document.querySelector("#row-stage .selectable.active");
@@ -185,7 +182,6 @@ function calculateAllScores() {
   document.getElementById("score-stage").textContent = stageScore;
 
   // 2. 流暢度與加權 (滿分 20)
-  // 公式：若手動或掉落次數為 X，關卡數量為 N，加權得分為 (20 - X*2) * N / 8
   const fluencyEl = document.querySelector("#row-fluency .selectable.active");
   const fluencyDrops = fluencyEl ? parseFloat(fluencyEl.dataset.val) : 0;
   const fluencyRaw = Math.max(0, 20 - fluencyDrops * 2);
@@ -208,14 +204,12 @@ function calculateAllScores() {
   document.getElementById("score-task-total").textContent = taskTotal;
 
   // 4. 指定任務 (滿分 54)
-  // 4.1 標準規範 (27分)
   let stdSum = 0;
   document.querySelectorAll("#row-mission-std .selectable.active").forEach(cell => {
     stdSum += parseFloat(cell.dataset.val);
   });
   document.getElementById("score-mission-std-sum").textContent = stdSum;
 
-  // 4.2 區域分數與加分 (27分)
   let zoneSum = 0;
   ["row-zone-1", "row-zone-2", "row-zone-3"].forEach(rowId => {
     const row = document.getElementById(rowId);
@@ -235,9 +229,6 @@ function calculateAllScores() {
   document.getElementById("final-total-score").textContent = totalScore;
 }
 
-// ---------------------------
-// 4. iPad 觸控簽名板
-// ---------------------------
 function initCanvas() {
   const rect = canvas.parentElement.getBoundingClientRect();
   canvas.width = rect.width;
@@ -289,9 +280,6 @@ function clearCanvas() {
   hasSignature = false;
 }
 
-// ---------------------------
-// 5. 成績送出與防衝突覆寫
-// ---------------------------
 async function submitScore() {
   if (!hasSignature) {
     alert("請評審完成下方簽名後再行送出！");
@@ -332,7 +320,6 @@ async function submitScore() {
 
     if (result.success) {
       alert("成績已成功同步覆寫至試算表！");
-      // 更新本地快取
       scoresCache[currentTeam.teamId] = payload;
       switchPage("summary");
     } else {
