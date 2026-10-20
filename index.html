@@ -237,7 +237,11 @@
       .sign-container { height: 115px !important; }
     }
 
-    /* ---------------- 列印/匯出 PDF 專屬樣式 ---------------- */
+    /* ---------------- 單頁橫式 PDF 列印專用樣式 ---------------- */
+    @page {
+      size: landscape;
+      margin: 5mm;
+    }
     @media print {
       header,
       #login-view,
@@ -245,15 +249,24 @@
       #judge-actions,
       #summary-heading,
       .btn,
-      #page-scoring {
+      #page-scoring,
+      .th-hide-score {
+        display: none !important;
+      }
+
+      /* 匯出時不包含最後一欄「評分者 / 操作」 */
+      #th-last-action,
+      #summary-table td:last-child {
         display: none !important;
       }
 
       body, html {
         background: #fff !important;
         width: 100% !important;
+        height: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
+        overflow: hidden !important;
       }
 
       .page {
@@ -267,33 +280,32 @@
         margin: 0 !important;
       }
 
-      table {
+      /* 濃縮表格排版，強制壓縮在單一橫向頁面 */
+      #summary-table {
         width: 100% !important;
-        font-size: 11pt !important;
+        table-layout: fixed !important;
         border-collapse: collapse !important;
+        page-break-inside: avoid !important;
       }
 
-      th, td {
+      #summary-table th, 
+      #summary-table td {
         border: 1px solid #000 !important;
-        padding: 6px 4px !important;
+        padding: 3px 2px !important;
         color: #000 !important;
+        font-size: 9.5pt !important;
+        line-height: 1.15 !important;
       }
 
-      th {
-        background-color: #f0f0f0 !important;
+      #summary-table th {
+        background-color: #f2f2f2 !important;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
 
-      /* 匯出時隱藏右側操作欄位 */
-      #summary-table th:last-child,
-      #summary-table td:last-child {
-        display: none !important;
-      }
-
-      @page {
-        size: landscape;
-        margin: 1cm;
+      /* 自動適配縮放比例，防止跨頁產生 */
+      .fit-one-page {
+        transform-origin: top center;
       }
     }
   </style>
@@ -339,15 +351,14 @@
         <button class="btn btn-success btn-sync-cloud" style="padding: 5px 10px; font-size: 13px;">🔄 同步雲端成績</button>
       </div>
 
-      <!-- admin 專屬按鈕組 (預設隱藏) -->
+      <!-- admin 專屬按鈕組 (已移除「全部」按鈕) -->
       <div id="admin-actions" style="display: none; width: 100%; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-        <!-- 左側：組別篩選按鈕與匯出 PDF 按鈕 -->
+        <!-- 左側：純中文組別 (國小/國中/高中) 與 匯出 PDF -->
         <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
-          <button class="btn btn-primary btn-filter-group" data-filter="ALL" style="padding: 5px 10px; font-size: 13px;" id="btn-group-all">全部</button>
-          <button class="btn btn-secondary btn-filter-group" data-filter="GAE" style="padding: 5px 10px; font-size: 13px;" id="btn-group-gae">國小</button>
-          <button class="btn btn-secondary btn-filter-group" data-filter="GAJ" style="padding: 5px 10px; font-size: 13px;" id="btn-group-gaj">國中</button>
-          <button class="btn btn-secondary btn-filter-group" data-filter="GAH" style="padding: 5px 10px; font-size: 13px;" id="btn-group-gah">高中</button>
-          <button class="btn btn-danger" style="padding: 5px 12px; font-size: 13px; margin-left: 4px;" id="btn-export-pdf">📄 匯出 PDF</button>
+          <button class="btn btn-primary btn-filter-group" data-filter="GAE" style="padding: 5px 11px; font-size: 13px;" id="btn-group-gae">國小</button>
+          <button class="btn btn-secondary btn-filter-group" data-filter="GAJ" style="padding: 5px 11px; font-size: 13px;" id="btn-group-gaj">國中</button>
+          <button class="btn btn-secondary btn-filter-group" data-filter="GAH" style="padding: 5px 11px; font-size: 13px;" id="btn-group-gah">高中</button>
+          <button class="btn btn-danger" style="padding: 5px 12px; font-size: 13px; margin-left: 6px;" id="btn-export-pdf">📄 匯出 PDF</button>
         </div>
 
         <!-- 右側：排序與同步按鈕 -->
@@ -374,7 +385,7 @@
             <th style="min-width: 48px;">任務<br>(33)</th>
             <th style="min-width: 56px;">總分<br>(100)</th>
             <th style="min-width: 56px;" class="th-hide-score">隱藏<br>成績</th>
-            <th style="min-width: 72px;">操作</th>
+            <th style="min-width: 72px;" id="th-last-action">操作</th>
           </tr>
         </thead>
         <tbody id="team-list-body"></tbody>
