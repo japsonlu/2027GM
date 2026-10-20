@@ -2,7 +2,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbytvMTqujIoe4T-e5JrpSYr
 
 let currentJudge = null;
 let assignedTeams = [];
-let scoresCache = {};
+let scoresCache = {}; // 嚴格以試算表回傳為唯一依據
 let currentTeam = null;
 
 // 記錄每一隊的顯示狀態 ('visible' | 'hidden')
@@ -18,6 +18,7 @@ const canvas = document.getElementById("sign-pad");
 const ctx = canvas.getContext("2d");
 let isDrawing = false;
 let hasSignature = false;
+let syncTimer = null; // 雲端定時同步器
 
 document.addEventListener("DOMContentLoaded", () => {
   setupSelectionHandlers();
@@ -28,11 +29,17 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-clear-sign").addEventListener("click", clearCanvas);
   document.getElementById("btn-submit").addEventListener("click", submitScore);
 
-  // 全部隱藏 / 全部顯示事件綁定
   document.getElementById("btn-hide-all").addEventListener("click", hideAllScores);
   document.getElementById("btn-show-all").addEventListener("click", showAllScores);
 
-  // 螢幕尺寸改變或旋轉時，僅重繪當前操作畫布
+  const btnSync = document.getElementById("btn-sync-cloud");
+  if (btnSync) {
+    btnSync.addEventListener("click", () => {
+      fetchLatestScores(true);
+    });
+  }
+
+  // 螢幕旋轉或尺寸改變時重設畫板（僅保留目前正在簽名的筆跡）
   window.addEventListener("resize", () => {
     if (pageScoring.classList.contains("active")) {
       resizeCanvas(hasSignature);
@@ -88,6 +95,15 @@ async function handleLogin() {
       }
 
       renderTeamList();
+
+      // 每 15 秒自動反向跟雲端試算表對齊一次，後台一刪除此處隨即自動歸零
+      if (syncTimer) clearInterval(syncTimer);
+      syncTimer = setInterval(() => {
+        if (pageSummary.classList.contains("active") && currentJudge) {
+          fetchLatestScores(false);
+        }
+      }, 15000);
+
     } else {
       alert("登入失敗：" + (data.message || "帳號密碼不正確"));
     }
@@ -99,7 +115,23 @@ async function handleLogin() {
   }
 }
 
-// 輔助函式：取得數值的文字表示（嚴格判斷：0 也是有效數值，只有 undefined、null、空字串返回空）
+// 反向從試算表撈取指定評審的最新成績
+async function fetchLatestScores(showNotice = false) {
+  if (!currentJudge) return;
+  try {
+    const res = await fetch(`${API_URL}?action=getScores&judgeName=${encodeURIComponent(currentJudge)}&_t=${Date.now()}`);
+    const data = await res.json();
+    if (data.success) {
+      scoresCache = data.scores || {};
+      renderTeamList();
+      if (showNotice) alert("已成功同步試算表最新成績！若後台已清空，總表已全數歸零。");
+    }
+  } catch (e) {
+    console.error("同步試算表失敗", e);
+  }
+}
+
+// 輔助函式：取得數值的文字表示（嚴格判斷：0 是合法分數，只有 undefined/null/"" 返回空字串）
 function formatScoreVal(val) {
   if (val === undefined || val === null || val === "" || val === "-") {
     return "";
@@ -107,13 +139,13 @@ function formatScoreVal(val) {
   return String(val);
 }
 
-// 輔助函式：若無成績則為空白，有成績時依 hidden 決定顯示或顯示 ***
+// 輔助函式：無分數時保持空白，有分數時依 hidden 判斷是否遮罩為 ***
 function getDisplayScore(valStr, isHidden) {
   if (!valStr && valStr !== "0") return "";
   return isHidden ? "***" : valStr;
 }
 
-// 渲染總表隊伍清單：未評分在第一列（前面），已評分沉至後方
+// 渲染總表隊伍清單：未評分在前面，已評分沉至後方
 function renderTeamList() {
   teamListBody.innerHTML = "";
 
@@ -122,10 +154,10 @@ function renderTeamList() {
     return;
   }
 
-  // 排序：未評分在前，已評分在後
+  // 排序：未評分在前 (綠色)，已評分在後 (紅色)
   const sortedTeams = [...assignedTeams].sort((a, b) => {
-    const aScored = scoresCache[a.teamId] && scoresCache[a.teamId].totalScore !== undefined;
-    const bScored = scoresCache[b.teamId] && scoresCache[b.teamId].totalScore !== undefined;
+    const aScored = scoresCache[a.teamId] && scoresCache[a.teamId].totalScore !== undefined && scoresCache[a.teamId].totalScore !== "";
+    const bScored = scoresCache[b.teamId] && scoresCache[b.teamId].totalScore !== undefined && scoresCache[b.teamId].totalScore !== "";
 
     if (aScored === bScored) return 0;
     return aScored ? 1 : -1;
@@ -138,7 +170,7 @@ function renderTeamList() {
     const score = scoresCache[team.teamId] || {};
     const isScored = (score.totalScore !== undefined && score.totalScore !== null && score.totalScore !== "");
 
-    // 容錯支援不同命名鍵值 (stdScore 或 missionStdScore)
+    // 支援 stdScore 與 missionStdScore 雙相容鍵名
     const stdRaw = score.stdScore !== undefined ? score.stdScore : score.missionStdScore;
 
     const stageVal = formatScoreVal(score.stageScore);
@@ -192,7 +224,7 @@ window.toggleScoreState = function(teamId) {
   updateRowDisplay(teamId);
 };
 
-// 更新單列畫面
+// 更新單列畫面，避免重整全表
 function updateRowDisplay(teamId) {
   const row = document.getElementById(`team-row-${teamId}`);
   if (!row) return;
@@ -238,11 +270,9 @@ window.openScoring = function(teamId) {
   calculateAllScores();
   switchPage("scoring");
 
-  // 強制重置簽名狀態
+  // 強制清除畫布與簽名狀態
   hasSignature = false;
   isDrawing = false;
-
-  // 物理清除 Canvas 像素快取
   canvas.width = 0;
   canvas.height = 0;
 
@@ -252,7 +282,7 @@ window.openScoring = function(teamId) {
   }, 120);
 };
 
-// 重設評分表格選項至預設值
+// 重設評分選項為系統預設值
 function resetFormToDefaults() {
   document.querySelectorAll(".toggleable").forEach(cell => {
     cell.classList.remove("active");
@@ -280,7 +310,8 @@ function switchPage(page) {
     pageSummary.classList.add("active");
     pageScoring.classList.remove("active");
     document.getElementById("page-title").textContent = "總評分表";
-    renderTeamList();
+    // 回總表時主動反向跟試算表同步最新資料
+    fetchLatestScores(false);
   } else {
     pageSummary.classList.remove("active");
     pageScoring.classList.add("active");
@@ -378,7 +409,7 @@ function calculateAllScores() {
 }
 
 // ---------------------------
-// 簽名板 (嚴格清空，避免跨隊殘留)
+// 簽名板 (嚴格清空，支援 Retina 與旋轉不溢出)
 // ---------------------------
 function resizeCanvas(preserveExisting = false) {
   const container = canvas.parentElement;
@@ -486,7 +517,7 @@ async function submitScore() {
   const totalScore = parseFloat(document.getElementById("final-total-score").textContent) || 0;
   const signatureData = canvas.toDataURL("image/png");
 
-  // 同時附上 stdScore 與 missionStdScore 雙鍵名，確保相容後端試算表定義
+  // 同步送出 stdScore 與 missionStdScore 雙相容鍵名
   const payload = {
     judgeName: currentJudge,
     teamId: currentTeam.teamId,
@@ -512,18 +543,15 @@ async function submitScore() {
 
     if (result.success) {
       alert("成績已成功同步覆寫至試算表！");
-      scoresCache[currentTeam.teamId] = payload;
-
-      // 剛評完分的這支隊伍設為顯現 (visible)
       teamDisplayState[currentTeam.teamId] = "visible";
 
-      // 徹底銷毀簽名與畫布
+      // 銷毀當前簽名
       clearCanvas();
       hasSignature = false;
       canvas.width = 0;
       canvas.height = 0;
 
-      // 返回總表
+      // 切換回總表時會自動向試算表反向讀取確認最新結果
       switchPage("summary");
     } else {
       alert("儲存失敗：" + result.message);
