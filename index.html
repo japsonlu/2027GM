@@ -60,7 +60,7 @@
     .page { display: none; padding: 16px; max-width: 1200px; margin: 0 auto; }
     .page.active { display: block; }
 
-    /* 表格滾動外框（防手機擠壓） */
+    /* 表格橫向防擠壓滾動 */
     .table-responsive {
       width: 100%;
       overflow-x: auto;
@@ -86,7 +86,7 @@
     }
     th { background: #f1f3f5; font-weight: 600; }
 
-    /* 可點選格子的樣式 */
+    /* 選取格子樣式 */
     .selectable {
       cursor: pointer;
       user-select: none;
@@ -100,7 +100,7 @@
       font-weight: bold;
     }
 
-    /* 置中的大表格加總列 */
+    /* 大表格底端置中合併列 */
     .big-footer-row td {
       padding: 14px 8px;
       font-size: 18px;
@@ -127,7 +127,6 @@
     }
     .sign-actions { margin-top: 10px; display: flex; gap: 10px; }
 
-    /* 手機直向適配 */
     @media (max-width: 768px) {
       header h2 { font-size: 17px; }
       .section-title { font-size: 16px; }
@@ -168,7 +167,7 @@
   <div id="page-summary" class="page active">
     <h3>分配評分隊伍清單</h3>
     <div class="table-responsive">
-      <table id="summary-table" style="min-width: 820px;">
+      <table id="summary-table" style="min-width: 860px;">
         <thead>
           <tr>
             <th style="width: 65px;">組別</th>
@@ -178,10 +177,11 @@
             <th style="width: 80px;">關卡(16)</th>
             <th style="width: 90px;">流暢度(20)</th>
             <th style="width: 80px;">內容(10)</th>
-            <th style="width: 90px;">任務(54)</th>
+            <th style="width: 90px;">規範(21)</th>
+            <th style="width: 90px;">任務(33)</th>
             <th style="width: 85px;">總分(100)</th>
-            <th style="width: 85px;">隱藏成績</th>
-            <th style="width: 100px;">操作</th>
+            <th style="width: 80px;">隱藏成績</th>
+            <th style="width: 95px;">操作</th>
           </tr>
         </thead>
         <tbody id="team-list-body"></tbody>
@@ -198,7 +198,7 @@
       <button class="btn btn-secondary" id="btn-back">返回總表</button>
     </div>
 
-    <!-- 1. 關卡數量 -->
+    <!-- 1. 關卡數量 (預設 8) -->
     <div class="section-title">關卡數量(16 分)：</div>
     <div class="table-responsive">
       <table style="min-width: 580px;">
@@ -209,21 +209,21 @@
         </thead>
         <tbody>
           <tr id="row-stage">
-            <td class="selectable toggleable" data-group="stage" data-val="1">1</td>
-            <td class="selectable toggleable" data-group="stage" data-val="2">2</td>
-            <td class="selectable toggleable" data-group="stage" data-val="3">3</td>
-            <td class="selectable toggleable" data-group="stage" data-val="4">4</td>
-            <td class="selectable toggleable" data-group="stage" data-val="5">5</td>
-            <td class="selectable toggleable" data-group="stage" data-val="6">6</td>
-            <td class="selectable toggleable" data-group="stage" data-val="7">7</td>
-            <td class="selectable toggleable" data-group="stage" data-val="8">8</td>
-            <td id="score-stage" class="score-badge">0</td>
+            <td class="selectable" data-group="stage" data-val="1">1</td>
+            <td class="selectable" data-group="stage" data-val="2">2</td>
+            <td class="selectable" data-group="stage" data-val="3">3</td>
+            <td class="selectable" data-group="stage" data-val="4">4</td>
+            <td class="selectable" data-group="stage" data-val="5">5</td>
+            <td class="selectable" data-group="stage" data-val="6">6</td>
+            <td class="selectable" data-group="stage" data-val="7">7</td>
+            <td class="selectable active" data-group="stage" data-val="8">8</td>
+            <td id="score-stage" class="score-badge">16</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- 2. 流暢度 (包含加權分數大框置中) -->
+    <!-- 2. 流暢度 (預設 0 次，加權顯示：/20) -->
     <div class="section-title">流暢度(20 分)：</div>
     <div class="sub-title">手動或掉落次數</div>
     <div class="table-responsive">
@@ -235,30 +235,29 @@
         </thead>
         <tbody>
           <tr id="row-fluency">
-            <td class="selectable toggleable" data-group="fluency" data-val="0">0</td>
-            <td class="selectable toggleable" data-group="fluency" data-val="1">1</td>
-            <td class="selectable toggleable" data-group="fluency" data-val="2">2</td>
-            <td class="selectable toggleable" data-group="fluency" data-val="3">3</td>
-            <td class="selectable toggleable" data-group="fluency" data-val="4">4</td>
-            <td class="selectable toggleable" data-group="fluency" data-val="5">5</td>
-            <td class="selectable toggleable" data-group="fluency" data-val="6">6</td>
-            <td class="selectable toggleable" data-group="fluency" data-val="7">7</td>
-            <td class="selectable toggleable" data-group="fluency" data-val="8">8</td>
-            <td class="selectable toggleable" data-group="fluency" data-val="9">9</td>
-            <td class="selectable toggleable" data-group="fluency" data-val="10">10</td>
-            <td id="score-fluency-raw" class="score-badge">0</td>
+            <td class="selectable active" data-group="fluency" data-val="0">0</td>
+            <td class="selectable" data-group="fluency" data-val="1">1</td>
+            <td class="selectable" data-group="fluency" data-val="2">2</td>
+            <td class="selectable" data-group="fluency" data-val="3">3</td>
+            <td class="selectable" data-group="fluency" data-val="4">4</td>
+            <td class="selectable" data-group="fluency" data-val="5">5</td>
+            <td class="selectable" data-group="fluency" data-val="6">6</td>
+            <td class="selectable" data-group="fluency" data-val="7">7</td>
+            <td class="selectable" data-group="fluency" data-val="8">8</td>
+            <td class="selectable" data-group="fluency" data-val="9">9</td>
+            <td class="selectable" data-group="fluency" data-val="10">10</td>
+            <td id="score-fluency-raw" class="score-badge">20</td>
           </tr>
-          <!-- 大表格置中框住的加權列 -->
           <tr class="big-footer-row">
             <td colspan="12">
-              流暢度加權分數：<span id="score-fluency-weighted" class="score-badge" style="font-size: 22px;">0</span>
+              流暢度加權：<span id="score-fluency-weighted" class="score-badge" style="font-size: 22px;">20</span> / 20
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- 3. 關卡任務/內容 (包含總計置中框) -->
+    <!-- 3. 關卡任務 (任務一、任務二預設 3 與 2) -->
     <div class="section-title">關卡任務(10 分)：</div>
     <div class="table-responsive">
       <table style="min-width: 580px;">
@@ -276,35 +275,35 @@
         <tbody>
           <tr id="row-task-1">
             <td style="font-weight: 500;">任務一</td>
-            <td class="selectable toggleable" data-group="c1" data-val="3">3</td>
-            <td class="selectable toggleable" data-group="c1" data-val="1">1</td>
-            <td class="selectable toggleable" data-group="c1" data-val="0">0</td>
-            <td class="selectable toggleable" data-group="o1" data-val="2">2</td>
-            <td class="selectable toggleable" data-group="o1" data-val="0">0</td>
-            <td class="score-badge task-row-total">0</td>
+            <td class="selectable active" data-group="c1" data-val="3">3</td>
+            <td class="selectable" data-group="c1" data-val="1">1</td>
+            <td class="selectable" data-group="c1" data-val="0">0</td>
+            <td class="selectable active" data-group="o1" data-val="2">2</td>
+            <td class="selectable" data-group="o1" data-val="0">0</td>
+            <td class="score-badge task-row-total">5</td>
           </tr>
           <tr id="row-task-2">
             <td style="font-weight: 500;">任務二</td>
-            <td class="selectable toggleable" data-group="c2" data-val="3">3</td>
-            <td class="selectable toggleable" data-group="c2" data-val="1">1</td>
-            <td class="selectable toggleable" data-group="c2" data-val="0">0</td>
-            <td class="selectable toggleable" data-group="o2" data-val="2">2</td>
-            <td class="selectable toggleable" data-group="o2" data-val="0">0</td>
-            <td class="score-badge task-row-total">0</td>
+            <td class="selectable active" data-group="c2" data-val="3">3</td>
+            <td class="selectable" data-group="c2" data-val="1">1</td>
+            <td class="selectable" data-group="c2" data-val="0">0</td>
+            <td class="selectable active" data-group="o2" data-val="2">2</td>
+            <td class="selectable" data-group="o2" data-val="0">0</td>
+            <td class="score-badge task-row-total">5</td>
           </tr>
           <tr class="big-footer-row">
             <td colspan="7">
-              關卡任務加總：<span id="score-task-total" class="score-badge" style="font-size: 22px;">0</span> / 10 分
+              關卡任務加總：<span id="score-task-total" class="score-badge" style="font-size: 22px;">10</span> / 10 分
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- 4. 指定任務 -->
+    <!-- 4. 指定任務 (規範 21 分 + 得分 33 分 = 54 分) -->
     <div class="section-title">指定任務(54 分)：</div>
-    
-    <!-- 4.1 任務標準規範分數 (含加總列大表格置中) -->
+
+    <!-- 4.1 任務標準規範分數 (預設全為「是」，總分 / 21) -->
     <div class="table-responsive">
       <table style="min-width: 780px; font-size: 14px;">
         <thead>
@@ -329,30 +328,29 @@
         </thead>
         <tbody>
           <tr id="row-mission-std">
-            <!-- 第一次 -->
-            <td class="selectable toggleable" data-group="m1_1" data-val="0">否</td><td class="selectable toggleable" data-group="m1_1" data-val="3">是</td>
-            <td class="selectable toggleable" data-group="m1_2" data-val="0">否</td><td class="selectable toggleable" data-group="m1_2" data-val="3">是</td>
-            <td class="selectable toggleable" data-group="m1_3" data-val="0">否</td><td class="selectable toggleable" data-group="m1_3" data-val="3">是</td>
-            <!-- 第二次 -->
-            <td class="selectable toggleable" data-group="m2_1" data-val="0">否</td><td class="selectable toggleable" data-group="m2_1" data-val="3">是</td>
-            <td class="selectable toggleable" data-group="m2_2" data-val="0">否</td><td class="selectable toggleable" data-group="m2_2" data-val="3">是</td>
-            <td class="selectable toggleable" data-group="m2_3" data-val="0">否</td><td class="selectable toggleable" data-group="m2_3" data-val="3">是</td>
-            <!-- 第三次 -->
-            <td class="selectable toggleable" data-group="m3_1" data-val="0">否</td><td class="selectable toggleable" data-group="m3_1" data-val="3">是</td>
-            <td class="selectable toggleable" data-group="m3_2" data-val="0">否</td><td class="selectable toggleable" data-group="m3_2" data-val="3">是</td>
-            <td class="selectable toggleable" data-group="m3_3" data-val="0">否</td><td class="selectable toggleable" data-group="m3_3" data-val="3">是</td>
+            <!-- 第一次 (每項 7/3 分，3項合計 7 分，預設選「是」) -->
+            <td class="selectable" data-group="m1_1" data-val="0">否</td><td class="selectable active" data-group="m1_1" data-val="2.3333">是</td>
+            <td class="selectable" data-group="m1_2" data-val="0">否</td><td class="selectable active" data-group="m1_2" data-val="2.3333">是</td>
+            <td class="selectable" data-group="m1_3" data-val="0">否</td><td class="selectable active" data-group="m1_3" data-val="2.3334">是</td>
+            <!-- 第二次 (合計 7 分，預設選「是」) -->
+            <td class="selectable" data-group="m2_1" data-val="0">否</td><td class="selectable active" data-group="m2_1" data-val="2.3333">是</td>
+            <td class="selectable" data-group="m2_2" data-val="0">否</td><td class="selectable active" data-group="m2_2" data-val="2.3333">是</td>
+            <td class="selectable" data-group="m2_3" data-val="0">否</td><td class="selectable active" data-group="m2_3" data-val="2.3334">是</td>
+            <!-- 第三次 (合計 7 分，預設選「是」) -->
+            <td class="selectable" data-group="m3_1" data-val="0">否</td><td class="selectable active" data-group="m3_1" data-val="2.3333">是</td>
+            <td class="selectable" data-group="m3_2" data-val="0">否</td><td class="selectable active" data-group="m3_2" data-val="2.3333">是</td>
+            <td class="selectable" data-group="m3_3" data-val="0">否</td><td class="selectable active" data-group="m3_3" data-val="2.3334">是</td>
           </tr>
-          <!-- 任務規範加總大表格置中 -->
           <tr class="big-footer-row">
             <td colspan="18">
-              任務規範加總：<span id="score-mission-std-sum" class="score-badge" style="font-size: 22px;">0</span>
+              任務規範總分：<span id="score-mission-std-sum" class="score-badge" style="font-size: 22px;">21</span> / 21
             </td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- 4.2 區域分數與加分 (含加總列大表格置中) -->
+    <!-- 4.2 任務得分加總大欄位 (只有此區塊初始為白色，點選變藍，再點一次變白取消) -->
     <div class="table-responsive">
       <table style="min-width: 820px;">
         <thead>
@@ -431,10 +429,10 @@
             <td class="selectable toggleable" data-group="b3" data-val="0.5">0.5</td>
             <td class="score-badge zone-row-total">0</td>
           </tr>
-          <!-- 任務得分加總大表格置中 -->
+          <!-- 任務得分加總大框，滿分 / 33 -->
           <tr class="big-footer-row">
             <td colspan="17">
-              任務得分加總：<span id="score-mission-total" class="score-badge" style="font-size: 22px;">0</span>
+              任務得分總分：<span id="score-mission-total" class="score-badge" style="font-size: 22px;">0</span> / 33
             </td>
           </tr>
         </tbody>
@@ -447,7 +445,7 @@
     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
       <div>
         <div style="font-size: 22px; font-weight: bold; margin-bottom: 8px;">
-          本次評分總結算：<span id="final-total-score" style="color: #d32f2f; font-size: 32px;">0</span> / 100 分
+          本次評分總結算：<span id="final-total-score" style="color: #d32f2f; font-size: 32px;">67</span> / 100 分
         </div>
         <p style="color: #666; font-size: 14px; margin: 0;">請於右方簽名板簽署，點擊送出即可同步至 Google 試算表。</p>
       </div>
