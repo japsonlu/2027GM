@@ -75,7 +75,6 @@
 
     /* 得分與文字框 */
     .score-badge { font-weight: bold; color: var(--primary); font-size: 17px; }
-    .calc-hint { color: #d32f2f; font-size: 14px; margin-top: 4px; }
     .section-title { font-size: 18px; font-weight: bold; margin: 20px 0 8px 0; }
     
     /* 簽名畫板 */
@@ -167,7 +166,7 @@
           <td class="selectable" data-val="5">5</td>
           <td class="selectable" data-val="6">6</td>
           <td class="selectable" data-val="7">7</td>
-          <td class="selectable active" data-val="8">8 (預設)</td>
+          <td class="selectable active" data-val="8">8</td>
           <td id="score-stage" class="score-badge">16</td>
         </tr>
       </tbody>
@@ -184,7 +183,7 @@
       </thead>
       <tbody>
         <tr id="row-fluency">
-          <td class="selectable active" data-val="0">0 (預設)</td>
+          <td class="selectable active" data-val="0">0</td>
           <td class="selectable" data-val="1">1</td>
           <td class="selectable" data-val="2">2</td>
           <td class="selectable" data-val="3">3</td>
@@ -199,9 +198,8 @@
         </tr>
       </tbody>
     </table>
-    <div>
+    <div style="margin-bottom: 12px;">
       <strong>流暢度加權分數：<span id="score-fluency-weighted" class="score-badge" style="font-size: 20px;">20</span> 分</strong>
-      <div class="calc-hint">(公式：(20 - 次數*2) * 關卡數量 / 8)</div>
     </div>
 
     <!-- 3. 關卡內容/任務 -->
@@ -221,19 +219,19 @@
       <tbody>
         <tr id="row-task-1">
           <td>任務一</td>
-          <td class="selectable active" data-group="c1" data-val="3">3 (預設)</td>
+          <td class="selectable active" data-group="c1" data-val="3">3</td>
           <td class="selectable" data-group="c1" data-val="1">1</td>
           <td class="selectable" data-group="c1" data-val="0">0</td>
-          <td class="selectable active" data-group="o1" data-val="2">2 (預設)</td>
+          <td class="selectable active" data-group="o1" data-val="2">2</td>
           <td class="selectable" data-group="o1" data-val="0">0</td>
           <td class="score-badge task-row-total">5</td>
         </tr>
         <tr id="row-task-2">
           <td>任務二</td>
-          <td class="selectable active" data-group="c2" data-val="3">3 (預設)</td>
+          <td class="selectable active" data-group="c2" data-val="3">3</td>
           <td class="selectable" data-group="c2" data-val="1">1</td>
           <td class="selectable" data-group="c2" data-val="0">0</td>
-          <td class="selectable active" data-group="o2" data-val="2">2 (預設)</td>
+          <td class="selectable active" data-group="o2" data-val="2">2</td>
           <td class="selectable" data-group="o2" data-val="0">0</td>
           <td class="score-badge task-row-total">5</td>
         </tr>
@@ -267,23 +265,23 @@
       <tbody>
         <tr id="row-mission-std">
           <!-- 第一次 -->
-          <td class="selectable" data-group="m1_1" data-val="0">否</td><td class="selectable active" data-group="m1_1" data-val="3">是(預設)</td>
-          <td class="selectable" data-group="m1_2" data-val="0">否</td><td class="selectable active" data-group="m1_2" data-val="3">是(預設)</td>
-          <td class="selectable" data-group="m1_3" data-val="0">否</td><td class="selectable active" data-group="m1_3" data-val="3">是(預設)</td>
+          <td class="selectable" data-group="m1_1" data-val="0">否</td><td class="selectable active" data-group="m1_1" data-val="3">是</td>
+          <td class="selectable" data-group="m1_2" data-val="0">否</td><td class="selectable active" data-group="m1_2" data-val="3">是</td>
+          <td class="selectable" data-group="m1_3" data-val="0">否</td><td class="selectable active" data-group="m1_3" data-val="3">是</td>
           <!-- 第二次 -->
-          <td class="selectable" data-group="m2_1" data-val="0">否</td><td class="selectable active" data-group="m2_1" data-val="3">是(預設)</td>
-          <td class="selectable" data-group="m2_2" data-val="0">否</td><td class="selectable active" data-group="m2_2" data-val="3">是(預設)</td>
-          <td class="selectable" data-group="m2_3" data-val="0">否</td><td class="selectable active" data-group="m2_3" data-val="3">是(預設)</td>
+          <td class="selectable" data-group="m2_1" data-val="0">否</td><td class="selectable active" data-group="m2_1" data-val="3">是</td>
+          <td class="selectable" data-group="m2_2" data-val="0">否</td><td class="selectable active" data-group="m2_2" data-val="3">是</td>
+          <td class="selectable" data-group="m2_3" data-val="0">否</td><td class="selectable active" data-group="m2_3" data-val="3">是</td>
           <!-- 第三次 -->
-          <td class="selectable" data-group="m3_1" data-val="0">否</td><td class="selectable active" data-group="m3_1" data-val="3">是(預設)</td>
-          <td class="selectable" data-group="m3_2" data-val="0">否</td><td class="selectable active" data-group="m3_2" data-val="3">是(預設)</td>
-          <td class="selectable" data-group="m3_3" data-val="0">否</td><td class="selectable active" data-group="m3_3" data-val="3">是(預設)</td>
+          <td class="selectable" data-group="m3_1" data-val="0">否</td><td class="selectable active" data-group="m3_1" data-val="3">是</td>
+          <td class="selectable" data-group="m3_2" data-val="0">否</td><td class="selectable active" data-group="m3_2" data-val="3">是</td>
+          <td class="selectable" data-group="m3_3" data-val="0">否</td><td class="selectable active" data-group="m3_3" data-val="3">是</td>
         </tr>
       </tbody>
     </table>
     <div style="font-weight: bold; margin-bottom: 12px;">標準規範加總：<span id="score-mission-std-sum" class="score-badge">27</span> 分</div>
 
-    <!-- 區域分數與加分 -->
+    <!-- 區域分數與加分 (預設不選取、支援 toggle 點擊反選) -->
     <table>
       <thead>
         <tr>
@@ -301,49 +299,70 @@
         <!-- 第一次 -->
         <tr id="row-zone-1">
           <td>第一次</td>
-          <td class="selectable active" data-group="z1" data-val="8">8</td>
-          <td class="selectable" data-group="z1" data-val="7">7</td><td class="selectable" data-group="z1" data-val="6">6</td>
-          <td class="selectable" data-group="z1" data-val="5">5</td><td class="selectable" data-group="z1" data-val="4">4</td>
-          <td class="selectable" data-group="z1" data-val="3">3</td><td class="selectable" data-group="z1" data-val="2">2</td>
-          <td class="selectable" data-group="z1" data-val="1">1</td><td class="selectable" data-group="z1" data-val="0">0</td>
+          <td class="selectable toggleable" data-group="z1" data-val="8">8</td>
+          <td class="selectable toggleable" data-group="z1" data-val="7">7</td>
+          <td class="selectable toggleable" data-group="z1" data-val="6">6</td>
+          <td class="selectable toggleable" data-group="z1" data-val="5">5</td>
+          <td class="selectable toggleable" data-group="z1" data-val="4">4</td>
+          <td class="selectable toggleable" data-group="z1" data-val="3">3</td>
+          <td class="selectable toggleable" data-group="z1" data-val="2">2</td>
+          <td class="selectable toggleable" data-group="z1" data-val="1">1</td>
+          <td class="selectable toggleable" data-group="z1" data-val="0">0</td>
           <!-- 加分 -->
-          <td class="selectable" data-group="b1" data-val="3">3</td><td class="selectable" data-group="b1" data-val="2.5">2.5</td>
-          <td class="selectable" data-group="b1" data-val="2">2</td><td class="selectable" data-group="b1" data-val="1.5">1.5</td>
-          <td class="selectable active" data-group="b1" data-val="1">1</td><td class="selectable" data-group="b1" data-val="0.5">0.5</td>
-          <td class="score-badge zone-row-total">9</td>
+          <td class="selectable toggleable" data-group="b1" data-val="3">3</td>
+          <td class="selectable toggleable" data-group="b1" data-val="2.5">2.5</td>
+          <td class="selectable toggleable" data-group="b1" data-val="2">2</td>
+          <td class="selectable toggleable" data-group="b1" data-val="1.5">1.5</td>
+          <td class="selectable toggleable" data-group="b1" data-val="1">1</td>
+          <td class="selectable toggleable" data-group="b1" data-val="0.5">0.5</td>
+          <td class="score-badge zone-row-total">0</td>
         </tr>
         <!-- 第二次 -->
         <tr id="row-zone-2">
           <td>第二次</td>
-          <td class="selectable active" data-group="z2" data-val="8">8</td>
-          <td class="selectable" data-group="z2" data-val="7">7</td><td class="selectable" data-group="z2" data-val="6">6</td>
-          <td class="selectable" data-group="z2" data-val="5">5</td><td class="selectable" data-group="z2" data-val="4">4</td>
-          <td class="selectable" data-group="z2" data-val="3">3</td><td class="selectable" data-group="z2" data-val="2">2</td>
-          <td class="selectable" data-group="z2" data-val="1">1</td><td class="selectable" data-group="z2" data-val="0">0</td>
+          <td class="selectable toggleable" data-group="z2" data-val="8">8</td>
+          <td class="selectable toggleable" data-group="z2" data-val="7">7</td>
+          <td class="selectable toggleable" data-group="z2" data-val="6">6</td>
+          <td class="selectable toggleable" data-group="z2" data-val="5">5</td>
+          <td class="selectable toggleable" data-group="z2" data-val="4">4</td>
+          <td class="selectable toggleable" data-group="z2" data-val="3">3</td>
+          <td class="selectable toggleable" data-group="z2" data-val="2">2</td>
+          <td class="selectable toggleable" data-group="z2" data-val="1">1</td>
+          <td class="selectable toggleable" data-group="z2" data-val="0">0</td>
           <!-- 加分 -->
-          <td class="selectable" data-group="b2" data-val="3">3</td><td class="selectable" data-group="b2" data-val="2.5">2.5</td>
-          <td class="selectable" data-group="b2" data-val="2">2</td><td class="selectable" data-group="b2" data-val="1.5">1.5</td>
-          <td class="selectable active" data-group="b2" data-val="1">1</td><td class="selectable" data-group="b2" data-val="0.5">0.5</td>
-          <td class="score-badge zone-row-total">9</td>
+          <td class="selectable toggleable" data-group="b2" data-val="3">3</td>
+          <td class="selectable toggleable" data-group="b2" data-val="2.5">2.5</td>
+          <td class="selectable toggleable" data-group="b2" data-val="2">2</td>
+          <td class="selectable toggleable" data-group="b2" data-val="1.5">1.5</td>
+          <td class="selectable toggleable" data-group="b2" data-val="1">1</td>
+          <td class="selectable toggleable" data-group="b2" data-val="0.5">0.5</td>
+          <td class="score-badge zone-row-total">0</td>
         </tr>
         <!-- 第三次 -->
         <tr id="row-zone-3">
           <td>第三次</td>
-          <td class="selectable active" data-group="z3" data-val="8">8</td>
-          <td class="selectable" data-group="z3" data-val="7">7</td><td class="selectable" data-group="z3" data-val="6">6</td>
-          <td class="selectable" data-group="z3" data-val="5">5</td><td class="selectable" data-group="z3" data-val="4">4</td>
-          <td class="selectable" data-group="z3" data-val="3">3</td><td class="selectable" data-group="z3" data-val="2">2</td>
-          <td class="selectable" data-group="z3" data-val="1">1</td><td class="selectable" data-group="z3" data-val="0">0</td>
+          <td class="selectable toggleable" data-group="z3" data-val="8">8</td>
+          <td class="selectable toggleable" data-group="z3" data-val="7">7</td>
+          <td class="selectable toggleable" data-group="z3" data-val="6">6</td>
+          <td class="selectable toggleable" data-group="z3" data-val="5">5</td>
+          <td class="selectable toggleable" data-group="z3" data-val="4">4</td>
+          <td class="selectable toggleable" data-group="z3" data-val="3">3</td>
+          <td class="selectable toggleable" data-group="z3" data-val="2">2</td>
+          <td class="selectable toggleable" data-group="z3" data-val="1">1</td>
+          <td class="selectable toggleable" data-group="z3" data-val="0">0</td>
           <!-- 加分 -->
-          <td class="selectable" data-group="b3" data-val="3">3</td><td class="selectable" data-group="b3" data-val="2.5">2.5</td>
-          <td class="selectable" data-group="b3" data-val="2">2</td><td class="selectable" data-group="b3" data-val="1.5">1.5</td>
-          <td class="selectable active" data-group="b3" data-val="1">1</td><td class="selectable" data-group="b3" data-val="0.5">0.5</td>
-          <td class="score-badge zone-row-total">9</td>
+          <td class="selectable toggleable" data-group="b3" data-val="3">3</td>
+          <td class="selectable toggleable" data-group="b3" data-val="2.5">2.5</td>
+          <td class="selectable toggleable" data-group="b3" data-val="2">2</td>
+          <td class="selectable toggleable" data-group="b3" data-val="1.5">1.5</td>
+          <td class="selectable toggleable" data-group="b3" data-val="1">1</td>
+          <td class="selectable toggleable" data-group="b3" data-val="0.5">0.5</td>
+          <td class="score-badge zone-row-total">0</td>
         </tr>
       </tbody>
     </table>
     <div style="font-weight: bold; margin-bottom: 20px;">
-      指定任務加總：<span id="score-mission-total" class="score-badge" style="font-size: 20px;">54</span> / 54 分
+      指定任務加總：<span id="score-mission-total" class="score-badge" style="font-size: 20px;">27</span> / 54 分
     </div>
 
     <hr style="margin: 30px 0; border: none; border-top: 1px solid #ccc;">
@@ -352,7 +371,7 @@
     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
       <div>
         <div style="font-size: 24px; font-weight: bold; margin-bottom: 12px;">
-          本次評分總結算：<span id="final-total-score" style="color: #d32f2f; font-size: 32px;">100</span> / 100 分
+          本次評分總結算：<span id="final-total-score" style="color: #d32f2f; font-size: 32px;">73</span> / 100 分
         </div>
         <p style="color: #666; font-size: 14px;">請於右方簽名板簽署，點擊送出即可同步至 Google 試算表。</p>
       </div>
