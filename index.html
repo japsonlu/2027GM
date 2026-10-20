@@ -276,14 +276,23 @@
       <div id="judge-actions" style="display: flex; gap: 8px;">
         <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 13px;" id="btn-hide-all">全部隱藏成績</button>
         <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px;" id="btn-show-all">全部顯示成績</button>
-        <button class="btn btn-success" style="padding: 5px 10px; font-size: 13px;" class="btn-sync-cloud">🔄 同步雲端成績</button>
+        <button class="btn btn-success btn-sync-cloud" style="padding: 5px 10px; font-size: 13px;">🔄 同步雲端成績</button>
       </div>
 
       <!-- admin 專屬按鈕組 (預設隱藏) -->
-      <div id="admin-actions" style="display: none; gap: 8px; flex-wrap: wrap;">
-        <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px;" id="btn-sort-teamid">🔢 依隊伍編號排序 (低→高)</button>
-        <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px; background-color: #673ab7;" id="btn-sort-score">🏆 依總分成績排序 (高→低)</button>
-        <button class="btn btn-success" style="padding: 5px 10px; font-size: 13px;" class="btn-sync-cloud">🔄 同步雲端成績</button>
+      <div id="admin-actions" style="display: none; gap: 8px; flex-wrap: wrap; align-items: center;">
+        <!-- 純中文組別按鈕組 -->
+        <div style="display: flex; gap: 4px; border-right: 2px solid #ccc; padding-right: 8px;">
+          <button class="btn btn-primary btn-filter-group" data-filter="ALL" style="padding: 5px 10px; font-size: 13px;" id="btn-group-all">全部</button>
+          <button class="btn btn-secondary btn-filter-group" data-filter="GAE" style="padding: 5px 10px; font-size: 13px;" id="btn-group-gae">國小</button>
+          <button class="btn btn-secondary btn-filter-group" data-filter="GAJ" style="padding: 5px 10px; font-size: 13px;" id="btn-group-gaj">國中</button>
+          <button class="btn btn-secondary btn-filter-group" data-filter="GAH" style="padding: 5px 10px; font-size: 13px;" id="btn-group-gah">高中</button>
+        </div>
+
+        <!-- 排序與同步按鈕 -->
+        <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px;" id="btn-sort-teamid">🔢 依編號排序 (低→高)</button>
+        <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px; background-color: #673ab7;" id="btn-sort-score">🏆 依總分排序 (高→低)</button>
+        <button class="btn btn-success btn-sync-cloud" style="padding: 5px 10px; font-size: 13px;">🔄 同步雲端成績</button>
       </div>
     </div>
 
@@ -301,7 +310,6 @@
             <th style="min-width: 48px;">規範<br>(21)</th>
             <th style="min-width: 48px;">任務<br>(33)</th>
             <th style="min-width: 56px;">總分<br>(100)</th>
-            <!-- 隱藏成績欄（admin 登入時自動隱藏） -->
             <th style="min-width: 56px;" class="th-hide-score">隱藏<br>成績</th>
             <th style="min-width: 72px;">操作</th>
           </tr>
@@ -311,7 +319,7 @@
     </div>
   </div>
 
-  <!-- 頁面 2：隊伍獨立評分頁面 (保持原結構) -->
+  <!-- 頁面 2：隊伍獨立評分頁面 -->
   <div id="page-scoring" class="page">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px;">
       <div>
