@@ -2,13 +2,13 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzhbWmJzRP0qwuxyKdxETuv
 
 let currentJudge = null;
 let currentPass = null;
-let isAdminUser = false; // 是否為 admin
-let currentSortMode = "teamId"; // admin 專屬排序模式: "teamId" | "scoreDesc"
+let isAdminUser = false;
+let currentSortMode = "teamId"; // "teamId" | "scoreDesc"
+let currentGroupFilter = "ALL"; // "ALL" | "GAE" | "GAJ" | "GAH"
 let assignedTeams = [];
 let scoresCache = {}; 
 let currentTeam = null;
 
-// 記錄每一隊的顯示狀態 ('visible' | 'hidden')
 const teamDisplayState = {};
 
 const loginView = document.getElementById("login-view");
@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-hide-all").addEventListener("click", hideAllScores);
   document.getElementById("btn-show-all").addEventListener("click", showAllScores);
 
-  // admin 專屬排序按鈕
+  // admin 排序按鈕
   document.getElementById("btn-sort-teamid").addEventListener("click", () => {
     currentSortMode = "teamId";
     renderTeamList();
@@ -46,7 +46,21 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTeamList();
   });
 
-  // 同步雲端按鈕綁定 (支援多個相同 class 的按鈕)
+  // admin 純中文組別篩選按鈕 (全部 / 國小 / 國中 / 高中)
+  document.querySelectorAll(".btn-filter-group").forEach(btn => {
+    btn.addEventListener("click", function() {
+      currentGroupFilter = this.dataset.filter;
+      
+      document.querySelectorAll(".btn-filter-group").forEach(b => {
+        b.className = "btn btn-secondary btn-filter-group";
+      });
+      this.className = "btn btn-primary btn-filter-group";
+
+      renderTeamList();
+    });
+  });
+
+  // 同步雲端成績按鈕
   document.querySelectorAll(".btn-sync-cloud").forEach(btn => {
     btn.addEventListener("click", () => {
       fetchLatestScores(true);
@@ -87,7 +101,6 @@ async function handleLogin() {
     if (data.success) {
       currentJudge = data.judgeName;
       currentPass = pass;
-      // 判定是否為 admin
       isAdminUser = (user.toLowerCase() === "admin") || !!data.isAdmin;
       
       assignedTeams = data.teams || [];
@@ -100,12 +113,9 @@ async function handleLogin() {
       judgeDisplay.textContent = isAdminUser ? `系統管理員：${currentJudge}` : `評審：${currentJudge}`;
       loginView.style.display = "none";
 
-      // 依據身分切換介面
       applyUserRoleUI();
-
       renderTeamList();
 
-      // 每 15 秒定時同步試算表成績
       if (syncTimer) clearInterval(syncTimer);
       syncTimer = setInterval(() => {
         if (pageSummary.classList.contains("active") && currentJudge) {
@@ -124,7 +134,6 @@ async function handleLogin() {
   }
 }
 
-// 根據是否為 admin 切換顯示 UI
 function applyUserRoleUI() {
   const judgeActions = document.getElementById("judge-actions");
   const adminActions = document.getElementById("admin-actions");
@@ -133,7 +142,7 @@ function applyUserRoleUI() {
   if (isAdminUser) {
     judgeActions.style.display = "none";
     adminActions.style.display = "flex";
-    if (thHideScore) thHideScore.style.display = "none"; // 隱藏表頭的「隱藏成績」
+    if (thHideScore) thHideScore.style.display = "none";
   } else {
     judgeActions.style.display = "flex";
     adminActions.style.display = "none";
@@ -141,7 +150,6 @@ function applyUserRoleUI() {
   }
 }
 
-// 核心同步函式：向 Google 試算表反向讀取最新成績
 async function fetchLatestScores(showNotice = false) {
   if (!currentJudge) return;
 
@@ -185,7 +193,6 @@ function formatScoreVal(val) {
 
 function getDisplayScore(valStr, isHidden) {
   if (!valStr && valStr !== "0") return "";
-  // admin 永遠不遮蔽成績
   if (isAdminUser) return valStr;
   return isHidden ? "***" : valStr;
 }
@@ -199,28 +206,37 @@ function renderTeamList() {
     return;
   }
 
-  // 排序核心邏輯
-  const sortedTeams = [...assignedTeams].sort((a, b) => {
+  // 1. 組別篩選（GAE: 國小, GAJ: 國中, GAH: 高中）
+  let filteredTeams = assignedTeams;
+  if (isAdminUser && currentGroupFilter !== "ALL") {
+    filteredTeams = assignedTeams.filter(t => {
+      const idUpper = String(t.teamId).toUpperCase();
+      return idUpper.startsWith(currentGroupFilter);
+    });
+  }
+
+  if (filteredTeams.length === 0) {
+    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#666; padding: 24px;">查無此組別之隊伍！</td></tr>`;
+    return;
+  }
+
+  // 2. 排序處理
+  const sortedTeams = [...filteredTeams].sort((a, b) => {
     const aScore = scoresCache[a.teamId];
     const bScore = scoresCache[b.teamId];
     const aTotal = (aScore && aScore.totalScore !== undefined && aScore.totalScore !== "") ? parseFloat(aScore.totalScore) : null;
     const bTotal = (bScore && bScore.totalScore !== undefined && bScore.totalScore !== "") ? parseFloat(bScore.totalScore) : null;
 
     if (isAdminUser) {
-      // ===== ADMIN 模式 =====
       if (currentSortMode === "scoreDesc") {
-        // 總分成績排序（由高至低），無成績排在最後
         if (aTotal !== null && bTotal !== null) return bTotal - aTotal;
         if (aTotal !== null && bTotal === null) return -1;
         if (aTotal === null && bTotal !== null) return 1;
         return a.teamId.localeCompare(b.teamId, undefined, { numeric: true });
       } else {
-        // 隊伍編號排序（由低至高）
         return a.teamId.localeCompare(b.teamId, undefined, { numeric: true });
       }
     } else {
-      // ===== 一般評審模式 =====
-      // 未評分在前 (綠色)，已評分在後 (紅色)
       const aScored = (aTotal !== null);
       const bScored = (bTotal !== null);
       if (aScored === bScored) {
@@ -237,7 +253,6 @@ function renderTeamList() {
     const score = scoresCache[team.teamId] || {};
     const isScored = (score.totalScore !== undefined && score.totalScore !== null && score.totalScore !== "");
 
-    // 規範分數鍵名相容
     let stdRaw = score.stdScore;
     if (stdRaw === undefined || stdRaw === null || stdRaw === "") {
       stdRaw = score.missionStdScore !== undefined ? score.missionStdScore : (score.ruleScore !== undefined ? score.ruleScore : score.std);
@@ -252,7 +267,6 @@ function renderTeamList() {
 
     const isHidden = (teamDisplayState[team.teamId] === "hidden");
 
-    // 依據是否為 admin 決定是否產生「隱藏成績」按鈕欄位
     const hideBtnColumn = isAdminUser ? "" : `
       <td>
         <button class="btn ${isHidden ? "btn-primary" : "btn-secondary"}" 
@@ -288,7 +302,6 @@ function renderTeamList() {
   });
 }
 
-// 一般評審切換隱藏
 window.toggleScoreState = function(teamId) {
   if (isAdminUser) return;
   const currentState = teamDisplayState[teamId];
@@ -331,7 +344,6 @@ function showAllScores() {
   });
 }
 
-// 開啟評分頁面
 window.openScoring = function(teamId) {
   currentTeam = assignedTeams.find(t => t.teamId === teamId);
   document.getElementById("current-team-info").textContent = 
@@ -555,7 +567,6 @@ function clearCanvas() {
   hasSignature = false;
 }
 
-// 送出成績
 async function submitScore() {
   if (!hasSignature) {
     alert("請評審完成下方簽名後再行送出！");
@@ -583,21 +594,21 @@ async function submitScore() {
     String(now.getSeconds()).padStart(2, "0");
 
   const payload = {
-    group: currentTeam.group || "",          // 1. 組別
-    teamId: currentTeam.teamId,              // 2. 隊伍編號
-    school: currentTeam.school,              // 3. 學校名稱
-    teamName: currentTeam.teamName,          // 4. 隊伍名稱
-    stageScore: stageScore,                  // 5. 關卡(16)
-    fluencyScore: fluencyScore,              // 6. 流暢度(20)
-    taskScore: taskScore,                    // 7. 內容(10)
-    stdScore: stdScore,                      // 8. 規範(21)
+    group: currentTeam.group || "",
+    teamId: currentTeam.teamId,
+    school: currentTeam.school,
+    teamName: currentTeam.teamName,
+    stageScore: stageScore,
+    fluencyScore: fluencyScore,
+    taskScore: taskScore,
+    stdScore: stdScore,
     missionStdScore: stdScore,
     ruleScore: stdScore,
-    missionScore: missionScore,              // 9. 任務(33)
-    totalScore: totalScore,                  // 10. 總分(100)
-    judgeName: currentJudge,                 // 11. 評分者
-    timestamp: timestamp,                    // 12. 評分時間
-    signature: signatureData                 // 13. 簽名檔案
+    missionScore: missionScore,
+    totalScore: totalScore,
+    judgeName: currentJudge,
+    timestamp: timestamp,
+    signature: signatureData
   };
 
   try {
