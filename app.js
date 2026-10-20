@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbwg0TsrBEulfroTS_zLZlsrnjruRLlDRt-kEamlXHZj_gS93UvybkeqLqw_JjDmdqVk/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbzhbWmJzRP0qwuxyKdxETuvooZ6WwAO_fYT8NfpRNlU1uOHFOY0qS0AwojlAluhUlNr/exec";
 
 let currentJudge = null;
 let currentPass = null; // 紀錄密碼以供手動與自動同步查詢
