@@ -25,7 +25,19 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-clear-sign").addEventListener("click", clearCanvas);
   document.getElementById("btn-submit").addEventListener("click", submitScore);
 
-  window.addEventListener("resize", resizeCanvas);
+  // 螢幕尺寸改變或橫豎向旋轉時校正畫板
+  window.addEventListener("resize", () => {
+    if (pageScoring.classList.contains("active")) {
+      resizeCanvas();
+    }
+  });
+  window.addEventListener("orientationchange", () => {
+    setTimeout(() => {
+      if (pageScoring.classList.contains("active")) {
+        resizeCanvas();
+      }
+    }, 200);
+  });
 });
 
 async function handleLogin() {
@@ -150,22 +162,18 @@ window.openScoring = function(teamId) {
   }, 100);
 };
 
-// 只有任務得分加總（區域分數與加分）重設為白色，其他區塊恢復預設藍色
+// 只有任務得分加總（區域分數與加分）重設為白色，其他區塊恢復預設值
 function resetFormToDefaults() {
-  // 1. 只有 .toggleable（任務得分欄位）移除 active，一開始全部為白色
   document.querySelectorAll(".toggleable").forEach(cell => {
     cell.classList.remove("active");
   });
 
-  // 2. 關卡數量預設 8
   document.querySelectorAll("#row-stage .selectable").forEach(c => c.classList.remove("active"));
   document.querySelector('#row-stage .selectable[data-val="8"]').classList.add("active");
 
-  // 3. 流暢度預設 0
   document.querySelectorAll("#row-fluency .selectable").forEach(c => c.classList.remove("active"));
   document.querySelector('#row-fluency .selectable[data-val="0"]').classList.add("active");
 
-  // 4. 關卡任務預設（內容符合 3、運作 2）
   ["row-task-1", "row-task-2"].forEach(rowId => {
     const row = document.getElementById(rowId);
     row.querySelectorAll(".selectable").forEach(c => c.classList.remove("active"));
@@ -173,7 +181,6 @@ function resetFormToDefaults() {
     row.querySelector('.selectable[data-val="2"]').classList.add("active");
   });
 
-  // 5. 任務規範預設全部選「是」
   document.querySelectorAll("#row-mission-std .selectable").forEach(c => c.classList.remove("active"));
   document.querySelectorAll('#row-mission-std .selectable[data-val="2.3333"], #row-mission-std .selectable[data-val="2.3334"]').forEach(c => c.classList.add("active"));
 }
@@ -191,7 +198,6 @@ function switchPage(page) {
   }
 }
 
-// 點選切換邏輯
 function setupSelectionHandlers() {
   document.querySelectorAll(".selectable").forEach(cell => {
     cell.addEventListener("click", function() {
@@ -200,7 +206,6 @@ function setupSelectionHandlers() {
       const isToggleable = this.classList.contains("toggleable");
 
       if (isToggleable) {
-        // 只有任務得分加總區塊支援反選（再次點擊取消變白為 0 分）
         if (this.classList.contains("active")) {
           this.classList.remove("active");
         } else {
@@ -208,7 +213,6 @@ function setupSelectionHandlers() {
           this.classList.add("active");
         }
       } else {
-        // 其他預設區塊維持單選切換（必定有一格被選中）
         if (group) {
           parentRow.querySelectorAll(`.selectable[data-group="${group}"]`).forEach(c => c.classList.remove("active"));
         } else {
@@ -222,15 +226,14 @@ function setupSelectionHandlers() {
   });
 }
 
-// 核心計分運算
 function calculateAllScores() {
-  // 1. 關卡數量 (滿分 16，預設 8 * 2 = 16)
+  // 1. 關卡數量
   const stageEl = document.querySelector("#row-stage .selectable.active");
   const stageCount = stageEl ? parseFloat(stageEl.dataset.val) : 8;
   const stageScore = stageCount * 2;
   document.getElementById("score-stage").textContent = stageScore;
 
-  // 2. 流暢度與加權 (滿分 20，預設 0 次 = 20)
+  // 2. 流暢度
   const fluencyEl = document.querySelector("#row-fluency .selectable.active");
   let fluencyRaw = 20;
   let fluencyWeighted = 20;
@@ -244,7 +247,7 @@ function calculateAllScores() {
   document.getElementById("score-fluency-raw").textContent = fluencyRaw;
   document.getElementById("score-fluency-weighted").textContent = fluencyWeighted;
 
-  // 3. 關卡任務 (滿分 10，預設 10)
+  // 3. 關卡任務
   let taskTotal = 0;
   ["row-task-1", "row-task-2"].forEach(rowId => {
     const row = document.getElementById(rowId);
@@ -257,8 +260,7 @@ function calculateAllScores() {
   });
   document.getElementById("score-task-total").textContent = taskTotal;
 
-  // 4. 指定任務 (滿分 54 分 = 任務規範 21 分 + 任務得分 33 分)
-  // 4.1 任務規範總分 (滿分 21，預設 21)
+  // 4. 指定任務
   let stdSum = 0;
   document.querySelectorAll("#row-mission-std .selectable.active").forEach(cell => {
     stdSum += parseFloat(cell.dataset.val);
@@ -266,7 +268,6 @@ function calculateAllScores() {
   const stdTotal = Math.round(stdSum);
   document.getElementById("score-mission-std-sum").textContent = stdTotal;
 
-  // 4.2 任務得分總分 (滿分 33，初始為 0 分，按一下選取計分，再按取消變白為 0)
   let zoneSum = 0;
   ["row-zone-1", "row-zone-2", "row-zone-3"].forEach(rowId => {
     const row = document.getElementById(rowId);
@@ -280,17 +281,23 @@ function calculateAllScores() {
   const missionScoreTotal = Number(zoneSum.toFixed(2));
   document.getElementById("score-mission-total").textContent = missionScoreTotal;
 
-  // 5. 總分結算 (滿分 100)
+  // 5. 總分結算
   const totalScore = Number((stageScore + fluencyWeighted + taskTotal + stdTotal + missionScoreTotal).toFixed(2));
   document.getElementById("final-total-score").textContent = totalScore;
 }
 
 // ---------------------------
-// 簽名板 (完美支援手機觸控、iPad Apple Pencil 與 Retina 高解析)
+// 簽名板 (支援 Retina 解析度與旋轉保留筆跡)
 // ---------------------------
 function resizeCanvas() {
   const container = canvas.parentElement;
-  if (!container) return;
+  if (!container || container.offsetParent === null) return;
+
+  // 若已有簽名，先暫存以防尺寸重設清空
+  let tempImg = null;
+  if (hasSignature) {
+    tempImg = canvas.toDataURL();
+  }
 
   const rect = container.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
@@ -303,6 +310,15 @@ function resizeCanvas() {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.strokeStyle = "#000000";
+
+  // 縮放後繪回原有筆跡
+  if (tempImg) {
+    const img = new Image();
+    img.onload = () => {
+      ctx.drawImage(img, 0, 0, rect.width, rect.height);
+    };
+    img.src = tempImg;
+  }
 }
 
 function getEventPos(e) {
