@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>機器人創客競賽評分系統</title>
+  <title>機關王評分系統</title>
   <style>
     :root {
       --primary: #1976d2;
@@ -151,7 +151,7 @@
     </div>
 
     <!-- 1. 關卡數量 -->
-    <div class="section-title">關卡數量 (16 分)[cite: 2]：</div>
+    <div class="section-title">關卡數量 (16 分)：</div>
     <table>
       <thead>
         <tr>
@@ -167,15 +167,15 @@
           <td class="selectable" data-val="5">5</td>
           <td class="selectable" data-val="6">6</td>
           <td class="selectable" data-val="7">7</td>
-          <td class="selectable active" data-val="8">8 (預設)[cite: 2]</td>
+          <td class="selectable active" data-val="8">8 (預設)</td>
           <td id="score-stage" class="score-badge">16</td>
         </tr>
       </tbody>
     </table>
 
     <!-- 2. 流暢度 -->
-    <div class="section-title">流暢度 (20 分)[cite: 2]：</div>
-    <div style="font-size: 15px; margin-bottom: 6px;">手動或掉落次數[cite: 2]</div>
+    <div class="section-title">流暢度 (20 分)：</div>
+    <div style="font-size: 15px; margin-bottom: 6px;">手動或掉落次數</div>
     <table>
       <thead>
         <tr>
@@ -184,7 +184,7 @@
       </thead>
       <tbody>
         <tr id="row-fluency">
-          <td class="selectable active" data-val="0">0 (預設)[cite: 2]</td>
+          <td class="selectable active" data-val="0">0 (預設)</td>
           <td class="selectable" data-val="1">1</td>
           <td class="selectable" data-val="2">2</td>
           <td class="selectable" data-val="3">3</td>
@@ -200,41 +200,41 @@
       </tbody>
     </table>
     <div>
-      <strong>流暢度加權分數[cite: 2]：<span id="score-fluency-weighted" class="score-badge" style="font-size: 20px;">20</span> 分</strong>
-      <div class="calc-hint">(公式：(20 - 次數*2) * 關卡數量 / 8)[cite: 2]</div>
+      <strong>流暢度加權分數：<span id="score-fluency-weighted" class="score-badge" style="font-size: 20px;">20</span> 分</strong>
+      <div class="calc-hint">(公式：(20 - 次數*2) * 關卡數量 / 8)</div>
     </div>
 
     <!-- 3. 關卡內容/任務 -->
-    <div class="section-title">關卡內容 / 任務 (10 分)[cite: 3]：</div>
+    <div class="section-title">關卡內容 / 任務 (10 分)：</div>
     <table>
       <thead>
         <tr>
           <th rowspan="2" style="width: 100px;">項目</th>
-          <th colspan="3">內容符合[cite: 3]</th>
-          <th colspan="2">運作[cite: 3]</th>
-          <th rowspan="2" style="width: 80px;">合計[cite: 3]</th>
+          <th colspan="3">內容符合</th>
+          <th colspan="2">運作</th>
+          <th rowspan="2" style="width: 80px;">合計</th>
         </tr>
         <tr>
-          <th>3[cite: 3]</th><th>1[cite: 3]</th><th>0[cite: 3]</th><th>2[cite: 3]</th><th>0[cite: 3]</th>
+          <th>3</th><th>1</th><th>0</th><th>2</th><th>0</th>
         </tr>
       </thead>
       <tbody>
         <tr id="row-task-1">
-          <td>任務一[cite: 3]</td>
-          <td class="selectable active" data-group="c1" data-val="3">3 (預設)[cite: 3]</td>
-          <td class="selectable" data-group="c1" data-val="1">1[cite: 3]</td>
-          <td class="selectable" data-group="c1" data-val="0">0[cite: 3]</td>
-          <td class="selectable active" data-group="o1" data-val="2">2 (預設)[cite: 3]</td>
-          <td class="selectable" data-group="o1" data-val="0">0[cite: 3]</td>
+          <td>任務一</td>
+          <td class="selectable active" data-group="c1" data-val="3">3 (預設)</td>
+          <td class="selectable" data-group="c1" data-val="1">1</td>
+          <td class="selectable" data-group="c1" data-val="0">0</td>
+          <td class="selectable active" data-group="o1" data-val="2">2 (預設)</td>
+          <td class="selectable" data-group="o1" data-val="0">0</td>
           <td class="score-badge task-row-total">5</td>
         </tr>
         <tr id="row-task-2">
-          <td>任務二[cite: 3]</td>
-          <td class="selectable active" data-group="c2" data-val="3">3 (預設)[cite: 3]</td>
-          <td class="selectable" data-group="c2" data-val="1">1[cite: 3]</td>
-          <td class="selectable" data-group="c2" data-val="0">0[cite: 3]</td>
-          <td class="selectable active" data-group="o2" data-val="2">2 (預設)[cite: 3]</td>
-          <td class="selectable" data-group="o2" data-val="0">0[cite: 3]</td>
+          <td>任務二</td>
+          <td class="selectable active" data-group="c2" data-val="3">3 (預設)</td>
+          <td class="selectable" data-group="c2" data-val="1">1</td>
+          <td class="selectable" data-group="c2" data-val="0">0</td>
+          <td class="selectable active" data-group="o2" data-val="2">2 (預設)</td>
+          <td class="selectable" data-group="o2" data-val="0">0</td>
           <td class="score-badge task-row-total">5</td>
         </tr>
       </tbody>
@@ -244,40 +244,40 @@
     </div>
 
     <!-- 4. 指定任務 -->
-    <div class="section-title">指定任務 (54 分)[cite: 4]：</div>
+    <div class="section-title">指定任務 (54 分)：</div>
     <!-- 任務標準規範分數 -->
     <table style="font-size: 13px;">
       <thead>
         <tr>
-          <th colspan="6">第一次[cite: 4]</th>
-          <th colspan="6">第二次[cite: 4]</th>
-          <th colspan="6">第三次[cite: 4]</th>
+          <th colspan="6">第一次</th>
+          <th colspan="6">第二次</th>
+          <th colspan="6">第三次</th>
         </tr>
         <tr>
-          <th colspan="2">自動[cite: 4]</th><th colspan="2">距離[cite: 4]</th><th colspan="2">未觸碰[cite: 4]</th>
-          <th colspan="2">自動[cite: 4]</th><th colspan="2">距離[cite: 4]</th><th colspan="2">未觸碰[cite: 4]</th>
-          <th colspan="2">自動[cite: 4]</th><th colspan="2">距離[cite: 4]</th><th colspan="2">未觸碰[cite: 4]</th>
+          <th colspan="2">自動</th><th colspan="2">距離</th><th colspan="2">未觸碰</th>
+          <th colspan="2">自動</th><th colspan="2">距離</th><th colspan="2">未觸碰</th>
+          <th colspan="2">自動</th><th colspan="2">距離</th><th colspan="2">未觸碰</th>
         </tr>
         <tr>
-          <th>否[cite: 4]</th><th>是[cite: 4]</th><th>否[cite: 4]</th><th>是[cite: 4]</th><th>否[cite: 4]</th><th>是[cite: 4]</th>
-          <th>否[cite: 4]</th><th>是[cite: 4]</th><th>否[cite: 4]</th><th>是[cite: 4]</th><th>否[cite: 4]</th><th>是[cite: 4]</th>
-          <th>否[cite: 4]</th><th>是[cite: 4]</th><th>否[cite: 4]</th><th>是[cite: 4]</th><th>否[cite: 4]</th><th>是[cite: 4]</th>
+          <th>否</th><th>是</th><th>否</th><th>是</th><th>否</th><th>是</th>
+          <th>否</th><th>是</th><th>否</th><th>是</th><th>否</th><th>是</th>
+          <th>否</th><th>是</th><th>否</th><th>是</th><th>否</th><th>是</th>
         </tr>
       </thead>
       <tbody>
         <tr id="row-mission-std">
           <!-- 第一次 -->
-          <td class="selectable" data-group="m1_1" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m1_1" data-val="3">是(預設)[cite: 4]</td>
-          <td class="selectable" data-group="m1_2" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m1_2" data-val="3">是(預設)[cite: 4]</td>
-          <td class="selectable" data-group="m1_3" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m1_3" data-val="3">是(預設)[cite: 4]</td>
+          <td class="selectable" data-group="m1_1" data-val="0">否</td><td class="selectable active" data-group="m1_1" data-val="3">是(預設)</td>
+          <td class="selectable" data-group="m1_2" data-val="0">否</td><td class="selectable active" data-group="m1_2" data-val="3">是(預設)</td>
+          <td class="selectable" data-group="m1_3" data-val="0">否</td><td class="selectable active" data-group="m1_3" data-val="3">是(預設)</td>
           <!-- 第二次 -->
-          <td class="selectable" data-group="m2_1" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m2_1" data-val="3">是(預設)[cite: 4]</td>
-          <td class="selectable" data-group="m2_2" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m2_2" data-val="3">是(預設)[cite: 4]</td>
-          <td class="selectable" data-group="m2_3" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m2_3" data-val="3">是(預設)[cite: 4]</td>
+          <td class="selectable" data-group="m2_1" data-val="0">否</td><td class="selectable active" data-group="m2_1" data-val="3">是(預設)</td>
+          <td class="selectable" data-group="m2_2" data-val="0">否</td><td class="selectable active" data-group="m2_2" data-val="3">是(預設)</td>
+          <td class="selectable" data-group="m2_3" data-val="0">否</td><td class="selectable active" data-group="m2_3" data-val="3">是(預設)</td>
           <!-- 第三次 -->
-          <td class="selectable" data-group="m3_1" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m3_1" data-val="3">是(預設)[cite: 4]</td>
-          <td class="selectable" data-group="m3_2" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m3_2" data-val="3">是(預設)[cite: 4]</td>
-          <td class="selectable" data-group="m3_3" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m3_3" data-val="3">是(預設)[cite: 4]</td>
+          <td class="selectable" data-group="m3_1" data-val="0">否</td><td class="selectable active" data-group="m3_1" data-val="3">是(預設)</td>
+          <td class="selectable" data-group="m3_2" data-val="0">否</td><td class="selectable active" data-group="m3_2" data-val="3">是(預設)</td>
+          <td class="selectable" data-group="m3_3" data-val="0">否</td><td class="selectable active" data-group="m3_3" data-val="3">是(預設)</td>
         </tr>
       </tbody>
     </table>
@@ -288,56 +288,56 @@
       <thead>
         <tr>
           <th rowspan="2" style="width: 70px;">次數</th>
-          <th colspan="9">區域分數[cite: 4]</th>
-          <th colspan="6">加分[cite: 4]</th>
-          <th rowspan="2" style="width: 80px;">合計[cite: 4]</th>
+          <th colspan="9">區域分數</th>
+          <th colspan="6">加分</th>
+          <th rowspan="2" style="width: 80px;">合計</th>
         </tr>
         <tr>
-          <th>8[cite: 4]</th><th>7[cite: 4]</th><th>6[cite: 4]</th><th>5[cite: 4]</th><th>4[cite: 4]</th><th>3[cite: 4]</th><th>2[cite: 4]</th><th>1[cite: 4]</th><th>0[cite: 4]</th>
-          <th>3[cite: 4]</th><th>2.5[cite: 4]</th><th>2[cite: 4]</th><th>1.5[cite: 4]</th><th>1[cite: 4]</th><th>0.5[cite: 4]</th>
+          <th>8</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th><th>0</th>
+          <th>3</th><th>2.5</th><th>2</th><th>1.5</th><th>1</th><th>0.5</th>
         </tr>
       </thead>
       <tbody>
         <!-- 第一次 -->
         <tr id="row-zone-1">
-          <td>第一次[cite: 4]</td>
-          <td class="selectable active" data-group="z1" data-val="8">8[cite: 4]</td>
-          <td class="selectable" data-group="z1" data-val="7">7[cite: 4]</td><td class="selectable" data-group="z1" data-val="6">6[cite: 4]</td>
-          <td class="selectable" data-group="z1" data-val="5">5[cite: 4]</td><td class="selectable" data-group="z1" data-val="4">4[cite: 4]</td>
-          <td class="selectable" data-group="z1" data-val="3">3[cite: 4]</td><td class="selectable" data-group="z1" data-val="2">2[cite: 4]</td>
-          <td class="selectable" data-group="z1" data-val="1">1[cite: 4]</td><td class="selectable" data-group="z1" data-val="0">0[cite: 4]</td>
+          <td>第一次</td>
+          <td class="selectable active" data-group="z1" data-val="8">8</td>
+          <td class="selectable" data-group="z1" data-val="7">7</td><td class="selectable" data-group="z1" data-val="6">6</td>
+          <td class="selectable" data-group="z1" data-val="5">5</td><td class="selectable" data-group="z1" data-val="4">4</td>
+          <td class="selectable" data-group="z1" data-val="3">3</td><td class="selectable" data-group="z1" data-val="2">2</td>
+          <td class="selectable" data-group="z1" data-val="1">1</td><td class="selectable" data-group="z1" data-val="0">0</td>
           <!-- 加分 -->
-          <td class="selectable" data-group="b1" data-val="3">3[cite: 4]</td><td class="selectable" data-group="b1" data-val="2.5">2.5[cite: 4]</td>
-          <td class="selectable" data-group="b1" data-val="2">2[cite: 4]</td><td class="selectable" data-group="b1" data-val="1.5">1.5[cite: 4]</td>
-          <td class="selectable active" data-group="b1" data-val="1">1[cite: 4]</td><td class="selectable" data-group="b1" data-val="0.5">0.5[cite: 4]</td>
+          <td class="selectable" data-group="b1" data-val="3">3</td><td class="selectable" data-group="b1" data-val="2.5">2.5</td>
+          <td class="selectable" data-group="b1" data-val="2">2</td><td class="selectable" data-group="b1" data-val="1.5">1.5</td>
+          <td class="selectable active" data-group="b1" data-val="1">1</td><td class="selectable" data-group="b1" data-val="0.5">0.5</td>
           <td class="score-badge zone-row-total">9</td>
         </tr>
         <!-- 第二次 -->
         <tr id="row-zone-2">
-          <td>第二次[cite: 4]</td>
-          <td class="selectable active" data-group="z2" data-val="8">8[cite: 4]</td>
-          <td class="selectable" data-group="z2" data-val="7">7[cite: 4]</td><td class="selectable" data-group="z2" data-val="6">6[cite: 4]</td>
-          <td class="selectable" data-group="z2" data-val="5">5[cite: 4]</td><td class="selectable" data-group="z2" data-val="4">4[cite: 4]</td>
-          <td class="selectable" data-group="z2" data-val="3">3[cite: 4]</td><td class="selectable" data-group="z2" data-val="2">2[cite: 4]</td>
-          <td class="selectable" data-group="z2" data-val="1">1[cite: 4]</td><td class="selectable" data-group="z2" data-val="0">0[cite: 4]</td>
+          <td>第二次</td>
+          <td class="selectable active" data-group="z2" data-val="8">8</td>
+          <td class="selectable" data-group="z2" data-val="7">7</td><td class="selectable" data-group="z2" data-val="6">6</td>
+          <td class="selectable" data-group="z2" data-val="5">5</td><td class="selectable" data-group="z2" data-val="4">4</td>
+          <td class="selectable" data-group="z2" data-val="3">3</td><td class="selectable" data-group="z2" data-val="2">2</td>
+          <td class="selectable" data-group="z2" data-val="1">1</td><td class="selectable" data-group="z2" data-val="0">0</td>
           <!-- 加分 -->
-          <td class="selectable" data-group="b2" data-val="3">3[cite: 4]</td><td class="selectable" data-group="b2" data-val="2.5">2.5[cite: 4]</td>
-          <td class="selectable" data-group="b2" data-val="2">2[cite: 4]</td><td class="selectable" data-group="b2" data-val="1.5">1.5[cite: 4]</td>
-          <td class="selectable active" data-group="b2" data-val="1">1[cite: 4]</td><td class="selectable" data-group="b2" data-val="0.5">0.5[cite: 4]</td>
+          <td class="selectable" data-group="b2" data-val="3">3</td><td class="selectable" data-group="b2" data-val="2.5">2.5</td>
+          <td class="selectable" data-group="b2" data-val="2">2</td><td class="selectable" data-group="b2" data-val="1.5">1.5</td>
+          <td class="selectable active" data-group="b2" data-val="1">1</td><td class="selectable" data-group="b2" data-val="0.5">0.5</td>
           <td class="score-badge zone-row-total">9</td>
         </tr>
         <!-- 第三次 -->
         <tr id="row-zone-3">
-          <td>第三次[cite: 4]</td>
-          <td class="selectable active" data-group="z3" data-val="8">8[cite: 4]</td>
-          <td class="selectable" data-group="z3" data-val="7">7[cite: 4]</td><td class="selectable" data-group="z3" data-val="6">6[cite: 4]</td>
-          <td class="selectable" data-group="z3" data-val="5">5[cite: 4]</td><td class="selectable" data-group="z3" data-val="4">4[cite: 4]</td>
-          <td class="selectable" data-group="z3" data-val="3">3[cite: 4]</td><td class="selectable" data-group="z3" data-val="2">2[cite: 4]</td>
-          <td class="selectable" data-group="z3" data-val="1">1[cite: 4]</td><td class="selectable" data-group="z3" data-val="0">0[cite: 4]</td>
+          <td>第三次</td>
+          <td class="selectable active" data-group="z3" data-val="8">8</td>
+          <td class="selectable" data-group="z3" data-val="7">7</td><td class="selectable" data-group="z3" data-val="6">6</td>
+          <td class="selectable" data-group="z3" data-val="5">5</td><td class="selectable" data-group="z3" data-val="4">4</td>
+          <td class="selectable" data-group="z3" data-val="3">3</td><td class="selectable" data-group="z3" data-val="2">2</td>
+          <td class="selectable" data-group="z3" data-val="1">1</td><td class="selectable" data-group="z3" data-val="0">0</td>
           <!-- 加分 -->
-          <td class="selectable" data-group="b3" data-val="3">3[cite: 4]</td><td class="selectable" data-group="b3" data-val="2.5">2.5[cite: 4]</td>
-          <td class="selectable" data-group="b3" data-val="2">2[cite: 4]</td><td class="selectable" data-group="b3" data-val="1.5">1.5[cite: 4]</td>
-          <td class="selectable active" data-group="b3" data-val="1">1[cite: 4]</td><td class="selectable" data-group="b3" data-val="0.5">0.5[cite: 4]</td>
+          <td class="selectable" data-group="b3" data-val="3">3</td><td class="selectable" data-group="b3" data-val="2.5">2.5</td>
+          <td class="selectable" data-group="b3" data-val="2">2</td><td class="selectable" data-group="b3" data-val="1.5">1.5</td>
+          <td class="selectable active" data-group="b3" data-val="1">1</td><td class="selectable" data-group="b3" data-val="0.5">0.5</td>
           <td class="score-badge zone-row-total">9</td>
         </tr>
       </tbody>
