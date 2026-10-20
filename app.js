@@ -1,4 +1,4 @@
-const API_URL = "https://script.google.com/macros/s/AKfycbw_b9xybad6ylP9ARxTHyAf1r54mY-p-K2Tv8FmtniJ7U90tjQFbRvNLhh2iNBlA1-T/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbx49J7gCy4MPEsEBsdSc7b8wsZvsK2FjfSltfi4GhhU6TBErsjmRsb2-6lap8RLtj-Y/exec";
 
 let currentJudge = null;
 let currentPass = null; // 紀錄密碼以供手動與自動同步查詢
@@ -161,7 +161,7 @@ function renderTeamList() {
   teamListBody.innerHTML = "";
 
   if (assignedTeams.length === 0) {
-    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認《評審名單》D 欄是否有填入正確的隊伍編號！</td></tr>`;
+    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認《評審名單》是否有填入正確的隊伍編號！</td></tr>`;
     return;
   }
 
