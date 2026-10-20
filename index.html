@@ -60,31 +60,50 @@
     .page { display: none; padding: 16px; max-width: 1200px; margin: 0 auto; }
     .page.active { display: block; }
 
-    /* 表格橫向防擠壓滾動 */
+    /* 表格滾動容器：手機上可平順橫向滑動，防止表格被壓扁 */
     .table-responsive {
       width: 100%;
+      max-width: 100vw;
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       margin-bottom: 24px;
       background: #fff;
-      border-radius: 4px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      display: block;
     }
 
-    /* 表格樣式 */
+    /* 表格樣式：使用 auto 排版與 max-content 寬度 */
     table {
-      width: 100%;
       border-collapse: collapse;
       text-align: center;
       background: #fff;
-      table-layout: fixed;
+      table-layout: auto !important;
+      width: max-content !important;
+      min-width: 100%;
     }
     th, td {
       border: 1px solid var(--border);
-      padding: 10px 2px;
+      padding: 10px 10px;
       font-size: 15px;
       vertical-align: middle;
+      white-space: nowrap !important; /* 嚴格禁止被擠壓折行或文字重疊 */
     }
     th { background: #f1f3f5; font-weight: 600; }
+
+    /* 鎖定總表特定欄位最小寬度 */
+    #summary-table th:nth-child(3),
+    #summary-table td:nth-child(3) {
+      min-width: 160px !important;
+      text-align: left;
+      padding-left: 12px;
+    }
+    #summary-table th:nth-child(4),
+    #summary-table td:nth-child(4) {
+      min-width: 160px !important;
+      text-align: left;
+      padding-left: 12px;
+    }
 
     /* 選取格子樣式 */
     .selectable {
@@ -167,21 +186,21 @@
   <div id="page-summary" class="page active">
     <h3>分配評分隊伍清單</h3>
     <div class="table-responsive">
-      <table id="summary-table" style="min-width: 860px;">
+      <table id="summary-table">
         <thead>
           <tr>
-            <th style="width: 65px;">組別</th>
-            <th style="width: 90px;">隊伍編號</th>
+            <th style="min-width: 70px;">組別</th>
+            <th style="min-width: 95px;">隊伍編號</th>
             <th>學校名稱</th>
             <th>隊伍名稱</th>
-            <th style="width: 80px;">關卡(16)</th>
-            <th style="width: 90px;">流暢度(20)</th>
-            <th style="width: 80px;">內容(10)</th>
-            <th style="width: 90px;">規範(21)</th>
-            <th style="width: 90px;">任務(33)</th>
-            <th style="width: 85px;">總分(100)</th>
-            <th style="width: 80px;">隱藏成績</th>
-            <th style="width: 95px;">操作</th>
+            <th style="min-width: 85px;">關卡(16)</th>
+            <th style="min-width: 95px;">流暢度(20)</th>
+            <th style="min-width: 85px;">內容(10)</th>
+            <th style="min-width: 85px;">規範(21)</th>
+            <th style="min-width: 85px;">任務(33)</th>
+            <th style="min-width: 90px;">總分(100)</th>
+            <th style="min-width: 85px;">隱藏成績</th>
+            <th style="min-width: 100px;">操作</th>
           </tr>
         </thead>
         <tbody id="team-list-body"></tbody>
@@ -198,13 +217,13 @@
       <button class="btn btn-secondary" id="btn-back">返回總表</button>
     </div>
 
-    <!-- 1. 關卡數量 (預設 8) -->
+    <!-- 1. 關卡數量 -->
     <div class="section-title">關卡數量(16 分)：</div>
     <div class="table-responsive">
-      <table style="min-width: 580px;">
+      <table>
         <thead>
           <tr>
-            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th style="width: 85px;">得分</th>
+            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th style="min-width: 85px;">得分</th>
           </tr>
         </thead>
         <tbody>
@@ -223,14 +242,14 @@
       </table>
     </div>
 
-    <!-- 2. 流暢度 (預設 0 次，加權顯示：/20) -->
+    <!-- 2. 流暢度 -->
     <div class="section-title">流暢度(20 分)：</div>
     <div class="sub-title">手動或掉落次數</div>
     <div class="table-responsive">
-      <table style="min-width: 680px;">
+      <table>
         <thead>
           <tr>
-            <th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th style="width: 85px;">得分</th>
+            <th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th style="min-width: 85px;">得分</th>
           </tr>
         </thead>
         <tbody>
@@ -257,16 +276,16 @@
       </table>
     </div>
 
-    <!-- 3. 關卡任務 (任務一、任務二預設 3 與 2) -->
+    <!-- 3. 關卡任務 -->
     <div class="section-title">關卡任務(10 分)：</div>
     <div class="table-responsive">
-      <table style="min-width: 580px;">
+      <table>
         <thead>
           <tr>
-            <th rowspan="2" style="width: 100px;">項目</th>
+            <th rowspan="2" style="min-width: 100px;">項目</th>
             <th colspan="3">內容符合</th>
             <th colspan="2">運作</th>
-            <th rowspan="2" style="width: 85px;">合計</th>
+            <th rowspan="2" style="min-width: 85px;">合計</th>
           </tr>
           <tr>
             <th>3</th><th>1</th><th>0</th><th>2</th><th>0</th>
@@ -300,12 +319,12 @@
       </table>
     </div>
 
-    <!-- 4. 指定任務 (規範 21 分 + 得分 33 分 = 54 分) -->
+    <!-- 4. 指定任務 -->
     <div class="section-title">指定任務(54 分)：</div>
 
-    <!-- 4.1 任務標準規範分數 (預設全為「是」，總分 / 21) -->
+    <!-- 4.1 任務標準規範分數 -->
     <div class="table-responsive">
-      <table style="min-width: 780px; font-size: 14px;">
+      <table style="font-size: 14px;">
         <thead>
           <tr>
             <th colspan="18" style="font-size: 16px; padding: 8px;">任務標準規範分數</th>
@@ -328,15 +347,14 @@
         </thead>
         <tbody>
           <tr id="row-mission-std">
-            <!-- 第一次 (每項 7/3 分，3項合計 7 分，預設選「是」) -->
             <td class="selectable" data-group="m1_1" data-val="0">否</td><td class="selectable active" data-group="m1_1" data-val="2.3333">是</td>
             <td class="selectable" data-group="m1_2" data-val="0">否</td><td class="selectable active" data-group="m1_2" data-val="2.3333">是</td>
             <td class="selectable" data-group="m1_3" data-val="0">否</td><td class="selectable active" data-group="m1_3" data-val="2.3334">是</td>
-            <!-- 第二次 (合計 7 分，預設選「是」) -->
+
             <td class="selectable" data-group="m2_1" data-val="0">否</td><td class="selectable active" data-group="m2_1" data-val="2.3333">是</td>
             <td class="selectable" data-group="m2_2" data-val="0">否</td><td class="selectable active" data-group="m2_2" data-val="2.3333">是</td>
             <td class="selectable" data-group="m2_3" data-val="0">否</td><td class="selectable active" data-group="m2_3" data-val="2.3334">是</td>
-            <!-- 第三次 (合計 7 分，預設選「是」) -->
+
             <td class="selectable" data-group="m3_1" data-val="0">否</td><td class="selectable active" data-group="m3_1" data-val="2.3333">是</td>
             <td class="selectable" data-group="m3_2" data-val="0">否</td><td class="selectable active" data-group="m3_2" data-val="2.3333">是</td>
             <td class="selectable" data-group="m3_3" data-val="0">否</td><td class="selectable active" data-group="m3_3" data-val="2.3334">是</td>
@@ -350,15 +368,15 @@
       </table>
     </div>
 
-    <!-- 4.2 任務得分加總大欄位 (只有此區塊初始為白色，點選變藍，再點一次變白取消) -->
+    <!-- 4.2 任務得分加總大欄位 -->
     <div class="table-responsive">
-      <table style="min-width: 820px;">
+      <table>
         <thead>
           <tr>
-            <th rowspan="2" style="width: 75px;">次數</th>
+            <th rowspan="2" style="min-width: 75px;">次數</th>
             <th colspan="9">區域分數</th>
             <th colspan="6">加分</th>
-            <th rowspan="2" style="width: 85px;">合計</th>
+            <th rowspan="2" style="min-width: 85px;">合計</th>
           </tr>
           <tr>
             <th>8</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th><th>0</th>
@@ -378,7 +396,7 @@
             <td class="selectable toggleable" data-group="z1" data-val="2">2</td>
             <td class="selectable toggleable" data-group="z1" data-val="1">1</td>
             <td class="selectable toggleable" data-group="z1" data-val="0">0</td>
-            <!-- 加分 -->
+
             <td class="selectable toggleable" data-group="b1" data-val="3">3</td>
             <td class="selectable toggleable" data-group="b1" data-val="2.5">2.5</td>
             <td class="selectable toggleable" data-group="b1" data-val="2">2</td>
@@ -399,7 +417,7 @@
             <td class="selectable toggleable" data-group="z2" data-val="2">2</td>
             <td class="selectable toggleable" data-group="z2" data-val="1">1</td>
             <td class="selectable toggleable" data-group="z2" data-val="0">0</td>
-            <!-- 加分 -->
+
             <td class="selectable toggleable" data-group="b2" data-val="3">3</td>
             <td class="selectable toggleable" data-group="b2" data-val="2.5">2.5</td>
             <td class="selectable toggleable" data-group="b2" data-val="2">2</td>
@@ -420,7 +438,7 @@
             <td class="selectable toggleable" data-group="z3" data-val="2">2</td>
             <td class="selectable toggleable" data-group="z3" data-val="1">1</td>
             <td class="selectable toggleable" data-group="z3" data-val="0">0</td>
-            <!-- 加分 -->
+
             <td class="selectable toggleable" data-group="b3" data-val="3">3</td>
             <td class="selectable toggleable" data-group="b3" data-val="2.5">2.5</td>
             <td class="selectable toggleable" data-group="b3" data-val="2">2</td>
@@ -429,7 +447,6 @@
             <td class="selectable toggleable" data-group="b3" data-val="0.5">0.5</td>
             <td class="score-badge zone-row-total">0</td>
           </tr>
-          <!-- 任務得分加總大框，滿分 / 33 -->
           <tr class="big-footer-row">
             <td colspan="17">
               任務得分總分：<span id="score-mission-total" class="score-badge" style="font-size: 22px;">0</span> / 33
