@@ -139,9 +139,17 @@ window.openScoring = function(teamId) {
     `評分對象：[${currentTeam.teamId}] ${currentTeam.school} - ${currentTeam.teamName}`;
 
   clearCanvas();
+  resetFormDefaults();
   calculateAllScores();
   switchPage("scoring");
 };
+
+function resetFormDefaults() {
+  // 重設區域分數與加分為未選狀態
+  document.querySelectorAll(".toggleable").forEach(cell => {
+    cell.classList.remove("active");
+  });
+}
 
 function switchPage(page) {
   if (page === "summary") {
@@ -161,14 +169,26 @@ function setupSelectionHandlers() {
     cell.addEventListener("click", function() {
       const parentRow = this.closest("tr");
       const group = this.dataset.group;
+      const isToggleable = this.classList.contains("toggleable");
 
-      if (group) {
-        parentRow.querySelectorAll(`.selectable[data-group="${group}"]`).forEach(c => c.classList.remove("active"));
+      if (isToggleable) {
+        // 區域分數與加分：支援反選（再次點擊取消變白色為 0 分）
+        if (this.classList.contains("active")) {
+          this.classList.remove("active");
+        } else {
+          parentRow.querySelectorAll(`.selectable[data-group="${group}"]`).forEach(c => c.classList.remove("active"));
+          this.classList.add("active");
+        }
       } else {
-        parentRow.querySelectorAll(".selectable").forEach(c => c.classList.remove("active"));
+        // 一般單選項（關卡、流暢度、關卡內容、標準規範）
+        if (group) {
+          parentRow.querySelectorAll(`.selectable[data-group="${group}"]`).forEach(c => c.classList.remove("active"));
+        } else {
+          parentRow.querySelectorAll(".selectable").forEach(c => c.classList.remove("active"));
+        }
+        this.classList.add("active");
       }
 
-      this.classList.add("active");
       calculateAllScores();
     });
   });
@@ -204,12 +224,14 @@ function calculateAllScores() {
   document.getElementById("score-task-total").textContent = taskTotal;
 
   // 4. 指定任務 (滿分 54)
+  // 4.1 標準規範 (滿分 27)
   let stdSum = 0;
   document.querySelectorAll("#row-mission-std .selectable.active").forEach(cell => {
     stdSum += parseFloat(cell.dataset.val);
   });
   document.getElementById("score-mission-std-sum").textContent = stdSum;
 
+  // 4.2 區域分數與加分 (若未選取則為 0 分)
   let zoneSum = 0;
   ["row-zone-1", "row-zone-2", "row-zone-3"].forEach(rowId => {
     const row = document.getElementById(rowId);
