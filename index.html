@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>機關王評分系統</title>
   <style>
     :root {
@@ -87,7 +87,7 @@
       padding: 10px 10px;
       font-size: 15px;
       vertical-align: middle;
-      white-space: nowrap !important; /* 嚴格禁止被擠壓折行或文字重疊 */
+      white-space: nowrap !important;
     }
     th { background: #f1f3f5; font-weight: 600; }
 
@@ -150,6 +150,63 @@
       header h2 { font-size: 17px; }
       .section-title { font-size: 16px; }
       .sign-container { height: 150px; }
+    }
+
+    /* =========================================
+       手機橫向滿版適配 (Landscape Fullscreen)
+       ========================================= */
+    @media screen and (orientation: landscape) and (max-height: 550px) {
+      body {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
+
+      header {
+        padding: 6px 16px;
+      }
+      header h2 {
+        font-size: 16px;
+      }
+      .btn {
+        padding: 5px 12px;
+        font-size: 13px;
+      }
+
+      .page {
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 8px 12px !important;
+        margin: 0 !important;
+      }
+
+      .table-responsive {
+        margin-bottom: 12px;
+        border-radius: 0;
+        box-shadow: none;
+      }
+
+      th, td {
+        padding: 6px 8px !important;
+        font-size: 13px !important;
+      }
+
+      .section-title {
+        font-size: 15px;
+        margin: 10px 0 4px 0;
+      }
+      .sub-title {
+        font-size: 12px;
+        margin-bottom: 4px;
+      }
+
+      .big-footer-row td {
+        padding: 8px 4px;
+        font-size: 15px;
+      }
+
+      .sign-container {
+        height: 125px !important;
+      }
     }
   </style>
 </head>
