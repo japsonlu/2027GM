@@ -23,7 +23,7 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* 頂部導航列 */
+    /* 頂部導航列：取消 sticky，捲動時不跟著黏在頂端 */
     header {
       background: #fff;
       padding: 12px 20px;
@@ -31,7 +31,8 @@
       justify-content: space-between;
       align-items: center;
       box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-      position: sticky; top: 0; z-index: 100;
+      position: static; /* 往下滑時會自然捲動上去 */
+      z-index: 10;
     }
     header h2 { margin: 0; font-size: 20px; }
     .btn {
@@ -282,7 +283,7 @@
     </div>
   </div>
 
-  <!-- 頂部資訊列 -->
+  <!-- 頂部資訊列 (不跟隨捲動) -->
   <header>
     <div>
       <span id="judge-display" style="font-weight:bold; font-size:15px;">未登入</span>
