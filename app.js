@@ -60,6 +60,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // admin 匯出 PDF 按鈕
+  const btnExportPdf = document.getElementById("btn-export-pdf");
+  if (btnExportPdf) {
+    btnExportPdf.addEventListener("click", exportSummaryToPdf);
+  }
+
   // 同步雲端成績按鈕
   document.querySelectorAll(".btn-sync-cloud").forEach(btn => {
     btn.addEventListener("click", () => {
@@ -300,6 +306,25 @@ function renderTeamList() {
     `;
     teamListBody.appendChild(tr);
   });
+}
+
+// 匯出 PDF 處理函式
+function exportSummaryToPdf() {
+  let groupName = "全部組別";
+  if (currentGroupFilter === "GAE") groupName = "國小組";
+  else if (currentGroupFilter === "GAJ") groupName = "國中組";
+  else if (currentGroupFilter === "GAH") groupName = "高中組";
+
+  const originalTitle = document.title;
+  const today = new Date();
+  const dateStr = today.getFullYear() + String(today.getMonth() + 1).padStart(2, "0") + String(today.getDate()).padStart(2, "0");
+  
+  // 動態修改網頁標題作為匯出 PDF 的預設檔名
+  document.title = `機關王評分總表_${groupName}_${dateStr}`;
+
+  window.print();
+
+  document.title = originalTitle;
 }
 
 window.toggleScoreState = function(teamId) {
