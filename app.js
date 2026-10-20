@@ -88,7 +88,7 @@ async function handleLogin() {
 
       renderTeamList();
 
-      // 每 15 秒定時同步試算表成績
+      // 每 15 秒自動跟雲端試算表對齊一次
       if (syncTimer) clearInterval(syncTimer);
       syncTimer = setInterval(() => {
         if (pageSummary.classList.contains("active") && currentJudge) {
@@ -156,12 +156,12 @@ function getDisplayScore(valStr, isHidden) {
   return isHidden ? "***" : valStr;
 }
 
-// 渲染總表
+// 渲染總表隊伍清單
 function renderTeamList() {
   teamListBody.innerHTML = "";
 
   if (assignedTeams.length === 0) {
-    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認《評審名單》是否有填入正確的隊伍編號！</td></tr>`;
+    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認《評審名單》D 欄是否有填入正確的隊伍編號！</td></tr>`;
     return;
   }
 
@@ -183,7 +183,7 @@ function renderTeamList() {
     const score = scoresCache[team.teamId] || {};
     const isScored = (score.totalScore !== undefined && score.totalScore !== null && score.totalScore !== "");
 
-    // 規範分數鍵名完整防呆支援
+    // 規範分數鍵名相容
     let stdRaw = score.stdScore;
     if (stdRaw === undefined || stdRaw === null || stdRaw === "") {
       stdRaw = score.missionStdScore !== undefined ? score.missionStdScore : (score.ruleScore !== undefined ? score.ruleScore : score.std);
@@ -283,7 +283,7 @@ window.openScoring = function(teamId) {
   calculateAllScores();
   switchPage("scoring");
 
-  // 清除前一隊的簽名畫布狀態
+  // 清除前一隊的簽名狀態與畫布尺寸
   hasSignature = false;
   isDrawing = false;
   canvas.width = 0;
@@ -524,7 +524,7 @@ async function submitScore() {
   const totalScore = parseFloat(document.getElementById("final-total-score").textContent) || 0;
   const signatureData = canvas.toDataURL("image/png");
 
-  // 產生格式化評分時間：YYYY/MM/DD HH:mm:ss
+  // 格式化評分時間：YYYY/MM/DD HH:mm:ss
   const now = new Date();
   const timestamp = now.getFullYear() + "/" +
     String(now.getMonth() + 1).padStart(2, "0") + "/" +
@@ -533,7 +533,7 @@ async function submitScore() {
     String(now.getMinutes()).padStart(2, "0") + ":" +
     String(now.getSeconds()).padStart(2, "0");
 
-  // 按照指定的 13 個欄位順序打包傳遞
+  // 依照 13 個欄位標準順序封裝送出
   const payload = {
     group: currentTeam.group || "",          // 1. 組別
     teamId: currentTeam.teamId,              // 2. 隊伍編號
@@ -543,7 +543,7 @@ async function submitScore() {
     fluencyScore: fluencyScore,              // 6. 流暢度(20)
     taskScore: taskScore,                    // 7. 內容(10)
     stdScore: stdScore,                      // 8. 規範(21)
-    missionStdScore: stdScore,               // 雙向相容鍵
+    missionStdScore: stdScore,               // 相容欄位
     ruleScore: stdScore,
     missionScore: missionScore,              // 9. 任務(33)
     totalScore: totalScore,                  // 10. 總分(100)
@@ -563,7 +563,7 @@ async function submitScore() {
     if (result.success) {
       alert("成績已成功同步覆寫至試算表！");
       
-      // 更新本機快取
+      // 更新本機快取與狀態
       scoresCache[currentTeam.teamId] = payload;
       teamDisplayState[currentTeam.teamId] = "visible";
 
