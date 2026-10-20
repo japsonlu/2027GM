@@ -1,362 +1,134 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>競賽評分系統</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>評分系統</title>
   <style>
-    :root {
-      --primary: #007aff;
-      --success: #34c759;
-      --warning: #ff9500;
-      --danger: #ff3b30;
-      --bg: #f2f2f7;
-      --card-bg: #ffffff;
-      --border: #d1d1d6;
-      --text: #1c1c1e;
-    }
-    * {
-      box-sizing: border-box;
-      -webkit-touch-callout: none;
-    }
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100vw;
-      height: 100vh;
-      overflow-x: hidden;
-      font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Helvetica Neue", sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
-    }
-    .view-screen {
-      display: none;
-      width: 100%;
-      min-height: 100vh;
-      padding: 16px 24px;
-    }
-    .view-screen.active {
-      display: block;
+    body {
+      font-family: Arial, "Microsoft JhengHei", sans-serif;
+      padding: 30px;
+      color: #333;
     }
 
-    /* 登入畫面置中 */
-    #pageLogin {
-      display: none;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
+    .section {
+      margin-bottom: 35px;
     }
-    #pageLogin.active {
-      display: flex;
-    }
-    .login-card {
-      background: #fff;
-      padding: 36px 32px;
-      border-radius: 16px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-      width: 100%;
-      max-width: 400px;
-      text-align: center;
-    }
-    .login-input {
-      width: 100%;
-      padding: 12px 14px;
-      margin-bottom: 14px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      font-size: 16px;
-      background: #fafafa;
-    }
-    .error-box {
-      color: var(--danger);
-      font-size: 14px;
-      margin-top: 12px;
+
+    .section-title {
+      font-size: 20px;
       font-weight: bold;
-      background: #ffe5e5;
-      padding: 8px;
-      border-radius: 6px;
-      display: none;
-    }
-
-    /* 頂部導覽 */
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
       margin-bottom: 12px;
-      padding-bottom: 8px;
-      border-bottom: 1px solid var(--border);
     }
-    h1, h2, h3 { margin: 0; }
-    .card {
-      background: var(--card-bg);
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      margin-bottom: 16px;
-    }
-    .btn-group {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    button {
-      padding: 9px 15px;
-      font-size: 14px;
-      font-weight: 600;
-      border: none;
-      border-radius: 8px;
-      background: var(--primary);
-      color: #fff;
-      cursor: pointer;
-    }
-    button.btn-warning { background: var(--warning); }
-    button.btn-success { background: var(--success); }
-    button.btn-danger { background: var(--danger); }
-    button.btn-gray { background: #8e8e93; }
 
-    /* 表格樣式 */
+    .sub-title {
+      font-size: 16px;
+      margin-bottom: 8px;
+    }
+
     table {
-      width: 100%;
       border-collapse: collapse;
       text-align: center;
-      background: #fff;
-      border-radius: 8px;
-      overflow: hidden;
+      table-layout: fixed;
     }
+
     th, td {
-      padding: 12px 8px;
-      border-bottom: 1px solid var(--border);
-      font-size: 15px;
+      border: 1px solid #000;
+      padding: 10px 14px;
+      min-width: 45px;
+      height: 40px;
+      vertical-align: middle;
     }
+
     th {
-      background: #f8f8fa;
-      font-weight: 600;
+      font-size: 18px;
+      font-weight: normal;
     }
-    tr.clickable-row:hover {
-      background: #f1f7ff;
+
+    .option-cell {
       cursor: pointer;
+      user-select: none;
     }
-    .masked-score {
-      letter-spacing: 2px;
-      color: #8e8e93;
+
+    .option-cell:hover {
+      background-color: #f7f7f7;
+    }
+
+    input[type="radio"] {
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      margin: 0;
+    }
+
+    .score-title {
+      font-size: 18px;
+    }
+
+    .score-cell {
+      min-width: 80px;
+      font-size: 20px;
       font-weight: bold;
-    }
-
-    /* 評分表單佈局 */
-    .form-section {
-      margin-bottom: 16px;
-      padding-bottom: 14px;
-      border-bottom: 1px dashed var(--border);
-    }
-    .form-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 8px;
-    }
-    .input-box {
-      font-size: 18px;
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      width: 130px;
-      text-align: center;
-    }
-    .calculated-badge {
-      display: inline-block;
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--primary);
-      background: #eaf2ff;
-      padding: 6px 14px;
-      border-radius: 8px;
-    }
-    .sync-status {
-      font-size: 13px;
-      font-weight: 600;
-      padding: 4px 8px;
-      border-radius: 6px;
-      background: #e5e5ea;
-    }
-
-    /* 手寫簽名板 */
-    .sig-container {
-      border: 2px dashed var(--border);
-      border-radius: 8px;
-      background: #fff;
-      margin: 10px 0;
-      touch-action: none;
-    }
-    canvas#signaturePad {
-      width: 100%;
-      height: 180px;
-      display: block;
+      color: #0d6efd;
     }
   </style>
 </head>
 <body>
 
-  <!-- 0. 登入畫面 -->
-  <div id="pageLogin" class="view-screen active">
-    <div class="login-card">
-      <h2 style="margin-bottom: 6px;">評審評分登入</h2>
-      <p style="color: #666; font-size: 13px; margin-bottom: 20px;">登入後將載入您在「評審名單」中負責的隊伍</p>
-      <input type="text" id="loginUsername" class="login-input" placeholder="評審帳號" autocomplete="off">
-      <input type="password" id="loginPassword" class="login-input" placeholder="密碼">
-      <button id="btnLogin" style="width: 100%; padding: 13px; font-size: 16px;" onclick="CompetitionGrader.handleLogin()">登入系統</button>
-      <div id="loginErrorMsg" class="error-box"></div>
-    </div>
+  <!-- 關卡數量區塊 -->
+  <div class="section">
+    <div class="section-title">關卡數量(16 分)：</div>
+    <table>
+      <thead>
+        <tr>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th>
+          <th class="score-title">得分</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="option-cell"><input type="radio" name="stages" value="1"></td>
+          <td class="option-cell"><input type="radio" name="stages" value="2"></td>
+          <td class="option-cell"><input type="radio" name="stages" value="3"></td>
+          <td class="option-cell"><input type="radio" name="stages" value="4"></td>
+          <td class="option-cell"><input type="radio" name="stages" value="5"></td>
+          <td class="option-cell"><input type="radio" name="stages" value="6"></td>
+          <td class="option-cell"><input type="radio" name="stages" value="7"></td>
+          <td class="option-cell"><input type="radio" name="stages" value="8" checked></td>
+          <td id="stage-score" class="score-cell">16</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
-  <!-- 1. 總表頁 -->
-  <div id="pageSummary" class="view-screen">
-    <header>
-      <div>
-        <h1 style="font-size: 22px;">競賽評分總表</h1>
-        <div style="margin-top: 5px; display: flex; align-items: center; gap: 8px;">
-          <span id="judgeNameBadge" style="background:#007aff; color:#fff; font-size:13px; padding:3px 10px; border-radius:12px; font-weight:bold;">評審：-</span>
-          <span id="judgeRuleBadge" style="background:#5856d6; color:#fff; font-size:13px; padding:3px 10px; border-radius:12px; font-weight:bold;">負責隊伍：-</span>
-          <span id="cloudStatusBadge" class="sync-status">🟢 雲端就緒</span>
-        </div>
-      </div>
-      <div class="btn-group">
-        <button class="btn-warning" onclick="CompetitionGrader.reloadFromCloud()">🔄 重新整理隊伍</button>
-        <button class="btn-gray" onclick="CompetitionGrader.toggleMask()">🔒 隱藏/顯示成績</button>
-        <button class="btn-success" onclick="CompetitionGrader.exportCSV()">匯出總成績(CSV)</button>
-        <button class="btn-danger" onclick="CompetitionGrader.handleLogout()">登出</button>
-      </div>
-    </header>
-
-    <div class="card" style="padding: 0; overflow-x: auto;">
-      <table>
-        <thead>
-          <tr>
-            <th>組別</th>
-            <th>隊伍編號</th>
-            <th>學校名稱</th>
-            <th>隊伍名稱</th>
-            <th>關卡數量<br><small style="font-size:12px;color:#888">(16分)</small></th>
-            <th>流暢度加權<br><small style="font-size:12px;color:#888">(20分)</small></th>
-            <th>關卡內容<br><small style="font-size:12px;color:#888">(10分)</small></th>
-            <th>指定任務<br><small style="font-size:12px;color:#888">(54分)</small></th>
-            <th>總分<br><small style="font-size:12px;color:#888">(100分)</small></th>
-            <th>評審姓名</th>
-            <th>狀態</th>
-          </tr>
-        </thead>
-        <tbody id="summaryTableBody">
-          <tr><td colspan="11" style="padding: 24px; color:#888;">正在載入隊伍名單...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- 2. 主評分頁 -->
-  <div id="pageTeamGrading" class="view-screen">
-    <header>
-      <div>
-        <h2 id="gradingTeamTitle">隊伍評分</h2>
-        <span id="gradingTeamMeta" style="color:#666; font-size:14px;"></span>
-        <div style="margin-top: 4px;">
-          <span id="gradingJudgeBadge" style="color:#007aff; font-weight:bold; font-size:13px; margin-right:8px;"></span>
-          <span id="gradingSyncStatus" class="sync-status">🟢 準備就緒</span>
-        </div>
-      </div>
-      <button class="btn-gray" onclick="CompetitionGrader.navigate('pageSummary')">返回總表</button>
-    </header>
-
-    <div class="card">
-      <div class="form-section">
-        <h3>1. 關卡數量輸入（滿分 16 分）</h3>
-        <div class="form-row">
-          <span>請填入關卡數量得分 (0 - 16)：</span>
-          <input type="number" id="inputStageCount" class="input-box" min="0" max="16" oninput="CompetitionGrader.updateMainScores()">
-        </div>
-      </div>
-
-      <div class="form-section">
-        <h3>2. 流暢度輸入（滿分 100 分，加權佔 20 分）</h3>
-        <div class="form-row">
-          <span>流暢度原始得分 (0 - 100)：</span>
-          <input type="number" id="inputFluencyRaw" class="input-box" min="0" max="100" oninput="CompetitionGrader.updateMainScores()">
-        </div>
-        <div class="form-row" style="margin-top:10px;">
-          <span>流暢度加權分數 (原始分 × 20%)：</span>
-          <span id="labelFluencyWeighted" class="calculated-badge">0.0 分</span>
-        </div>
-      </div>
-
-      <div class="form-section">
-        <h3>3. 關卡內容輸入（滿分 10 分）</h3>
-        <div class="form-row">
-          <span>關卡內容一 (0 - 5 分)：</span>
-          <input type="number" id="inputContent1" class="input-box" min="0" max="5" oninput="CompetitionGrader.updateMainScores()">
-        </div>
-        <div class="form-row">
-          <span>關卡內容二 (0 - 5 分)：</span>
-          <input type="number" id="inputContent2" class="input-box" min="0" max="5" oninput="CompetitionGrader.updateMainScores()">
-        </div>
-        <div class="form-row" style="margin-top:10px;">
-          <span>關卡內容合計：</span>
-          <span id="labelContentTotal" class="calculated-badge">0.0 分</span>
-        </div>
-      </div>
-
-      <div class="form-section">
-        <h3>4. 指定任務評分（滿分 54 分）</h3>
-        <div class="form-row">
-          <span>指定任務當前總得分：<strong id="labelTaskTotalScore" style="color:var(--primary); font-size:18px;">0.0</strong> / 54 分</span>
-          <button class="btn-warning" onclick="CompetitionGrader.navigate('pageTaskGrading')">進入指定任務評分 ➔</button>
-        </div>
-      </div>
-
-      <div class="form-section" style="border-bottom:none;">
-        <h3>5. 評審手寫簽名確認</h3>
-        <div class="sig-container">
-          <canvas id="signaturePad"></canvas>
-        </div>
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <button class="btn-gray" onclick="CompetitionGrader.clearSignature()">清除簽名</button>
-          <button class="btn-success" style="font-size:17px; padding:12px 24px;" onclick="CompetitionGrader.saveAndReturn()">確認送出成績並返回總表</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 3. 指定任務評分頁 -->
-  <div id="pageTaskGrading" class="view-screen">
-    <header>
-      <h2>指定任務評分（滿分 54 分）</h2>
-      <button class="btn-success" onclick="CompetitionGrader.navigate('pageTeamGrading')">完成任務評分並返回</button>
-    </header>
-
-    <div class="card">
-      <div class="form-section">
-        <div class="form-row">
-          <span>任務一：指定動作精準度 (0 - 18 分)</span>
-          <input type="number" id="taskSub1" class="input-box" min="0" max="18" oninput="CompetitionGrader.updateTaskScores()">
-        </div>
-      </div>
-      <div class="form-section">
-        <div class="form-row">
-          <span>任務二：指定機構互動性 (0 - 18 分)</span>
-          <input type="number" id="taskSub2" class="input-box" min="0" max="18" oninput="CompetitionGrader.updateTaskScores()">
-        </div>
-      </div>
-      <div class="form-section">
-        <div class="form-row">
-          <span>任務三：指定得分達標率 (0 - 18 分)</span>
-          <input type="number" id="taskSub3" class="input-box" min="0" max="18" oninput="CompetitionGrader.updateTaskScores()">
-        </div>
-      </div>
-      <div class="form-section" style="border-bottom:none;">
-        <div class="form-row">
-          <h3>指定任務總計：</h3>
-          <span id="labelTaskSubTotal" class="calculated-badge">0.0 / 54 分</span>
-        </div>
-      </div>
-    </div>
+  <!-- 流暢度區塊 -->
+  <div class="section">
+    <div class="section-title">流暢度(20 分)：</div>
+    <div class="sub-title">手動或掉落次數</div>
+    <table>
+      <thead>
+        <tr>
+          <th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
+          <th class="score-title">得分</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="option-cell"><input type="radio" name="fluency" value="0" checked></td>
+          <td class="option-cell"><input type="radio" name="fluency" value="1"></td>
+          <td class="option-cell"><input type="radio" name="fluency" value="2"></td>
+          <td class="option-cell"><input type="radio" name="fluency" value="3"></td>
+          <td class="option-cell"><input type="radio" name="fluency" value="4"></td>
+          <td class="option-cell"><input type="radio" name="fluency" value="5"></td>
+          <td class="option-cell"><input type="radio" name="fluency" value="6"></td>
+          <td class="option-cell"><input type="radio" name="fluency" value="7"></td>
+          <td class="option-cell"><input type="radio" name="fluency" value="8"></td>
+          <td class="option-cell"><input type="radio" name="fluency" value="9"></td>
+          <td class="option-cell"><input type="radio" name="fluency" value="10"></td>
+          <td id="fluency-score" class="score-cell">20</td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
   <script src="app.js"></script>
