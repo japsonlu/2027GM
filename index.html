@@ -2,133 +2,372 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>評分系統</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>機器人創客競賽評分系統</title>
   <style>
-    body {
-      font-family: Arial, "Microsoft JhengHei", sans-serif;
-      padding: 30px;
-      color: #333;
+    :root {
+      --primary: #1976d2;
+      --primary-dark: #115293;
+      --bg: #f4f6f9;
+      --border: #444;
+      --text: #212529;
+    }
+    * { box-sizing: border-box; }
+    body, html {
+      margin: 0; padding: 0;
+      width: 100vw; height: 100vh;
+      overflow-x: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
     }
 
-    .section {
-      margin-bottom: 35px;
+    /* 頂部導航列 */
+    header {
+      background: #fff;
+      padding: 10px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+      position: sticky; top: 0; z-index: 100;
     }
-
-    .section-title {
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 12px;
+    header h2 { margin: 0; font-size: 20px; }
+    .btn {
+      padding: 8px 16px; border: none; border-radius: 6px;
+      font-size: 15px; cursor: pointer; font-weight: bold;
+      transition: 0.2s;
     }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-secondary { background: #6c757d; color: #fff; }
+    .btn-success { background: #28a745; color: #fff; }
 
-    .sub-title {
-      font-size: 16px;
-      margin-bottom: 8px;
+    /* 登入彈窗 */
+    #login-view {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      display: flex; justify-content: center; align-items: center; z-index: 999;
     }
+    .login-card {
+      background: #fff; padding: 32px; border-radius: 12px;
+      width: 360px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; margin-bottom: 6px; font-weight: bold; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
 
+    /* 頁面通用樣式 */
+    .page { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
+    .page.active { display: block; }
+
+    /* 表格樣式 */
     table {
-      border-collapse: collapse;
-      text-align: center;
-      table-layout: fixed;
+      width: 100%; border-collapse: collapse; text-align: center;
+      background: #fff; margin-bottom: 24px; table-layout: fixed;
     }
-
     th, td {
-      border: 1px solid #000;
-      padding: 10px 14px;
-      min-width: 45px;
-      height: 40px;
-      vertical-align: middle;
+      border: 1px solid var(--border);
+      padding: 10px 4px; font-size: 15px;
     }
+    th { background: #e9ecef; }
+    .selectable { cursor: pointer; user-select: none; }
+    .selectable:hover { background-color: #e3f2fd; }
+    .selectable.active { background-color: #90caf9 !important; font-weight: bold; }
 
-    th {
-      font-size: 18px;
-      font-weight: normal;
+    /* 得分與文字框 */
+    .score-badge { font-weight: bold; color: var(--primary); font-size: 17px; }
+    .calc-hint { color: #d32f2f; font-size: 14px; margin-top: 4px; }
+    .section-title { font-size: 18px; font-weight: bold; margin: 20px 0 8px 0; }
+    
+    /* 簽名畫板 */
+    .sign-container {
+      background: #fff; border: 2px dashed #999;
+      border-radius: 8px; position: relative; width: 450px; height: 180px;
     }
-
-    .option-cell {
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .option-cell:hover {
-      background-color: #f7f7f7;
-    }
-
-    input[type="radio"] {
-      cursor: pointer;
-      width: 18px;
-      height: 18px;
-      margin: 0;
-    }
-
-    .score-title {
-      font-size: 18px;
-    }
-
-    .score-cell {
-      min-width: 80px;
-      font-size: 20px;
-      font-weight: bold;
-      color: #0d6efd;
-    }
+    canvas { width: 100%; height: 100%; touch-action: none; }
+    .sign-actions { margin-top: 8px; display: flex; gap: 10px; }
   </style>
 </head>
 <body>
 
-  <!-- 關卡數量區塊 -->
-  <div class="section">
-    <div class="section-title">關卡數量(16 分)：</div>
-    <table>
+  <!-- 登入模態框 -->
+  <div id="login-view">
+    <div class="login-card">
+      <h3 style="margin-top:0; text-align:center;">評審登入</h3>
+      <div class="form-group">
+        <label>帳號</label>
+        <input type="text" id="login-user" placeholder="輸入評審帳號">
+      </div>
+      <div class="form-group">
+        <label>密碼</label>
+        <input type="password" id="login-pass" placeholder="輸入密碼">
+      </div>
+      <button class="btn btn-primary" style="width: 100%;" id="btn-login">登入系統</button>
+    </div>
+  </div>
+
+  <!-- 頂部資訊列 -->
+  <header>
+    <div>
+      <span id="judge-display" style="font-weight:bold; font-size:16px;">未登入</span>
+    </div>
+    <h2 id="page-title">總評分表</h2>
+    <div>
+      <button class="btn btn-secondary" id="btn-logout">登出</button>
+    </div>
+  </header>
+
+  <!-- 頁面 1：總表 (隊伍名單) -->
+  <div id="page-summary" class="page active">
+    <h3>分配評分隊伍清單</h3>
+    <table id="summary-table">
       <thead>
         <tr>
-          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th>
-          <th class="score-title">得分</th>
+          <th style="width: 80px;">組別</th>
+          <th style="width: 100px;">隊伍編號</th>
+          <th>學校名稱</th>
+          <th>隊伍名稱</th>
+          <th style="width: 90px;">關卡(16)</th>
+          <th style="width: 100px;">流暢度(20)</th>
+          <th style="width: 90px;">內容(10)</th>
+          <th style="width: 100px;">任務(54)</th>
+          <th style="width: 90px;">總分(100)</th>
+          <th style="width: 90px;">隱藏成績</th>
+          <th style="width: 110px;">操作</th>
         </tr>
       </thead>
-      <tbody>
-        <tr>
-          <td class="option-cell"><input type="radio" name="stages" value="1"></td>
-          <td class="option-cell"><input type="radio" name="stages" value="2"></td>
-          <td class="option-cell"><input type="radio" name="stages" value="3"></td>
-          <td class="option-cell"><input type="radio" name="stages" value="4"></td>
-          <td class="option-cell"><input type="radio" name="stages" value="5"></td>
-          <td class="option-cell"><input type="radio" name="stages" value="6"></td>
-          <td class="option-cell"><input type="radio" name="stages" value="7"></td>
-          <td class="option-cell"><input type="radio" name="stages" value="8" checked></td>
-          <td id="stage-score" class="score-cell">16</td>
-        </tr>
+      <tbody id="team-list-body">
+        <!-- 動態注入隊伍 -->
       </tbody>
     </table>
   </div>
 
-  <!-- 流暢度區塊 -->
-  <div class="section">
-    <div class="section-title">流暢度(20 分)：</div>
-    <div class="sub-title">手動或掉落次數</div>
+  <!-- 頁面 2：隊伍獨立評分頁面 -->
+  <div id="page-scoring" class="page">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <div>
+        <h3 id="current-team-info" style="margin: 0; color: var(--primary);">隊伍評分中</h3>
+      </div>
+      <button class="btn btn-secondary" id="btn-back">返回總表</button>
+    </div>
+
+    <!-- 1. 關卡數量 -->
+    <div class="section-title">關卡數量 (16 分)[cite: 2]：</div>
     <table>
       <thead>
         <tr>
-          <th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
-          <th class="score-title">得分</th>
+          <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>得分</th>
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td class="option-cell"><input type="radio" name="fluency" value="0" checked></td>
-          <td class="option-cell"><input type="radio" name="fluency" value="1"></td>
-          <td class="option-cell"><input type="radio" name="fluency" value="2"></td>
-          <td class="option-cell"><input type="radio" name="fluency" value="3"></td>
-          <td class="option-cell"><input type="radio" name="fluency" value="4"></td>
-          <td class="option-cell"><input type="radio" name="fluency" value="5"></td>
-          <td class="option-cell"><input type="radio" name="fluency" value="6"></td>
-          <td class="option-cell"><input type="radio" name="fluency" value="7"></td>
-          <td class="option-cell"><input type="radio" name="fluency" value="8"></td>
-          <td class="option-cell"><input type="radio" name="fluency" value="9"></td>
-          <td class="option-cell"><input type="radio" name="fluency" value="10"></td>
-          <td id="fluency-score" class="score-cell">20</td>
+        <tr id="row-stage">
+          <td class="selectable" data-val="1">1</td>
+          <td class="selectable" data-val="2">2</td>
+          <td class="selectable" data-val="3">3</td>
+          <td class="selectable" data-val="4">4</td>
+          <td class="selectable" data-val="5">5</td>
+          <td class="selectable" data-val="6">6</td>
+          <td class="selectable" data-val="7">7</td>
+          <td class="selectable active" data-val="8">8 (預設)[cite: 2]</td>
+          <td id="score-stage" class="score-badge">16</td>
         </tr>
       </tbody>
     </table>
+
+    <!-- 2. 流暢度 -->
+    <div class="section-title">流暢度 (20 分)[cite: 2]：</div>
+    <div style="font-size: 15px; margin-bottom: 6px;">手動或掉落次數[cite: 2]</div>
+    <table>
+      <thead>
+        <tr>
+          <th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>得分</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr id="row-fluency">
+          <td class="selectable active" data-val="0">0 (預設)[cite: 2]</td>
+          <td class="selectable" data-val="1">1</td>
+          <td class="selectable" data-val="2">2</td>
+          <td class="selectable" data-val="3">3</td>
+          <td class="selectable" data-val="4">4</td>
+          <td class="selectable" data-val="5">5</td>
+          <td class="selectable" data-val="6">6</td>
+          <td class="selectable" data-val="7">7</td>
+          <td class="selectable" data-val="8">8</td>
+          <td class="selectable" data-val="9">9</td>
+          <td class="selectable" data-val="10">10</td>
+          <td id="score-fluency-raw" class="score-badge">20</td>
+        </tr>
+      </tbody>
+    </table>
+    <div>
+      <strong>流暢度加權分數[cite: 2]：<span id="score-fluency-weighted" class="score-badge" style="font-size: 20px;">20</span> 分</strong>
+      <div class="calc-hint">(公式：(20 - 次數*2) * 關卡數量 / 8)[cite: 2]</div>
+    </div>
+
+    <!-- 3. 關卡內容/任務 -->
+    <div class="section-title">關卡內容 / 任務 (10 分)[cite: 3]：</div>
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="2" style="width: 100px;">項目</th>
+          <th colspan="3">內容符合[cite: 3]</th>
+          <th colspan="2">運作[cite: 3]</th>
+          <th rowspan="2" style="width: 80px;">合計[cite: 3]</th>
+        </tr>
+        <tr>
+          <th>3[cite: 3]</th><th>1[cite: 3]</th><th>0[cite: 3]</th><th>2[cite: 3]</th><th>0[cite: 3]</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr id="row-task-1">
+          <td>任務一[cite: 3]</td>
+          <td class="selectable active" data-group="c1" data-val="3">3 (預設)[cite: 3]</td>
+          <td class="selectable" data-group="c1" data-val="1">1[cite: 3]</td>
+          <td class="selectable" data-group="c1" data-val="0">0[cite: 3]</td>
+          <td class="selectable active" data-group="o1" data-val="2">2 (預設)[cite: 3]</td>
+          <td class="selectable" data-group="o1" data-val="0">0[cite: 3]</td>
+          <td class="score-badge task-row-total">5</td>
+        </tr>
+        <tr id="row-task-2">
+          <td>任務二[cite: 3]</td>
+          <td class="selectable active" data-group="c2" data-val="3">3 (預設)[cite: 3]</td>
+          <td class="selectable" data-group="c2" data-val="1">1[cite: 3]</td>
+          <td class="selectable" data-group="c2" data-val="0">0[cite: 3]</td>
+          <td class="selectable active" data-group="o2" data-val="2">2 (預設)[cite: 3]</td>
+          <td class="selectable" data-group="o2" data-val="0">0[cite: 3]</td>
+          <td class="score-badge task-row-total">5</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="text-align: right; margin-bottom: 20px; font-weight: bold;">
+      關卡內容總分：<span id="score-task-total" class="score-badge">10</span> / 10 分
+    </div>
+
+    <!-- 4. 指定任務 -->
+    <div class="section-title">指定任務 (54 分)[cite: 4]：</div>
+    <!-- 任務標準規範分數 -->
+    <table style="font-size: 13px;">
+      <thead>
+        <tr>
+          <th colspan="6">第一次[cite: 4]</th>
+          <th colspan="6">第二次[cite: 4]</th>
+          <th colspan="6">第三次[cite: 4]</th>
+        </tr>
+        <tr>
+          <th colspan="2">自動[cite: 4]</th><th colspan="2">距離[cite: 4]</th><th colspan="2">未觸碰[cite: 4]</th>
+          <th colspan="2">自動[cite: 4]</th><th colspan="2">距離[cite: 4]</th><th colspan="2">未觸碰[cite: 4]</th>
+          <th colspan="2">自動[cite: 4]</th><th colspan="2">距離[cite: 4]</th><th colspan="2">未觸碰[cite: 4]</th>
+        </tr>
+        <tr>
+          <th>否[cite: 4]</th><th>是[cite: 4]</th><th>否[cite: 4]</th><th>是[cite: 4]</th><th>否[cite: 4]</th><th>是[cite: 4]</th>
+          <th>否[cite: 4]</th><th>是[cite: 4]</th><th>否[cite: 4]</th><th>是[cite: 4]</th><th>否[cite: 4]</th><th>是[cite: 4]</th>
+          <th>否[cite: 4]</th><th>是[cite: 4]</th><th>否[cite: 4]</th><th>是[cite: 4]</th><th>否[cite: 4]</th><th>是[cite: 4]</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr id="row-mission-std">
+          <!-- 第一次 -->
+          <td class="selectable" data-group="m1_1" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m1_1" data-val="3">是(預設)[cite: 4]</td>
+          <td class="selectable" data-group="m1_2" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m1_2" data-val="3">是(預設)[cite: 4]</td>
+          <td class="selectable" data-group="m1_3" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m1_3" data-val="3">是(預設)[cite: 4]</td>
+          <!-- 第二次 -->
+          <td class="selectable" data-group="m2_1" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m2_1" data-val="3">是(預設)[cite: 4]</td>
+          <td class="selectable" data-group="m2_2" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m2_2" data-val="3">是(預設)[cite: 4]</td>
+          <td class="selectable" data-group="m2_3" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m2_3" data-val="3">是(預設)[cite: 4]</td>
+          <!-- 第三次 -->
+          <td class="selectable" data-group="m3_1" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m3_1" data-val="3">是(預設)[cite: 4]</td>
+          <td class="selectable" data-group="m3_2" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m3_2" data-val="3">是(預設)[cite: 4]</td>
+          <td class="selectable" data-group="m3_3" data-val="0">否[cite: 4]</td><td class="selectable active" data-group="m3_3" data-val="3">是(預設)[cite: 4]</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="font-weight: bold; margin-bottom: 12px;">標準規範加總：<span id="score-mission-std-sum" class="score-badge">27</span> 分</div>
+
+    <!-- 區域分數與加分 -->
+    <table>
+      <thead>
+        <tr>
+          <th rowspan="2" style="width: 70px;">次數</th>
+          <th colspan="9">區域分數[cite: 4]</th>
+          <th colspan="6">加分[cite: 4]</th>
+          <th rowspan="2" style="width: 80px;">合計[cite: 4]</th>
+        </tr>
+        <tr>
+          <th>8[cite: 4]</th><th>7[cite: 4]</th><th>6[cite: 4]</th><th>5[cite: 4]</th><th>4[cite: 4]</th><th>3[cite: 4]</th><th>2[cite: 4]</th><th>1[cite: 4]</th><th>0[cite: 4]</th>
+          <th>3[cite: 4]</th><th>2.5[cite: 4]</th><th>2[cite: 4]</th><th>1.5[cite: 4]</th><th>1[cite: 4]</th><th>0.5[cite: 4]</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 第一次 -->
+        <tr id="row-zone-1">
+          <td>第一次[cite: 4]</td>
+          <td class="selectable active" data-group="z1" data-val="8">8[cite: 4]</td>
+          <td class="selectable" data-group="z1" data-val="7">7[cite: 4]</td><td class="selectable" data-group="z1" data-val="6">6[cite: 4]</td>
+          <td class="selectable" data-group="z1" data-val="5">5[cite: 4]</td><td class="selectable" data-group="z1" data-val="4">4[cite: 4]</td>
+          <td class="selectable" data-group="z1" data-val="3">3[cite: 4]</td><td class="selectable" data-group="z1" data-val="2">2[cite: 4]</td>
+          <td class="selectable" data-group="z1" data-val="1">1[cite: 4]</td><td class="selectable" data-group="z1" data-val="0">0[cite: 4]</td>
+          <!-- 加分 -->
+          <td class="selectable" data-group="b1" data-val="3">3[cite: 4]</td><td class="selectable" data-group="b1" data-val="2.5">2.5[cite: 4]</td>
+          <td class="selectable" data-group="b1" data-val="2">2[cite: 4]</td><td class="selectable" data-group="b1" data-val="1.5">1.5[cite: 4]</td>
+          <td class="selectable active" data-group="b1" data-val="1">1[cite: 4]</td><td class="selectable" data-group="b1" data-val="0.5">0.5[cite: 4]</td>
+          <td class="score-badge zone-row-total">9</td>
+        </tr>
+        <!-- 第二次 -->
+        <tr id="row-zone-2">
+          <td>第二次[cite: 4]</td>
+          <td class="selectable active" data-group="z2" data-val="8">8[cite: 4]</td>
+          <td class="selectable" data-group="z2" data-val="7">7[cite: 4]</td><td class="selectable" data-group="z2" data-val="6">6[cite: 4]</td>
+          <td class="selectable" data-group="z2" data-val="5">5[cite: 4]</td><td class="selectable" data-group="z2" data-val="4">4[cite: 4]</td>
+          <td class="selectable" data-group="z2" data-val="3">3[cite: 4]</td><td class="selectable" data-group="z2" data-val="2">2[cite: 4]</td>
+          <td class="selectable" data-group="z2" data-val="1">1[cite: 4]</td><td class="selectable" data-group="z2" data-val="0">0[cite: 4]</td>
+          <!-- 加分 -->
+          <td class="selectable" data-group="b2" data-val="3">3[cite: 4]</td><td class="selectable" data-group="b2" data-val="2.5">2.5[cite: 4]</td>
+          <td class="selectable" data-group="b2" data-val="2">2[cite: 4]</td><td class="selectable" data-group="b2" data-val="1.5">1.5[cite: 4]</td>
+          <td class="selectable active" data-group="b2" data-val="1">1[cite: 4]</td><td class="selectable" data-group="b2" data-val="0.5">0.5[cite: 4]</td>
+          <td class="score-badge zone-row-total">9</td>
+        </tr>
+        <!-- 第三次 -->
+        <tr id="row-zone-3">
+          <td>第三次[cite: 4]</td>
+          <td class="selectable active" data-group="z3" data-val="8">8[cite: 4]</td>
+          <td class="selectable" data-group="z3" data-val="7">7[cite: 4]</td><td class="selectable" data-group="z3" data-val="6">6[cite: 4]</td>
+          <td class="selectable" data-group="z3" data-val="5">5[cite: 4]</td><td class="selectable" data-group="z3" data-val="4">4[cite: 4]</td>
+          <td class="selectable" data-group="z3" data-val="3">3[cite: 4]</td><td class="selectable" data-group="z3" data-val="2">2[cite: 4]</td>
+          <td class="selectable" data-group="z3" data-val="1">1[cite: 4]</td><td class="selectable" data-group="z3" data-val="0">0[cite: 4]</td>
+          <!-- 加分 -->
+          <td class="selectable" data-group="b3" data-val="3">3[cite: 4]</td><td class="selectable" data-group="b3" data-val="2.5">2.5[cite: 4]</td>
+          <td class="selectable" data-group="b3" data-val="2">2[cite: 4]</td><td class="selectable" data-group="b3" data-val="1.5">1.5[cite: 4]</td>
+          <td class="selectable active" data-group="b3" data-val="1">1[cite: 4]</td><td class="selectable" data-group="b3" data-val="0.5">0.5[cite: 4]</td>
+          <td class="score-badge zone-row-total">9</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="font-weight: bold; margin-bottom: 20px;">
+      指定任務加總：<span id="score-mission-total" class="score-badge" style="font-size: 20px;">54</span> / 54 分
+    </div>
+
+    <hr style="margin: 30px 0; border: none; border-top: 1px solid #ccc;">
+
+    <!-- 5. 總分結算與評審簽名 -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
+      <div>
+        <div style="font-size: 24px; font-weight: bold; margin-bottom: 12px;">
+          本次評分總結算：<span id="final-total-score" style="color: #d32f2f; font-size: 32px;">100</span> / 100 分
+        </div>
+        <p style="color: #666; font-size: 14px;">請於右方簽名板簽署，點擊送出即可同步至 Google 試算表。</p>
+      </div>
+
+      <div>
+        <label style="display:block; font-weight: bold; margin-bottom: 6px;">評審簽名確認：</label>
+        <div class="sign-container">
+          <canvas id="sign-pad"></canvas>
+        </div>
+        <div class="sign-actions">
+          <button class="btn btn-secondary" id="btn-clear-sign">清除重簽</button>
+          <button class="btn btn-success" style="flex: 1;" id="btn-submit">確認並送出成績</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>
