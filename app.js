@@ -17,7 +17,6 @@ let isDrawing = false;
 let hasSignature = false;
 
 document.addEventListener("DOMContentLoaded", () => {
-  initCanvas();
   setupSelectionHandlers();
 
   document.getElementById("btn-login").addEventListener("click", handleLogin);
@@ -25,6 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-back").addEventListener("click", () => switchPage("summary"));
   document.getElementById("btn-clear-sign").addEventListener("click", clearCanvas);
   document.getElementById("btn-submit").addEventListener("click", submitScore);
+
+  // 視窗尺寸改變時重新校準 Canvas
+  window.addEventListener("resize", resizeCanvas);
 });
 
 async function handleLogin() {
@@ -38,7 +40,7 @@ async function handleLogin() {
 
   const btn = document.getElementById("btn-login");
   btn.disabled = true;
-  btn.textContent = "驗證並載入隊伍中...";
+  btn.textContent = "登入中...";
 
   try {
     const res = await fetch(`${API_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}`);
@@ -55,10 +57,9 @@ async function handleLogin() {
       if (assignedTeams.length === 0) {
         alert(
           `【登入成功，但未比對到隊伍】\n\n` +
-          `1. 評審名單 D 欄設定的文字為：\n「${data.rawInputTeams || "(空白)"}」\n\n` +
-          `2. 系統解析出的隊伍代號為：\n${data.parsedTeams.join(", ") || "(無)"}\n\n` +
-          `3. 「隊伍名單」試算表 B 欄抓到的前幾筆代號為：\n${data.sampleTeamsInSheet.join(", ") || "(工作表 B 欄沒有資料)"}\n\n` +
-          `請檢查兩邊的代號格式是否一致（例如 GAE01 vs GAE1）。`
+          `1. 評審名單 D 欄設定文字：\n「${data.rawInputTeams || "(空白)"}」\n\n` +
+          `2. 解析出代號：\n${data.parsedTeams.join(", ") || "(無)"}\n\n` +
+          `3. 隊伍名單 B 欄代號樣例：\n${data.sampleTeamsInSheet.join(", ") || "(無)"}`
         );
       }
 
@@ -138,15 +139,20 @@ window.openScoring = function(teamId) {
   document.getElementById("current-team-info").textContent = 
     `評分對象：[${currentTeam.teamId}] ${currentTeam.school} - ${currentTeam.teamName}`;
 
-  clearCanvas();
-  resetFormDefaults();
+  resetAllFormSelections();
   calculateAllScores();
   switchPage("scoring");
+
+  // 切換至評分頁後校準畫布
+  setTimeout(() => {
+    resizeCanvas();
+    clearCanvas();
+  }, 100);
 };
 
-function resetFormDefaults() {
-  // 重設區域分數與加分為未選狀態
-  document.querySelectorAll(".toggleable").forEach(cell => {
+// 一開始都不選取，全部重設為白色
+function resetAllFormSelections() {
+  document.querySelectorAll(".selectable").forEach(cell => {
     cell.classList.remove("active");
   });
 }
@@ -164,23 +170,18 @@ function switchPage(page) {
   }
 }
 
+// 點選變藍、再點一次取消變白（Toggle 邏輯）
 function setupSelectionHandlers() {
   document.querySelectorAll(".selectable").forEach(cell => {
     cell.addEventListener("click", function() {
       const parentRow = this.closest("tr");
       const group = this.dataset.group;
-      const isToggleable = this.classList.contains("toggleable");
 
-      if (isToggleable) {
-        // 區域分數與加分：支援反選（再次點擊取消變白色為 0 分）
-        if (this.classList.contains("active")) {
-          this.classList.remove("active");
-        } else {
-          parentRow.querySelectorAll(`.selectable[data-group="${group}"]`).forEach(c => c.classList.remove("active"));
-          this.classList.add("active");
-        }
+      if (this.classList.contains("active")) {
+        // 若已經是藍色，再點一次變回白色（取消選取）
+        this.classList.remove("active");
       } else {
-        // 一般單選項（關卡、流暢度、關卡內容、標準規範）
+        // 同一組別（例如同一列或同項目）其他格取消藍色
         if (group) {
           parentRow.querySelectorAll(`.selectable[data-group="${group}"]`).forEach(c => c.classList.remove("active"));
         } else {
@@ -194,23 +195,30 @@ function setupSelectionHandlers() {
   });
 }
 
+// 核心計分運算
 function calculateAllScores() {
-  // 1. 關卡數量 (滿分 16)
+  // 1. 關卡數量 (若未選則為 0 分)
   const stageEl = document.querySelector("#row-stage .selectable.active");
-  const stageCount = stageEl ? parseFloat(stageEl.dataset.val) : 8;
+  const stageCount = stageEl ? parseFloat(stageEl.dataset.val) : 0;
   const stageScore = stageCount * 2;
   document.getElementById("score-stage").textContent = stageScore;
 
-  // 2. 流暢度與加權 (滿分 20)
+  // 2. 流暢度與加權 (若未選次數則為 0 分)
   const fluencyEl = document.querySelector("#row-fluency .selectable.active");
-  const fluencyDrops = fluencyEl ? parseFloat(fluencyEl.dataset.val) : 0;
-  const fluencyRaw = Math.max(0, 20 - fluencyDrops * 2);
-  const fluencyWeighted = Number(((fluencyRaw * stageCount) / 8).toFixed(2));
+  let fluencyRaw = 0;
+  let fluencyWeighted = 0;
+
+  if (fluencyEl) {
+    const drops = parseFloat(fluencyEl.dataset.val);
+    fluencyRaw = Math.max(0, 20 - drops * 2);
+    // 加權公式：(20 - 次數*2) * 關卡數量 / 8
+    fluencyWeighted = stageCount > 0 ? Number(((fluencyRaw * stageCount) / 8).toFixed(2)) : 0;
+  }
 
   document.getElementById("score-fluency-raw").textContent = fluencyRaw;
   document.getElementById("score-fluency-weighted").textContent = fluencyWeighted;
 
-  // 3. 關卡內容 / 任務 (滿分 10)
+  // 3. 關卡任務 (任務一、任務二)
   let taskTotal = 0;
   ["row-task-1", "row-task-2"].forEach(rowId => {
     const row = document.getElementById(rowId);
@@ -223,15 +231,15 @@ function calculateAllScores() {
   });
   document.getElementById("score-task-total").textContent = taskTotal;
 
-  // 4. 指定任務 (滿分 54)
-  // 4.1 標準規範 (滿分 27)
+  // 4. 指定任務
+  // 4.1 標準規範 (未選為 0)
   let stdSum = 0;
   document.querySelectorAll("#row-mission-std .selectable.active").forEach(cell => {
     stdSum += parseFloat(cell.dataset.val);
   });
   document.getElementById("score-mission-std-sum").textContent = stdSum;
 
-  // 4.2 區域分數與加分 (若未選取則為 0 分)
+  // 4.2 區域分數與加分 (未選為 0)
   let zoneSum = 0;
   ["row-zone-1", "row-zone-2", "row-zone-3"].forEach(rowId => {
     const row = document.getElementById(rowId);
@@ -246,62 +254,91 @@ function calculateAllScores() {
   const missionTotal = stdSum + zoneSum;
   document.getElementById("score-mission-total").textContent = missionTotal;
 
-  // 5. 總分結算 (滿分 100)
+  // 5. 總分結算
   const totalScore = Number((stageScore + fluencyWeighted + taskTotal + missionTotal).toFixed(2));
   document.getElementById("final-total-score").textContent = totalScore;
 }
 
-function initCanvas() {
-  const rect = canvas.parentElement.getBoundingClientRect();
-  canvas.width = rect.width;
-  canvas.height = rect.height;
+// ---------------------------
+// 簽名板 (完美支援手機觸控、iPad Apple Pencil 與 Retina 高解析)
+// ---------------------------
+function resizeCanvas() {
+  const container = canvas.parentElement;
+  if (!container) return;
+
+  const rect = container.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+
+  // 解決手機高解析螢幕模糊與座標偏移
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
 
   ctx.lineWidth = 3;
   ctx.lineCap = "round";
-  ctx.strokeStyle = "#000";
-
-  function getPos(e) {
-    const cRect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: clientX - cRect.left, y: clientY - cRect.top };
-  }
-
-  function start(e) {
-    isDrawing = true;
-    hasSignature = true;
-    const pos = getPos(e);
-    ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
-    e.preventDefault();
-  }
-
-  function move(e) {
-    if (!isDrawing) return;
-    const pos = getPos(e);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-    e.preventDefault();
-  }
-
-  function end() {
-    isDrawing = false;
-  }
-
-  canvas.addEventListener("touchstart", start, { passive: false });
-  canvas.addEventListener("touchmove", move, { passive: false });
-  canvas.addEventListener("touchend", end);
-
-  canvas.addEventListener("mousedown", start);
-  canvas.addEventListener("mousemove", move);
-  canvas.addEventListener("mouseup", end);
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "#000000";
 }
 
+function getEventPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  let clientX, clientY;
+
+  if (e.touches && e.touches.length > 0) {
+    clientX = e.touches[0].clientX;
+    clientY = e.touches[0].clientY;
+  } else {
+    clientX = e.clientX;
+    clientY = e.clientY;
+  }
+
+  return {
+    x: clientX - rect.left,
+    y: clientY - rect.top
+  };
+}
+
+function startDrawing(e) {
+  isDrawing = true;
+  hasSignature = true;
+  const pos = getEventPos(e);
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+  e.preventDefault();
+}
+
+function draw(e) {
+  if (!isDrawing) return;
+  const pos = getEventPos(e);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+  e.preventDefault();
+}
+
+function stopDrawing() {
+  isDrawing = false;
+}
+
+// 綁定觸控與滑鼠事件
+canvas.addEventListener("touchstart", startDrawing, { passive: false });
+canvas.addEventListener("touchmove", draw, { passive: false });
+canvas.addEventListener("touchend", stopDrawing);
+canvas.addEventListener("touchcancel", stopDrawing);
+
+canvas.addEventListener("mousedown", startDrawing);
+canvas.addEventListener("mousemove", draw);
+canvas.addEventListener("mouseup", stopDrawing);
+canvas.addEventListener("mouseleave", stopDrawing);
+
 function clearCanvas() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const dpr = window.devicePixelRatio || 1;
+  ctx.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
   hasSignature = false;
 }
 
+// ---------------------------
+// 送出成績
+// ---------------------------
 async function submitScore() {
   if (!hasSignature) {
     alert("請評審完成下方簽名後再行送出！");
