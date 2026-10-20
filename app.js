@@ -5,6 +5,10 @@ let assignedTeams = [];
 let scoresCache = {};
 let currentTeam = null;
 
+// 關鍵狀態記錄表：記錄每一隊的顯示狀態 ('visible' | 'hidden')
+// 只要設為 'hidden'，無論切換頁面、評分、返回總表，都不會被重置
+const teamDisplayState = {};
+
 const loginView = document.getElementById("login-view");
 const pageSummary = document.getElementById("page-summary");
 const pageScoring = document.getElementById("page-scoring");
@@ -26,8 +30,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-submit").addEventListener("click", submitScore);
 
   // 全部隱藏 / 全部顯示事件綁定
-  document.getElementById("btn-hide-all").addEventListener("click", () => setAllScoresVisibility(true));
-  document.getElementById("btn-show-all").addEventListener("click", () => setAllScoresVisibility(false));
+  document.getElementById("btn-hide-all").addEventListener("click", hideAllScores);
+  document.getElementById("btn-show-all").addEventListener("click", showAllScores);
 
   // 螢幕尺寸改變或橫豎向旋轉時校正畫板
   window.addEventListener("resize", () => {
@@ -66,6 +70,13 @@ async function handleLogin() {
       assignedTeams = data.teams || [];
       scoresCache = data.existingScores || {};
 
+      // 初始化所有隊伍的顯示狀態，預設若沒有設定過則為 'visible'
+      assignedTeams.forEach(t => {
+        if (!teamDisplayState[t.teamId]) {
+          teamDisplayState[t.teamId] = "visible";
+        }
+      });
+
       judgeDisplay.textContent = `評審：${currentJudge}`;
       loginView.style.display = "none";
 
@@ -90,6 +101,7 @@ async function handleLogin() {
   }
 }
 
+// 根據 teamDisplayState 狀態渲染隊伍清單
 function renderTeamList() {
   teamListBody.innerHTML = "";
 
@@ -100,28 +112,38 @@ function renderTeamList() {
 
   assignedTeams.forEach(team => {
     const tr = document.createElement("tr");
+    tr.id = `team-row-${team.teamId}`;
+
     const score = scoresCache[team.teamId] || {};
 
-    const stageVal = score.stageScore ?? "-";
-    const fluencyVal = score.fluencyScore ?? "-";
-    const taskVal = score.taskScore ?? "-";
-    const stdVal = score.stdScore ?? "-";
-    const missionVal = score.missionScore ?? "-";
-    const totalVal = score.totalScore ?? "-";
+    const stageVal = score.stageScore !== undefined ? score.stageScore : "-";
+    const fluencyVal = score.fluencyScore !== undefined ? score.fluencyScore : "-";
+    const taskVal = score.taskScore !== undefined ? score.taskScore : "-";
+    const stdVal = score.stdScore !== undefined ? score.stdScore : "-";
+    const missionVal = score.missionScore !== undefined ? score.missionScore : "-";
+    const totalVal = score.totalScore !== undefined ? score.totalScore : "-";
+
+    // 嚴格判斷：是否已被按過「隱藏」
+    const isHidden = (teamDisplayState[team.teamId] === "hidden");
 
     tr.innerHTML = `
       <td>${team.group}</td>
       <td style="font-weight:bold;">${team.teamId}</td>
       <td>${team.school}</td>
       <td>${team.teamName}</td>
-      <td class="score-col">${stageVal}</td>
-      <td class="score-col">${fluencyVal}</td>
-      <td class="score-col">${taskVal}</td>
-      <td class="score-col">${stdVal}</td>
-      <td class="score-col">${missionVal}</td>
-      <td class="score-col" style="font-weight:bold; color:var(--primary);">${totalVal}</td>
+      <td class="score-col" data-val="${stageVal}">${isHidden ? "***" : stageVal}</td>
+      <td class="score-col" data-val="${fluencyVal}">${isHidden ? "***" : fluencyVal}</td>
+      <td class="score-col" data-val="${taskVal}">${isHidden ? "***" : taskVal}</td>
+      <td class="score-col" data-val="${stdVal}">${isHidden ? "***" : stdVal}</td>
+      <td class="score-col" data-val="${missionVal}">${isHidden ? "***" : missionVal}</td>
+      <td class="score-col" data-val="${totalVal}" style="font-weight:bold; color:var(--primary);">${isHidden ? "***" : totalVal}</td>
       <td>
-        <button class="btn btn-secondary btn-toggle-score" style="padding: 4px 6px; font-size:11px;" onclick="toggleRowScore(this)">隱藏</button>
+        <button class="btn ${isHidden ? "btn-primary" : "btn-secondary"}" 
+                style="padding: 4px 6px; font-size:11px;" 
+                id="btn-toggle-${team.teamId}"
+                onclick="toggleScoreState('${team.teamId}')">
+          ${isHidden ? "顯示" : "隱藏"}
+        </button>
       </td>
       <td>
         <button class="btn btn-primary" style="padding: 5px 8px; font-size:12px;" onclick="openScoring('${team.teamId}')">
@@ -133,53 +155,53 @@ function renderTeamList() {
   });
 }
 
-// 單列切換隱藏/顯示
-window.toggleRowScore = function(btn) {
-  const row = btn.closest("tr");
-  const scoreCells = row.querySelectorAll(".score-col");
-  const isHidden = btn.dataset.hidden === "true";
-
-  scoreCells.forEach(cell => {
-    if (!isHidden) {
-      if (!cell.dataset.realText) {
-        cell.dataset.realText = cell.textContent;
-      }
-      cell.textContent = "***";
-    } else {
-      cell.textContent = cell.dataset.realText || cell.textContent;
-    }
-  });
-
-  btn.dataset.hidden = !isHidden;
-  btn.textContent = !isHidden ? "顯示" : "隱藏";
+// 單一隊伍點擊隱藏/顯示按鈕切換
+window.toggleScoreState = function(teamId) {
+  const currentState = teamDisplayState[teamId];
+  // 切換狀態
+  if (currentState === "hidden") {
+    // 只有按了「顯示」，才轉為 visible
+    teamDisplayState[teamId] = "visible";
+  } else {
+    // 按了「隱藏」，轉為 hidden
+    teamDisplayState[teamId] = "hidden";
+  }
+  // 即時更新畫面該列
+  updateRowDisplay(teamId);
 };
 
-// 全部隱藏 / 全部顯示
-function setAllScoresVisibility(hide) {
-  const rows = teamListBody.querySelectorAll("tr");
-  rows.forEach(row => {
-    const btn = row.querySelector(".btn-toggle-score");
-    const scoreCells = row.querySelectorAll(".score-col");
-    if (!btn || scoreCells.length === 0) return;
+// 更新單列畫面，避免重刷整張表
+function updateRowDisplay(teamId) {
+  const row = document.getElementById(`team-row-${teamId}`);
+  if (!row) return;
 
-    if (hide) {
-      scoreCells.forEach(cell => {
-        if (!cell.dataset.realText) {
-          cell.dataset.realText = cell.textContent;
-        }
-        cell.textContent = "***";
-      });
-      btn.dataset.hidden = "true";
-      btn.textContent = "顯示";
-    } else {
-      scoreCells.forEach(cell => {
-        if (cell.dataset.realText !== undefined) {
-          cell.textContent = cell.dataset.realText;
-        }
-      });
-      btn.dataset.hidden = "false";
-      btn.textContent = "隱藏";
-    }
+  const isHidden = (teamDisplayState[teamId] === "hidden");
+  const scoreCells = row.querySelectorAll(".score-col");
+  const btn = document.getElementById(`btn-toggle-${teamId}`);
+
+  scoreCells.forEach(cell => {
+    cell.textContent = isHidden ? "***" : cell.dataset.val;
+  });
+
+  if (btn) {
+    btn.textContent = isHidden ? "顯示" : "隱藏";
+    btn.className = `btn ${isHidden ? "btn-primary" : "btn-secondary"}`;
+  }
+}
+
+// 全部隱藏按鈕：強制將所有隊伍設為 hidden
+function hideAllScores() {
+  assignedTeams.forEach(team => {
+    teamDisplayState[team.teamId] = "hidden";
+    updateRowDisplay(team.teamId);
+  });
+}
+
+// 全部顯示按鈕：強制將所有隊伍設為 visible
+function showAllScores() {
+  assignedTeams.forEach(team => {
+    teamDisplayState[team.teamId] = "visible";
+    updateRowDisplay(team.teamId);
   });
 }
 
@@ -226,6 +248,7 @@ function switchPage(page) {
     pageSummary.classList.add("active");
     pageScoring.classList.remove("active");
     document.getElementById("page-title").textContent = "總評分表";
+    // 返回總表時重繪，會嚴格依據 teamDisplayState 狀態決定維持隱藏或維持顯示！
     renderTeamList();
   } else {
     pageSummary.classList.remove("active");
@@ -456,6 +479,7 @@ async function submitScore() {
     if (result.success) {
       alert("成績已成功同步覆寫至試算表！");
       scoresCache[currentTeam.teamId] = payload;
+      // 送出成功返回總表，此時該隊伍若原本是 hidden，依然維持 hidden 不變！
       switchPage("summary");
     } else {
       alert("儲存失敗：" + result.message);
