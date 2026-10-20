@@ -69,7 +69,7 @@ async function handleLogin() {
       assignedTeams = data.teams || [];
       scoresCache = data.existingScores || {};
 
-      // 初始化所有隊伍的顯示狀態，預設若沒有設定過則為 'visible'
+      // 初始化隊伍顯示狀態
       assignedTeams.forEach(t => {
         if (!teamDisplayState[t.teamId]) {
           teamDisplayState[t.teamId] = "visible";
@@ -100,7 +100,22 @@ async function handleLogin() {
   }
 }
 
-// 根據 teamDisplayState 狀態渲染隊伍清單
+// 輔助函式：取得數值的文字表示（無成績時返回空字串 ""）
+function formatScoreVal(val) {
+  if (val === undefined || val === null || val === "" || val === "-") {
+    return "";
+  }
+  return String(val);
+}
+
+// 輔助函式：判斷欄位文字在給定 hidden 狀態下應顯現的字串
+// 若原始值為空字串，則隱藏時依然為空白，絕不會補上 ***
+function getDisplayScore(valStr, isHidden) {
+  if (!valStr) return "";
+  return isHidden ? "***" : valStr;
+}
+
+// 根據 teamDisplayState 狀態與「未評分在前、已評分在後」排序渲染
 function renderTeamList() {
   teamListBody.innerHTML = "";
 
@@ -109,20 +124,29 @@ function renderTeamList() {
     return;
   }
 
-  assignedTeams.forEach(team => {
+  // 複製一份隊伍清單進行排序：未評分 (scored=false) 排在前面，已評分 (scored=true) 排在後面
+  const sortedTeams = [...assignedTeams].sort((a, b) => {
+    const aScored = scoresCache[a.teamId] && scoresCache[a.teamId].totalScore !== undefined;
+    const bScored = scoresCache[b.teamId] && scoresCache[b.teamId].totalScore !== undefined;
+
+    if (aScored === bScored) return 0;
+    return aScored ? 1 : -1; // a 已評分則往後放 (1)，未評分則往前放 (-1)
+  });
+
+  sortedTeams.forEach(team => {
     const tr = document.createElement("tr");
     tr.id = `team-row-${team.teamId}`;
 
     const score = scoresCache[team.teamId] || {};
+    const isScored = (score.totalScore !== undefined);
 
-    const stageVal = score.stageScore !== undefined ? score.stageScore : "-";
-    const fluencyVal = score.fluencyScore !== undefined ? score.fluencyScore : "-";
-    const taskVal = score.taskScore !== undefined ? score.taskScore : "-";
-    const stdVal = score.stdScore !== undefined ? score.stdScore : "-";
-    const missionVal = score.missionScore !== undefined ? score.missionScore : "-";
-    const totalVal = score.totalScore !== undefined ? score.totalScore : "-";
+    const stageVal = formatScoreVal(score.stageScore);
+    const fluencyVal = formatScoreVal(score.fluencyScore);
+    const taskVal = formatScoreVal(score.taskScore);
+    const stdVal = formatScoreVal(score.stdScore);
+    const missionVal = formatScoreVal(score.missionScore);
+    const totalVal = formatScoreVal(score.totalScore);
 
-    // 嚴格依照該隊伍目前的記錄狀態決定是否隱藏
     const isHidden = (teamDisplayState[team.teamId] === "hidden");
 
     tr.innerHTML = `
@@ -130,12 +154,12 @@ function renderTeamList() {
       <td style="font-weight:bold;">${team.teamId}</td>
       <td>${team.school}</td>
       <td>${team.teamName}</td>
-      <td class="score-col" data-val="${stageVal}">${isHidden ? "***" : stageVal}</td>
-      <td class="score-col" data-val="${fluencyVal}">${isHidden ? "***" : fluencyVal}</td>
-      <td class="score-col" data-val="${taskVal}">${isHidden ? "***" : taskVal}</td>
-      <td class="score-col" data-val="${stdVal}">${isHidden ? "***" : stdVal}</td>
-      <td class="score-col" data-val="${missionVal}">${isHidden ? "***" : missionVal}</td>
-      <td class="score-col" data-val="${totalVal}" style="font-weight:bold; color:var(--primary);">${isHidden ? "***" : totalVal}</td>
+      <td class="score-col" data-val="${stageVal}">${getDisplayScore(stageVal, isHidden)}</td>
+      <td class="score-col" data-val="${fluencyVal}">${getDisplayScore(fluencyVal, isHidden)}</td>
+      <td class="score-col" data-val="${taskVal}">${getDisplayScore(taskVal, isHidden)}</td>
+      <td class="score-col" data-val="${stdVal}">${getDisplayScore(stdVal, isHidden)}</td>
+      <td class="score-col" data-val="${missionVal}">${getDisplayScore(missionVal, isHidden)}</td>
+      <td class="score-col" data-val="${totalVal}" style="font-weight:bold; color:var(--primary);">${getDisplayScore(totalVal, isHidden)}</td>
       <td>
         <button class="btn ${isHidden ? "btn-primary" : "btn-secondary"}" 
                 style="padding: 4px 6px; font-size:11px;" 
@@ -145,8 +169,10 @@ function renderTeamList() {
         </button>
       </td>
       <td>
-        <button class="btn btn-primary" style="padding: 5px 8px; font-size:12px;" onclick="openScoring('${team.teamId}')">
-          ${score.totalScore !== undefined ? "重評" : "評分"}
+        <button class="btn ${isScored ? "btn-danger" : "btn-success"}" 
+                style="padding: 5px 8px; font-size:12px;" 
+                onclick="openScoring('${team.teamId}')">
+          ${isScored ? "重評" : "評分"}
         </button>
       </td>
     `;
@@ -165,7 +191,7 @@ window.toggleScoreState = function(teamId) {
   updateRowDisplay(teamId);
 };
 
-// 更新單列畫面，避免重刷整張表影響其他行
+// 更新單列畫面
 function updateRowDisplay(teamId) {
   const row = document.getElementById(`team-row-${teamId}`);
   if (!row) return;
@@ -175,7 +201,9 @@ function updateRowDisplay(teamId) {
   const btn = document.getElementById(`btn-toggle-${teamId}`);
 
   scoreCells.forEach(cell => {
-    cell.textContent = isHidden ? "***" : cell.dataset.val;
+    const rawVal = cell.dataset.val || "";
+    // 只有有成績的才變 ***，沒有成績的永遠保持空白
+    cell.textContent = getDisplayScore(rawVal, isHidden);
   });
 
   if (btn) {
@@ -243,7 +271,7 @@ function switchPage(page) {
     pageSummary.classList.add("active");
     pageScoring.classList.remove("active");
     document.getElementById("page-title").textContent = "總評分表";
-    // 返回總表時重新渲染，嚴格依照各隊伍各自的 teamDisplayState 狀態決定維持隱藏或維持顯示
+    // 返回總表時重新渲染排序：已評分隊伍會沉至後方，未評分隊伍在前方
     renderTeamList();
   } else {
     pageSummary.classList.remove("active");
@@ -475,10 +503,10 @@ async function submitScore() {
       alert("成績已成功同步覆寫至試算表！");
       scoresCache[currentTeam.teamId] = payload;
 
-      // 【核心修改】：只將剛評完分的這支隊伍設為顯現 (visible)，其他隊伍維持原狀態不變
+      // 剛評完分的這支隊伍設為顯現 (visible)，其餘原本隱藏的隊伍繼續維持隱藏
       teamDisplayState[currentTeam.teamId] = "visible";
 
-      // 返回總表，renderTeamList() 會依照各隊狀態顯示，其他原本隱藏的依然是 ***
+      // 返回總表，renderTeamList() 會自動將這支剛評完分的隊伍排序到未評分隊伍的後方
       switchPage("summary");
     } else {
       alert("儲存失敗：" + result.message);
