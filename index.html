@@ -294,7 +294,15 @@
 
   <!-- 頁面 1：總表 (隊伍名單) -->
   <div id="page-summary" class="page active">
-    <h3 style="margin: 6px 0 10px 0;">分配評分隊伍清單</h3>
+    <!-- 標題與全部隱藏/顯示操作列 -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin: 6px 0 10px 0; flex-wrap: wrap; gap: 8px;">
+      <h3 style="margin: 0;">分配評分隊伍清單</h3>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-secondary" style="padding: 5px 10px; font-size: 13px;" id="btn-hide-all">全部隱藏成績</button>
+        <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px;" id="btn-show-all">全部顯示成績</button>
+      </div>
+    </div>
+
     <div class="table-responsive">
       <table id="summary-table">
         <thead>
