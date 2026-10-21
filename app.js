@@ -4,7 +4,7 @@ let currentJudge = null;
 let currentPass = null;
 let isAdminUser = false;
 let currentSortMode = "teamId"; // "teamId" | "scoreDesc"
-let currentGroupFilter = "GAE"; // 預設直接指定為國小組 (GAE)
+let currentGroupFilter = "GAE"; // 預設國小組 (GAE)
 let assignedTeams = [];
 let scoresCache = {}; 
 let currentTeam = null;
@@ -15,7 +15,11 @@ const loginView = document.getElementById("login-view");
 const pageSummary = document.getElementById("page-summary");
 const pageScoring = document.getElementById("page-scoring");
 const judgeDisplay = document.getElementById("judge-display");
+const regionTag = document.getElementById("region-tag");
 const teamListBody = document.getElementById("team-list-body");
+
+const modalAddRegion = document.getElementById("modal-add-region");
+const selectActiveRegion = document.getElementById("select-active-region");
 
 const canvas = document.getElementById("sign-pad");
 const ctx = canvas.getContext("2d");
@@ -46,16 +50,14 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTeamList();
   });
 
-  // admin 純中文組別篩選按鈕 (國小 / 國中 / 高中)
+  // admin 組別篩選按鈕 (國小 / 國中 / 高中)
   document.querySelectorAll(".btn-filter-group").forEach(btn => {
     btn.addEventListener("click", function() {
       currentGroupFilter = this.dataset.filter;
-      
       document.querySelectorAll(".btn-filter-group").forEach(b => {
         b.className = "btn btn-secondary btn-filter-group";
       });
       this.className = "btn btn-primary btn-filter-group";
-
       renderTeamList();
     });
   });
@@ -72,6 +74,16 @@ document.addEventListener("DOMContentLoaded", () => {
       fetchLatestScores(true);
     });
   });
+
+  // admin 手動新增賽事彈窗控制
+  document.getElementById("btn-open-add-region").addEventListener("click", () => {
+    modalAddRegion.style.display = "flex";
+  });
+  document.getElementById("btn-cancel-add-region").addEventListener("click", () => {
+    modalAddRegion.style.display = "none";
+  });
+  document.getElementById("btn-confirm-add-region").addEventListener("click", submitCreateTournament);
+  document.getElementById("btn-switch-region").addEventListener("click", submitSwitchRegion);
 
   window.addEventListener("resize", () => {
     if (pageScoring.classList.contains("active")) {
@@ -117,9 +129,19 @@ async function handleLogin() {
       });
 
       judgeDisplay.textContent = isAdminUser ? `系統管理員：${currentJudge}` : `評審：${currentJudge}`;
+      if (data.regionName) {
+        regionTag.textContent = data.regionName;
+        regionTag.style.display = "inline-block";
+      }
+
       loginView.style.display = "none";
 
       applyUserRoleUI();
+
+      if (isAdminUser) {
+        loadRegionsList();
+      }
+
       renderTeamList();
 
       if (syncTimer) clearInterval(syncTimer);
@@ -156,6 +178,106 @@ function applyUserRoleUI() {
     adminActions.style.display = "none";
     if (thHideScore) thHideScore.style.display = "";
     if (thLastAction) thLastAction.textContent = "操作";
+  }
+}
+
+// 取得所有賽事清單 (admin)
+async function loadRegionsList() {
+  try {
+    const res = await fetch(`${API_URL}?action=getRegions&_t=${Date.now()}`);
+    const data = await res.json();
+    if (data.success && data.config) {
+      selectActiveRegion.innerHTML = "";
+      data.config.regions.forEach(r => {
+        const opt = document.createElement("option");
+        opt.value = r.name;
+        opt.textContent = r.name;
+        if (r.active) opt.selected = true;
+        selectActiveRegion.appendChild(opt);
+      });
+      if (data.config.activeRegion) {
+        regionTag.textContent = data.config.activeRegion.name;
+      }
+    }
+  } catch (e) {
+    console.error("載入賽事清單失敗", e);
+  }
+}
+
+// 手動送出建立新賽事
+async function submitCreateTournament() {
+  const regionName = document.getElementById("input-new-region-name").value.trim();
+  const rawDate = document.getElementById("input-new-region-date").value.trim();
+
+  if (!regionName) {
+    alert("請填寫賽事區域名稱（例如：桃園賽、台北賽）！");
+    return;
+  }
+  if (!rawDate) {
+    alert("請選擇比賽日期！");
+    return;
+  }
+
+  // 將 2026-10-31 格式化為 20261031
+  const eventDate = rawDate.replace(/-/g, "");
+
+  const btn = document.getElementById("btn-confirm-add-region");
+  btn.disabled = true;
+  btn.textContent = "建立雲端表單中...";
+
+  try {
+    const res = await fetch(`${API_URL}?action=createTournament`, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        adminUser: "admin",
+        regionName: regionName,
+        eventDate: eventDate
+      })
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      alert(`【建立成功！】\n表單名稱：${result.tournamentName}\n已自動移至指定雲端資料夾並取得表單 ID！`);
+      modalAddRegion.style.display = "none";
+      document.getElementById("input-new-region-name").value = "";
+      document.getElementById("input-new-region-date").value = "";
+      await loadRegionsList();
+    } else {
+      alert("建立失敗：" + result.message);
+    }
+  } catch (err) {
+    alert("建立新賽事發生錯誤：" + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "建立賽事表單";
+  }
+}
+
+// 鎖定切換賽事
+async function submitSwitchRegion() {
+  const targetRegion = selectActiveRegion.value;
+  if (!targetRegion) return;
+
+  if (!confirm(`確定要將系統賽事切換鎖定為「${targetRegion}」嗎？\n鎖定後，所有評審登入將直接進入此賽事的評分表！`)) {
+    return;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}?action=switchRegion`, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ adminUser: "admin", regionName: targetRegion })
+    });
+    const result = await res.json();
+    if (result.success) {
+      alert(result.message);
+      location.reload(); // 重新載入以讀取新鎖定賽事名單
+    } else {
+      alert("切換失敗：" + result.message);
+    }
+  } catch (err) {
+    alert("切換賽事發生錯誤：" + err.message);
   }
 }
 
@@ -211,11 +333,10 @@ function renderTeamList() {
   teamListBody.innerHTML = "";
 
   if (assignedTeams.length === 0) {
-    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認《評審名單》是否有填入正確的隊伍編號！</td></tr>`;
+    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認當前賽事試算表的《隊伍名單》是否有填寫！</td></tr>`;
     return;
   }
 
-  // 1. 組別篩選（GAE: 國小, GAJ: 國中, GAH: 高中）
   let filteredTeams = assignedTeams;
   if (isAdminUser) {
     filteredTeams = assignedTeams.filter(t => {
@@ -229,7 +350,6 @@ function renderTeamList() {
     return;
   }
 
-  // 2. 排序處理
   const sortedTeams = [...filteredTeams].sort((a, b) => {
     const aScore = scoresCache[a.teamId];
     const bScore = scoresCache[b.teamId];
@@ -287,7 +407,6 @@ function renderTeamList() {
       </td>
     `;
 
-    // 最後一欄：admin 顯示「評分者姓名」，一般評審顯示「評分/重評按鈕」
     let lastColumnHtml = "";
     if (isAdminUser) {
       const judgeName = score.judgeName || "";
@@ -322,7 +441,6 @@ function renderTeamList() {
   });
 }
 
-// 匯出 PDF 處理函式：動態縮放以確保強制單張橫向呈現
 function exportSummaryToPdf() {
   let groupName = "國小組";
   if (currentGroupFilter === "GAJ") groupName = "國中組";
@@ -332,9 +450,9 @@ function exportSummaryToPdf() {
   const today = new Date();
   const dateStr = today.getFullYear() + String(today.getMonth() + 1).padStart(2, "0") + String(today.getDate()).padStart(2, "0");
   
-  document.title = `機關王評分總表_${groupName}_${dateStr}`;
+  const currentTourName = regionTag.textContent ? `_${regionTag.textContent}` : "";
+  document.title = `機關王評分總表${currentTourName}_${groupName}_${dateStr}`;
 
-  // 計算隊伍數量動態計算縮放比例，確保壓縮至單一張 A4
   const rows = document.querySelectorAll("#team-list-body tr");
   const count = rows.length;
   const table = document.getElementById("summary-table");
@@ -349,10 +467,7 @@ function exportSummaryToPdf() {
   }
 
   table.style.zoom = scale;
-
   window.print();
-
-  // 列印預覽完成後還原畫面縮放與標題
   table.style.zoom = "";
   document.title = originalTitle;
 }
