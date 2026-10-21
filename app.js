@@ -2,6 +2,7 @@ const API_URL = "https://script.google.com/macros/s/AKfycbzhbWmJzRP0qwuxyKdxETuv
 
 let currentJudge = null;
 let currentPass = null;
+let currentUsername = null;
 let isAdminUser = false;
 let currentSortMode = "teamId"; // "teamId" | "scoreDesc"
 let currentGroupFilter = "GAE"; // 預設國小組 (GAE)
@@ -117,6 +118,7 @@ async function handleLogin() {
     const data = await res.json();
 
     if (data.success) {
+      currentUsername = user;
       currentJudge = data.judgeName;
       currentPass = pass;
       isAdminUser = (user.toLowerCase() === "admin") || !!data.isAdmin;
@@ -218,7 +220,6 @@ async function submitCreateTournament() {
     return;
   }
 
-  // 將 2026-10-31 格式化為 20261031
   const eventDate = rawDate.replace(/-/g, "");
 
   const btn = document.getElementById("btn-confirm-add-region");
@@ -272,7 +273,7 @@ async function submitSwitchRegion() {
     const result = await res.json();
     if (result.success) {
       alert(result.message);
-      location.reload(); // 重新載入以讀取新鎖定賽事名單
+      location.reload();
     } else {
       alert("切換失敗：" + result.message);
     }
@@ -290,7 +291,7 @@ async function fetchLatestScores(showNotice = false) {
   }
 
   try {
-    const fetchUrl = `${API_URL}?action=getScores&judgeName=${encodeURIComponent(currentJudge)}&password=${encodeURIComponent(currentPass || "")}&_t=${Date.now()}`;
+    const fetchUrl = `${API_URL}?action=getScores&judgeName=${encodeURIComponent(currentJudge)}&username=${encodeURIComponent(currentUsername || "")}&password=${encodeURIComponent(currentPass || "")}&_t=${Date.now()}`;
     const res = await fetch(fetchUrl);
     const data = await res.json();
 
@@ -298,7 +299,7 @@ async function fetchLatestScores(showNotice = false) {
       scoresCache = data.existingScores || data.scores || {};
       renderTeamList();
       if (showNotice) {
-        alert("【同步成功】已重新取得試算表最新成績！\n若後台剛清空資料，總表已全數歸零。");
+        alert("【同步成功】已重新取得試算表最新成績！");
       }
     } else {
       if (showNotice) alert("同步失敗：" + (data.message || "伺服器未回傳有效成績"));
@@ -561,7 +562,7 @@ function switchPage(page) {
     pageSummary.classList.add("active");
     pageScoring.classList.remove("active");
     document.getElementById("page-title").textContent = "總評分表";
-    fetchLatestScores(false);
+    renderTeamList();
   } else {
     pageSummary.classList.remove("active");
     pageScoring.classList.add("active");
@@ -777,6 +778,7 @@ async function submitScore() {
     missionScore: missionScore,
     totalScore: totalScore,
     judgeName: currentJudge,
+    username: currentUsername,
     timestamp: timestamp,
     signature: signatureData
   };
@@ -791,6 +793,7 @@ async function submitScore() {
 
     if (result.success) {
       alert("成績已成功同步覆寫至試算表！");
+      // 1. 本地快取立即更新並標註為顯示
       scoresCache[currentTeam.teamId] = payload;
       teamDisplayState[currentTeam.teamId] = "visible";
 
@@ -799,7 +802,9 @@ async function submitScore() {
       canvas.width = 0;
       canvas.height = 0;
 
+      // 2. 切回總表並重繪
       switchPage("summary");
+      renderTeamList();
     } else {
       alert("儲存失敗：" + result.message);
     }
