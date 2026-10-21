@@ -45,18 +45,20 @@
     .btn-success { background: #28a745; color: #fff; }
     .btn-danger { background: #dc3545; color: #fff; }
 
-    /* 登入彈窗 */
-    #login-view {
+    /* 彈窗樣式 */
+    .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.5);
       display: flex; justify-content: center; align-items: center; z-index: 999;
     }
-    .login-card {
-      background: #fff; padding: 30px; border-radius: 12px;
-      width: 90%; max-width: 360px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    .modal-card {
+      background: #fff; padding: 26px; border-radius: 12px;
+      width: 90%; max-width: 380px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
     }
-    .form-group { margin-bottom: 16px; }
+    .form-group { margin-bottom: 14px; }
     .form-group label { display: block; margin-bottom: 6px; font-weight: bold; }
-    .form-group input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; }
+    .form-group input, .form-group select {
+      width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px;
+    }
 
     /* 頁面容器 */
     .page { display: none; padding: 16px; max-width: 1200px; margin: 0 auto; }
@@ -244,7 +246,7 @@
     }
     @media print {
       header,
-      #login-view,
+      .modal-overlay,
       #admin-actions,
       #judge-actions,
       #summary-heading,
@@ -280,7 +282,6 @@
         margin: 0 !important;
       }
 
-      /* 濃縮表格排版，強制壓縮在單一橫向頁面 */
       #summary-table {
         width: 100% !important;
         table-layout: fixed !important;
@@ -302,19 +303,14 @@
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
       }
-
-      /* 自動適配縮放比例，防止跨頁產生 */
-      .fit-one-page {
-        transform-origin: top center;
-      }
     }
   </style>
 </head>
 <body>
 
   <!-- 登入模態框 -->
-  <div id="login-view">
-    <div class="login-card">
+  <div id="login-view" class="modal-overlay">
+    <div class="modal-card">
       <h3 style="margin-top:0; text-align:center;">評審登入</h3>
       <div class="form-group">
         <label>帳號</label>
@@ -328,10 +324,33 @@
     </div>
   </div>
 
+  <!-- 新增賽事模態框 (admin 專用) -->
+  <div id="modal-add-region" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <h3 style="margin-top:0; text-align:center;">➕ 手動增加新賽事</h3>
+      <div class="form-group">
+        <label>賽事區域名稱</label>
+        <input type="text" id="input-new-region-name" placeholder="例如：桃園賽、台北賽、台中賽">
+      </div>
+      <div class="form-group">
+        <label>比賽日期</label>
+        <input type="date" id="input-new-region-date">
+      </div>
+      <div style="font-size:12px; color:#666; margin-bottom: 14px; line-height: 1.4;">
+        ※ 系統將自動於雲端資料夾建立對應表單（如：台北賽20261031），並初始化隊伍、評審及評分紀錄分頁。
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-secondary" style="flex:1;" id="btn-cancel-add-region">取消</button>
+        <button class="btn btn-success" style="flex:1;" id="btn-confirm-add-region">建立賽事表單</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 頂部資訊列 -->
   <header>
     <div>
       <span id="judge-display" style="font-weight:bold; font-size:15px;">未登入</span>
+      <span id="region-tag" style="margin-left: 8px; background: #e3f2fd; color: #1976d2; padding: 3px 8px; border-radius: 4px; font-size: 13px; font-weight: bold; display: none;"></span>
     </div>
     <h2 id="page-title">總評分表</h2>
     <div>
@@ -351,14 +370,22 @@
         <button class="btn btn-success btn-sync-cloud" style="padding: 5px 10px; font-size: 13px;">🔄 同步雲端成績</button>
       </div>
 
-      <!-- admin 專屬按鈕組 (已移除「全部」按鈕) -->
+      <!-- admin 專屬按鈕組 -->
       <div id="admin-actions" style="display: none; width: 100%; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-        <!-- 左側：純中文組別 (國小/國中/高中) 與 匯出 PDF -->
+        <!-- 左側：組別篩選、PDF匯出、賽事切換與手動新增賽事 -->
         <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
           <button class="btn btn-primary btn-filter-group" data-filter="GAE" style="padding: 5px 11px; font-size: 13px;" id="btn-group-gae">國小</button>
           <button class="btn btn-secondary btn-filter-group" data-filter="GAJ" style="padding: 5px 11px; font-size: 13px;" id="btn-group-gaj">國中</button>
           <button class="btn btn-secondary btn-filter-group" data-filter="GAH" style="padding: 5px 11px; font-size: 13px;" id="btn-group-gah">高中</button>
-          <button class="btn btn-danger" style="padding: 5px 12px; font-size: 13px; margin-left: 6px;" id="btn-export-pdf">📄 匯出 PDF</button>
+          <button class="btn btn-danger" style="padding: 5px 12px; font-size: 13px; margin-left: 4px;" id="btn-export-pdf">📄 匯出 PDF</button>
+
+          <!-- 賽事切換與新增控制群 -->
+          <div style="display: flex; align-items: center; gap: 4px; margin-left: 6px; background: #e9ecef; padding: 3px 6px; border-radius: 6px;">
+            <label style="font-size: 12px; font-weight: bold;">賽事：</label>
+            <select id="select-active-region" style="font-size: 13px; padding: 3px 6px; border-radius: 4px; border: 1px solid #ccc; max-width: 160px;"></select>
+            <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;" id="btn-switch-region">鎖定</button>
+            <button class="btn btn-success" style="padding: 4px 8px; font-size: 12px;" id="btn-open-add-region">➕ 新增賽事</button>
+          </div>
         </div>
 
         <!-- 右側：排序與同步按鈕 -->
