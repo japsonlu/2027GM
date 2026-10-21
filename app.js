@@ -41,11 +41,11 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-clear-sign").addEventListener("click", clearCanvas);
   document.getElementById("btn-submit").addEventListener("click", submitScore);
 
-  // 一般評審功能
+  // 評審成績顯示切換
   document.getElementById("btn-hide-all").addEventListener("click", hideAllScores);
   document.getElementById("btn-show-all").addEventListener("click", showAllScores);
 
-  // 第一列：基礎組 / 進階組 切換按鈕
+  // 第一列：基礎組 / 進階組 切換
   document.querySelectorAll(".btn-division-toggle").forEach(btn => {
     btn.addEventListener("click", function() {
       currentDivision = this.dataset.division;
@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 第二列：國小 / 國中 / 高中 切換按鈕
+  // 第二列：國小 / 國中 / 高中 篩選
   document.querySelectorAll(".btn-filter-group").forEach(btn => {
     btn.addEventListener("click", function() {
       currentGroupFilter = this.dataset.filter;
@@ -80,18 +80,18 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTeamList();
   });
 
-  // 第二列：匯出 PDF 按鈕
+  // 匯出 PDF 按鈕
   const btnExportPdf = document.getElementById("btn-export-pdf");
   if (btnExportPdf) {
     btnExportPdf.addEventListener("click", exportSummaryToPdf);
   }
 
-  // 同步雲端成績按鈕
+  // 同步雲端成績
   document.querySelectorAll(".btn-sync-cloud").forEach(btn => {
     btn.addEventListener("click", () => fetchLatestScores(true));
   });
 
-  // 賽事新增與切換控制
+  // 賽事新增與切換控制 (管理員專用)
   document.getElementById("btn-open-add-region").addEventListener("click", () => {
     modalAddRegion.style.display = "flex";
   });
@@ -381,7 +381,7 @@ function renderTeamList() {
       <td>
         <button class="btn ${isHidden ? "btn-primary" : "btn-secondary"}" 
                 style="padding: 4px 6px; font-size:11px;" 
-                id="btn-toggle-${team.teamId}"
+                id="btn-toggle-${team.teamId}" 
                 onclick="toggleScoreState('${team.teamId}')">
           ${isHidden ? "顯示" : "隱藏"}
         </button>
@@ -422,7 +422,7 @@ function renderTeamList() {
   });
 }
 
-// 匯出 PDF：抬頭與檔名皆嚴格產生為「台北賽基礎組國小組」格式
+// 匯出 PDF：抬頭與檔名格式處理
 function exportSummaryToPdf() {
   let groupName = "國小組";
   if (currentGroupFilter === "GAJ") groupName = "國中組";
@@ -431,10 +431,8 @@ function exportSummaryToPdf() {
   const divName = (currentDivision === "basic") ? "基礎組" : "進階組";
   const tourName = currentRegionName || (regionTag.textContent || "賽事");
   
-  // 嚴格組合標題，例如：台北賽20261031基礎組國小組
   const fullTitle = `${tourName}${divName}${groupName}`;
 
-  // 更新頁面列印抬頭與文件標題
   const banner = document.getElementById("print-header-banner");
   banner.textContent = fullTitle;
 
@@ -503,7 +501,6 @@ window.openScoring = function(teamId) {
   document.getElementById("current-team-info").textContent = 
     `評分對象：【${divName}】[${currentTeam.teamId}] ${currentTeam.school} - ${currentTeam.teamName}`;
 
-  // 動態切換評分向度
   const isBasic = (currentDivision === "basic");
   document.getElementById("division-basic-section").style.display = isBasic ? "block" : "none";
   document.getElementById("division-advanced-section").style.display = isBasic ? "none" : "block";
