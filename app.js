@@ -4,8 +4,11 @@ let currentJudge = null;
 let currentPass = null;
 let currentUsername = null;
 let isAdminUser = false;
+let currentDivision = "basic"; // "basic" | "advanced"
 let currentSortMode = "teamId"; // "teamId" | "scoreDesc"
-let currentGroupFilter = "GAE"; // 預設國小組 (GAE)
+let currentGroupFilter = "GAE"; // "GAE" | "GAJ" | "GAH"
+let currentRegionName = "";
+
 let assignedTeams = [];
 let scoresCache = {}; 
 let currentTeam = null;
@@ -17,6 +20,7 @@ const pageSummary = document.getElementById("page-summary");
 const pageScoring = document.getElementById("page-scoring");
 const judgeDisplay = document.getElementById("judge-display");
 const regionTag = document.getElementById("region-tag");
+const divisionTag = document.getElementById("division-tag");
 const teamListBody = document.getElementById("team-list-body");
 
 const modalAddRegion = document.getElementById("modal-add-region");
@@ -37,21 +41,24 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-clear-sign").addEventListener("click", clearCanvas);
   document.getElementById("btn-submit").addEventListener("click", submitScore);
 
-  // 一般評審按鈕
+  // 一般評審功能
   document.getElementById("btn-hide-all").addEventListener("click", hideAllScores);
   document.getElementById("btn-show-all").addEventListener("click", showAllScores);
 
-  // admin 排序按鈕
-  document.getElementById("btn-sort-teamid").addEventListener("click", () => {
-    currentSortMode = "teamId";
-    renderTeamList();
-  });
-  document.getElementById("btn-sort-score").addEventListener("click", () => {
-    currentSortMode = "scoreDesc";
-    renderTeamList();
+  // 第一列：基礎組 / 進階組 切換按鈕
+  document.querySelectorAll(".btn-division-toggle").forEach(btn => {
+    btn.addEventListener("click", function() {
+      currentDivision = this.dataset.division;
+      document.querySelectorAll(".btn-division-toggle").forEach(b => {
+        b.className = "btn btn-secondary btn-division-toggle";
+      });
+      this.className = "btn btn-primary btn-division-toggle";
+      updateDivisionBadge();
+      fetchLatestScores(true);
+    });
   });
 
-  // admin 組別篩選按鈕 (國小 / 國中 / 高中)
+  // 第二列：國小 / 國中 / 高中 切換按鈕
   document.querySelectorAll(".btn-filter-group").forEach(btn => {
     btn.addEventListener("click", function() {
       currentGroupFilter = this.dataset.filter;
@@ -63,7 +70,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // admin 匯出 PDF 按鈕
+  // 第二列：排序按鈕
+  document.getElementById("btn-sort-teamid").addEventListener("click", () => {
+    currentSortMode = "teamId";
+    renderTeamList();
+  });
+  document.getElementById("btn-sort-score").addEventListener("click", () => {
+    currentSortMode = "scoreDesc";
+    renderTeamList();
+  });
+
+  // 第二列：匯出 PDF 按鈕
   const btnExportPdf = document.getElementById("btn-export-pdf");
   if (btnExportPdf) {
     btnExportPdf.addEventListener("click", exportSummaryToPdf);
@@ -71,12 +88,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 同步雲端成績按鈕
   document.querySelectorAll(".btn-sync-cloud").forEach(btn => {
-    btn.addEventListener("click", () => {
-      fetchLatestScores(true);
-    });
+    btn.addEventListener("click", () => fetchLatestScores(true));
   });
 
-  // admin 手動新增賽事彈窗控制
+  // 賽事新增與切換控制
   document.getElementById("btn-open-add-region").addEventListener("click", () => {
     modalAddRegion.style.display = "flex";
   });
@@ -87,18 +102,14 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-switch-region").addEventListener("click", submitSwitchRegion);
 
   window.addEventListener("resize", () => {
-    if (pageScoring.classList.contains("active")) {
-      resizeCanvas(hasSignature);
-    }
-  });
-  window.addEventListener("orientationchange", () => {
-    setTimeout(() => {
-      if (pageScoring.classList.contains("active")) {
-        resizeCanvas(hasSignature);
-      }
-    }, 200);
+    if (pageScoring.classList.contains("active")) resizeCanvas(hasSignature);
   });
 });
+
+function updateDivisionBadge() {
+  divisionTag.textContent = (currentDivision === "basic") ? "基礎組" : "進階組";
+  divisionTag.style.display = "inline-block";
+}
 
 async function handleLogin() {
   const user = document.getElementById("login-user").value.trim();
@@ -114,7 +125,7 @@ async function handleLogin() {
   btn.textContent = "登入中...";
 
   try {
-    const res = await fetch(`${API_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}&_t=${Date.now()}`);
+    const res = await fetch(`${API_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}&division=${encodeURIComponent(currentDivision)}&_t=${Date.now()}`);
     const data = await res.json();
 
     if (data.success) {
@@ -122,27 +133,24 @@ async function handleLogin() {
       currentJudge = data.judgeName;
       currentPass = pass;
       isAdminUser = (user.toLowerCase() === "admin") || !!data.isAdmin;
+      currentRegionName = data.regionName || "";
       
       assignedTeams = data.teams || [];
       scoresCache = data.existingScores || {};
 
-      assignedTeams.forEach(t => {
-        teamDisplayState[t.teamId] = "visible";
-      });
+      assignedTeams.forEach(t => { teamDisplayState[t.teamId] = "visible"; });
 
       judgeDisplay.textContent = isAdminUser ? `系統管理員：${currentJudge}` : `評審：${currentJudge}`;
-      if (data.regionName) {
-        regionTag.textContent = data.regionName;
+      if (currentRegionName) {
+        regionTag.textContent = currentRegionName;
         regionTag.style.display = "inline-block";
       }
+      updateDivisionBadge();
 
       loginView.style.display = "none";
-
       applyUserRoleUI();
 
-      if (isAdminUser) {
-        loadRegionsList();
-      }
+      if (isAdminUser) loadRegionsList();
 
       renderTeamList();
 
@@ -166,24 +174,23 @@ async function handleLogin() {
 
 function applyUserRoleUI() {
   const judgeActions = document.getElementById("judge-actions");
-  const adminActions = document.getElementById("admin-actions");
+  const adminActionsBar = document.getElementById("admin-actions-bar");
   const thHideScore = document.querySelector(".th-hide-score");
   const thLastAction = document.getElementById("th-last-action");
 
   if (isAdminUser) {
     judgeActions.style.display = "none";
-    adminActions.style.display = "flex";
+    adminActionsBar.style.display = "flex";
     if (thHideScore) thHideScore.style.display = "none";
     if (thLastAction) thLastAction.textContent = "評分者";
   } else {
     judgeActions.style.display = "flex";
-    adminActions.style.display = "none";
+    adminActionsBar.style.display = "none";
     if (thHideScore) thHideScore.style.display = "";
     if (thLastAction) thLastAction.textContent = "操作";
   }
 }
 
-// 取得所有賽事清單 (admin)
 async function loadRegionsList() {
   try {
     const res = await fetch(`${API_URL}?action=getRegions&_t=${Date.now()}`);
@@ -198,7 +205,8 @@ async function loadRegionsList() {
         selectActiveRegion.appendChild(opt);
       });
       if (data.config.activeRegion) {
-        regionTag.textContent = data.config.activeRegion.name;
+        currentRegionName = data.config.activeRegion.name;
+        regionTag.textContent = currentRegionName;
       }
     }
   } catch (e) {
@@ -206,40 +214,30 @@ async function loadRegionsList() {
   }
 }
 
-// 手動送出建立新賽事
 async function submitCreateTournament() {
   const regionName = document.getElementById("input-new-region-name").value.trim();
   const rawDate = document.getElementById("input-new-region-date").value.trim();
 
-  if (!regionName) {
-    alert("請填寫賽事區域名稱（例如：桃園賽、台北賽）！");
-    return;
-  }
-  if (!rawDate) {
-    alert("請選擇比賽日期！");
+  if (!regionName || !rawDate) {
+    alert("請填寫賽事名稱與日期！");
     return;
   }
 
   const eventDate = rawDate.replace(/-/g, "");
-
   const btn = document.getElementById("btn-confirm-add-region");
   btn.disabled = true;
-  btn.textContent = "建立雲端表單中...";
+  btn.textContent = "正在建立兩組表單...";
 
   try {
     const res = await fetch(`${API_URL}?action=createTournament`, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({
-        adminUser: "admin",
-        regionName: regionName,
-        eventDate: eventDate
-      })
+      body: JSON.stringify({ adminUser: "admin", regionName: regionName, eventDate: eventDate })
     });
     const result = await res.json();
 
     if (result.success) {
-      alert(`【建立成功！】\n表單名稱：${result.tournamentName}\n已自動移至指定雲端資料夾並取得表單 ID！`);
+      alert(`【建立成功！】\n基礎組表單：${result.basicName}\n進階組表單：${result.advancedName}\n已全數建立至指定雲端資料夾。`);
       modalAddRegion.style.display = "none";
       document.getElementById("input-new-region-name").value = "";
       document.getElementById("input-new-region-date").value = "";
@@ -255,14 +253,11 @@ async function submitCreateTournament() {
   }
 }
 
-// 鎖定切換賽事
 async function submitSwitchRegion() {
   const targetRegion = selectActiveRegion.value;
   if (!targetRegion) return;
 
-  if (!confirm(`確定要將系統賽事切換鎖定為「${targetRegion}」嗎？\n鎖定後，所有評審登入將直接進入此賽事的評分表！`)) {
-    return;
-  }
+  if (!confirm(`確定要將系統賽事鎖定為「${targetRegion}」嗎？`)) return;
 
   try {
     const res = await fetch(`${API_URL}?action=switchRegion`, {
@@ -278,7 +273,7 @@ async function submitSwitchRegion() {
       alert("切換失敗：" + result.message);
     }
   } catch (err) {
-    alert("切換賽事發生錯誤：" + err.message);
+    alert("切換賽事錯誤：" + err.message);
   }
 }
 
@@ -286,40 +281,31 @@ async function fetchLatestScores(showNotice = false) {
   if (!currentJudge) return;
 
   const syncBtns = document.querySelectorAll(".btn-sync-cloud");
-  if (showNotice) {
-    syncBtns.forEach(b => { b.disabled = true; b.textContent = "同步中..."; });
-  }
+  if (showNotice) syncBtns.forEach(b => { b.disabled = true; b.textContent = "同步中..."; });
 
   try {
-    const fetchUrl = `${API_URL}?action=getScores&judgeName=${encodeURIComponent(currentJudge)}&username=${encodeURIComponent(currentUsername || "")}&password=${encodeURIComponent(currentPass || "")}&_t=${Date.now()}`;
+    const fetchUrl = `${API_URL}?action=getScores&judgeName=${encodeURIComponent(currentJudge)}&username=${encodeURIComponent(currentUsername || "")}&division=${encodeURIComponent(currentDivision)}&_t=${Date.now()}`;
     const res = await fetch(fetchUrl);
     const data = await res.json();
 
     if (data.success) {
+      assignedTeams = data.teams || assignedTeams;
       scoresCache = data.existingScores || data.scores || {};
       renderTeamList();
-      if (showNotice) {
-        alert("【同步成功】已重新取得試算表最新成績！");
-      }
+      if (showNotice) alert("【同步成功】已重新取得試算表最新成績！");
     } else {
-      if (showNotice) alert("同步失敗：" + (data.message || "伺服器未回傳有效成績"));
+      if (showNotice) alert("同步失敗：" + (data.message || "伺服器未回傳成績"));
     }
   } catch (e) {
     console.error("同步失敗", e);
-    if (showNotice) {
-      alert("連線後端同步失敗，請檢查網路連線或稍後再試！");
-    }
+    if (showNotice) alert("連線同步失敗，請檢查網路連線！");
   } finally {
-    if (showNotice) {
-      syncBtns.forEach(b => { b.disabled = false; b.textContent = "🔄 同步雲端成績"; });
-    }
+    if (showNotice) syncBtns.forEach(b => { b.disabled = false; b.textContent = "🔄 同步雲端成績"; });
   }
 }
 
 function formatScoreVal(val) {
-  if (val === undefined || val === null || val === "" || val === "-") {
-    return "";
-  }
+  if (val === undefined || val === null || val === "" || val === "-") return "";
   return String(val);
 }
 
@@ -329,25 +315,21 @@ function getDisplayScore(valStr, isHidden) {
   return isHidden ? "***" : valStr;
 }
 
-// 渲染總表隊伍清單
 function renderTeamList() {
   teamListBody.innerHTML = "";
 
   if (assignedTeams.length === 0) {
-    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認當前賽事試算表的《隊伍名單》是否有填寫！</td></tr>`;
+    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#d32f2f; padding: 24px;">查無【${currentDivision === "basic" ? "基礎組" : "進階組"}】可評分的隊伍，請確認該組別試算表！</td></tr>`;
     return;
   }
 
   let filteredTeams = assignedTeams;
   if (isAdminUser) {
-    filteredTeams = assignedTeams.filter(t => {
-      const idUpper = String(t.teamId).toUpperCase();
-      return idUpper.startsWith(currentGroupFilter);
-    });
+    filteredTeams = assignedTeams.filter(t => String(t.teamId).toUpperCase().startsWith(currentGroupFilter));
   }
 
   if (filteredTeams.length === 0) {
-    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#666; padding: 24px;">查無此組別之隊伍！</td></tr>`;
+    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#666; padding: 24px;">查無此年段之隊伍！</td></tr>`;
     return;
   }
 
@@ -369,9 +351,7 @@ function renderTeamList() {
     } else {
       const aScored = (aTotal !== null);
       const bScored = (bTotal !== null);
-      if (aScored === bScored) {
-        return a.teamId.localeCompare(b.teamId, undefined, { numeric: true });
-      }
+      if (aScored === bScored) return a.teamId.localeCompare(b.teamId, undefined, { numeric: true });
       return aScored ? 1 : -1;
     }
   });
@@ -385,7 +365,7 @@ function renderTeamList() {
 
     let stdRaw = score.stdScore;
     if (stdRaw === undefined || stdRaw === null || stdRaw === "") {
-      stdRaw = score.missionStdScore !== undefined ? score.missionStdScore : (score.ruleScore !== undefined ? score.ruleScore : score.std);
+      stdRaw = score.missionStdScore !== undefined ? score.missionStdScore : score.ruleScore;
     }
 
     const stageVal = formatScoreVal(score.stageScore);
@@ -442,41 +422,43 @@ function renderTeamList() {
   });
 }
 
+// 匯出 PDF：抬頭與檔名皆嚴格產生為「台北賽基礎組國小組」格式
 function exportSummaryToPdf() {
   let groupName = "國小組";
   if (currentGroupFilter === "GAJ") groupName = "國中組";
   else if (currentGroupFilter === "GAH") groupName = "高中組";
 
-  const originalTitle = document.title;
-  const today = new Date();
-  const dateStr = today.getFullYear() + String(today.getMonth() + 1).padStart(2, "0") + String(today.getDate()).padStart(2, "0");
+  const divName = (currentDivision === "basic") ? "基礎組" : "進階組";
+  const tourName = currentRegionName || (regionTag.textContent || "賽事");
   
-  const currentTourName = regionTag.textContent ? `_${regionTag.textContent}` : "";
-  document.title = `機關王評分總表${currentTourName}_${groupName}_${dateStr}`;
+  // 嚴格組合標題，例如：台北賽20261031基礎組國小組
+  const fullTitle = `${tourName}${divName}${groupName}`;
+
+  // 更新頁面列印抬頭與文件標題
+  const banner = document.getElementById("print-header-banner");
+  banner.textContent = fullTitle;
+
+  const originalDocTitle = document.title;
+  document.title = fullTitle;
 
   const rows = document.querySelectorAll("#team-list-body tr");
   const count = rows.length;
   const table = document.getElementById("summary-table");
 
   let scale = 1.0;
-  if (count > 15 && count <= 25) {
-    scale = 0.85;
-  } else if (count > 25 && count <= 35) {
-    scale = 0.72;
-  } else if (count > 35) {
-    scale = 0.60;
-  }
+  if (count > 15 && count <= 25) scale = 0.85;
+  else if (count > 25 && count <= 35) scale = 0.72;
+  else if (count > 35) scale = 0.60;
 
   table.style.zoom = scale;
   window.print();
   table.style.zoom = "";
-  document.title = originalTitle;
+  document.title = originalDocTitle;
 }
 
 window.toggleScoreState = function(teamId) {
   if (isAdminUser) return;
-  const currentState = teamDisplayState[teamId];
-  teamDisplayState[teamId] = (currentState === "hidden") ? "visible" : "hidden";
+  teamDisplayState[teamId] = (teamDisplayState[teamId] === "hidden") ? "visible" : "hidden";
   updateRowDisplay(teamId);
 };
 
@@ -517,8 +499,14 @@ function showAllScores() {
 
 window.openScoring = function(teamId) {
   currentTeam = assignedTeams.find(t => t.teamId === teamId);
+  const divName = (currentDivision === "basic") ? "基礎組" : "進階組";
   document.getElementById("current-team-info").textContent = 
-    `評分對象：[${currentTeam.teamId}] ${currentTeam.school} - ${currentTeam.teamName}`;
+    `評分對象：【${divName}】[${currentTeam.teamId}] ${currentTeam.school} - ${currentTeam.teamName}`;
+
+  // 動態切換評分向度
+  const isBasic = (currentDivision === "basic");
+  document.getElementById("division-basic-section").style.display = isBasic ? "block" : "none";
+  document.getElementById("division-advanced-section").style.display = isBasic ? "none" : "block";
 
   resetFormToDefaults();
   calculateAllScores();
@@ -536,9 +524,7 @@ window.openScoring = function(teamId) {
 };
 
 function resetFormToDefaults() {
-  document.querySelectorAll(".toggleable").forEach(cell => {
-    cell.classList.remove("active");
-  });
+  document.querySelectorAll(".toggleable").forEach(cell => cell.classList.remove("active"));
 
   document.querySelectorAll("#row-stage .selectable").forEach(c => c.classList.remove("active"));
   document.querySelector('#row-stage .selectable[data-val="8"]').classList.add("active");
@@ -553,8 +539,9 @@ function resetFormToDefaults() {
     row.querySelector('.selectable[data-val="2"]').classList.add("active");
   });
 
-  document.querySelectorAll("#row-mission-std .selectable").forEach(c => c.classList.remove("active"));
-  document.querySelectorAll('#row-mission-std .selectable[data-val="2.3333"], #row-mission-std .selectable[data-val="2.3334"]').forEach(c => c.classList.add("active"));
+  const stdSelector = (currentDivision === "basic") ? "#row-mission-std-basic" : "#row-mission-std-adv";
+  document.querySelectorAll(`${stdSelector} .selectable`).forEach(c => c.classList.remove("active"));
+  document.querySelectorAll(`${stdSelector} .selectable[data-val="2.3333"], ${stdSelector} .selectable[data-val="2.3334"]`).forEach(c => c.classList.add("active"));
 }
 
 function switchPage(page) {
@@ -613,7 +600,6 @@ function calculateAllScores() {
     fluencyRaw = Math.max(0, 20 - drops * 2);
     fluencyWeighted = Number(((fluencyRaw * stageCount) / 8).toFixed(2));
   }
-
   document.getElementById("score-fluency-raw").textContent = fluencyRaw;
   document.getElementById("score-fluency-weighted").textContent = fluencyWeighted;
 
@@ -629,25 +615,46 @@ function calculateAllScores() {
   });
   document.getElementById("score-task-total").textContent = taskTotal;
 
-  let stdSum = 0;
-  document.querySelectorAll("#row-mission-std .selectable.active").forEach(cell => {
-    stdSum += parseFloat(cell.dataset.val);
-  });
-  const stdTotal = Math.round(stdSum);
-  document.getElementById("score-mission-std-sum").textContent = stdTotal;
+  let stdTotal = 0;
+  let missionScoreTotal = 0;
 
-  let zoneSum = 0;
-  ["row-zone-1", "row-zone-2", "row-zone-3"].forEach(rowId => {
-    const row = document.getElementById(rowId);
-    let rowScore = 0;
-    row.querySelectorAll(".selectable.active").forEach(cell => {
-      rowScore += parseFloat(cell.dataset.val);
+  if (currentDivision === "basic") {
+    let stdSum = 0;
+    document.querySelectorAll("#row-mission-std-basic .selectable.active").forEach(c => {
+      stdSum += parseFloat(c.dataset.val);
     });
-    row.querySelector(".zone-row-total").textContent = rowScore;
-    zoneSum += rowScore;
-  });
-  const missionScoreTotal = Number(zoneSum.toFixed(2));
-  document.getElementById("score-mission-total").textContent = missionScoreTotal;
+    stdTotal = Math.round(stdSum);
+    document.getElementById("score-mission-std-sum-basic").textContent = stdTotal;
+
+    let zoneSum = 0;
+    ["row-zone-basic-1", "row-zone-basic-2", "row-zone-basic-3"].forEach(rowId => {
+      const row = document.getElementById(rowId);
+      let rowScore = 0;
+      row.querySelectorAll(".selectable.active").forEach(c => rowScore += parseFloat(c.dataset.val));
+      row.querySelector(".zone-row-total-basic").textContent = rowScore;
+      zoneSum += rowScore;
+    });
+    missionScoreTotal = Number(zoneSum.toFixed(2));
+    document.getElementById("score-mission-total-basic").textContent = missionScoreTotal;
+  } else {
+    let stdSum = 0;
+    document.querySelectorAll("#row-mission-std-adv .selectable.active").forEach(c => {
+      stdSum += parseFloat(c.dataset.val);
+    });
+    stdTotal = Math.round(stdSum);
+    document.getElementById("score-mission-std-sum-adv").textContent = stdTotal;
+
+    let zoneSum = 0;
+    ["row-zone-adv-1", "row-zone-adv-2", "row-zone-adv-3"].forEach(rowId => {
+      const row = document.getElementById(rowId);
+      let rowScore = 0;
+      row.querySelectorAll(".selectable.active").forEach(c => rowScore += parseFloat(c.dataset.val));
+      row.querySelector(".zone-row-total-adv").textContent = rowScore;
+      zoneSum += rowScore;
+    });
+    missionScoreTotal = Number(zoneSum.toFixed(2));
+    document.getElementById("score-mission-total-adv").textContent = missionScoreTotal;
+  }
 
   const totalScore = Number((stageScore + fluencyWeighted + taskTotal + stdTotal + missionScoreTotal).toFixed(2));
   document.getElementById("final-total-score").textContent = totalScore;
@@ -658,9 +665,7 @@ function resizeCanvas(preserveExisting = false) {
   if (!container || container.offsetParent === null) return;
 
   let tempImg = null;
-  if (preserveExisting && hasSignature) {
-    tempImg = canvas.toDataURL();
-  }
+  if (preserveExisting && hasSignature) tempImg = canvas.toDataURL();
 
   const rect = container.getBoundingClientRect();
   const dpr = window.devicePixelRatio || 1;
@@ -676,9 +681,7 @@ function resizeCanvas(preserveExisting = false) {
 
   if (tempImg) {
     const img = new Image();
-    img.onload = () => {
-      ctx.drawImage(img, 0, 0, rect.width, rect.height);
-    };
+    img.onload = () => ctx.drawImage(img, 0, 0, rect.width, rect.height);
     img.src = tempImg;
   }
 }
@@ -686,7 +689,6 @@ function resizeCanvas(preserveExisting = false) {
 function getEventPos(e) {
   const rect = canvas.getBoundingClientRect();
   let clientX, clientY;
-
   if (e.touches && e.touches.length > 0) {
     clientX = e.touches[0].clientX;
     clientY = e.touches[0].clientY;
@@ -694,11 +696,7 @@ function getEventPos(e) {
     clientX = e.clientX;
     clientY = e.clientY;
   }
-
-  return {
-    x: clientX - rect.left,
-    y: clientY - rect.top
-  };
+  return { x: clientX - rect.left, y: clientY - rect.top };
 }
 
 function startDrawing(e) {
@@ -718,15 +716,11 @@ function draw(e) {
   e.preventDefault();
 }
 
-function stopDrawing() {
-  isDrawing = false;
-}
+function stopDrawing() { isDrawing = false; }
 
 canvas.addEventListener("touchstart", startDrawing, { passive: false });
 canvas.addEventListener("touchmove", draw, { passive: false });
 canvas.addEventListener("touchend", stopDrawing);
-canvas.addEventListener("touchcancel", stopDrawing);
-
 canvas.addEventListener("mousedown", startDrawing);
 canvas.addEventListener("mousemove", draw);
 canvas.addEventListener("mouseup", stopDrawing);
@@ -751,8 +745,12 @@ async function submitScore() {
   const stageScore = parseFloat(document.getElementById("score-stage").textContent) || 0;
   const fluencyScore = parseFloat(document.getElementById("score-fluency-weighted").textContent) || 0;
   const taskScore = parseFloat(document.getElementById("score-task-total").textContent) || 0;
-  const stdScore = parseFloat(document.getElementById("score-mission-std-sum").textContent) || 0;
-  const missionScore = parseFloat(document.getElementById("score-mission-total").textContent) || 0;
+
+  const stdSumId = (currentDivision === "basic") ? "score-mission-std-sum-basic" : "score-mission-std-sum-adv";
+  const missionSumId = (currentDivision === "basic") ? "score-mission-total-basic" : "score-mission-total-adv";
+
+  const stdScore = parseFloat(document.getElementById(stdSumId).textContent) || 0;
+  const missionScore = parseFloat(document.getElementById(missionSumId).textContent) || 0;
   const totalScore = parseFloat(document.getElementById("final-total-score").textContent) || 0;
   const signatureData = canvas.toDataURL("image/png");
 
@@ -765,6 +763,7 @@ async function submitScore() {
     String(now.getSeconds()).padStart(2, "0");
 
   const payload = {
+    division: currentDivision,
     group: currentTeam.group || "",
     teamId: currentTeam.teamId,
     school: currentTeam.school,
@@ -793,7 +792,6 @@ async function submitScore() {
 
     if (result.success) {
       alert("成績已成功同步覆寫至試算表！");
-      // 1. 本地快取立即更新並標註為顯示
       scoresCache[currentTeam.teamId] = payload;
       teamDisplayState[currentTeam.teamId] = "visible";
 
@@ -802,7 +800,6 @@ async function submitScore() {
       canvas.width = 0;
       canvas.height = 0;
 
-      // 2. 切回總表並重繪
       switchPage("summary");
       renderTeamList();
     } else {
