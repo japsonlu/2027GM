@@ -4,7 +4,7 @@ let currentJudge = null;
 let currentPass = null;
 let currentUsername = null;
 let isAdminUser = false;
-let currentJudgeRole = "all"; // "flow" | "green" | "creative" | "structure" | "all"
+let currentAssignedSheets = ["sheet1", "sheet2", "sheet3", "sheet4"]; // 評審被指派的向度列表
 let currentDivision = "advanced"; // "basic" | "advanced"
 let currentSortMode = "scoreDesc";
 let currentGroupFilter = "GAE";
@@ -13,6 +13,9 @@ let currentRegionName = "";
 let assignedTeams = [];
 let scoresCache = {}; 
 let currentTeam = null;
+
+let cachedAdminJudges = [];
+let cachedAdminAllTeams = [];
 
 const teamDisplayState = {};
 
@@ -28,6 +31,9 @@ const summaryThead = document.getElementById("summary-thead");
 
 const modalAddRegion = document.getElementById("modal-add-region");
 const selectActiveRegion = document.getElementById("select-active-region");
+const modalAssignJudge = document.getElementById("modal-assign-judge");
+const selectAssignJudge = document.getElementById("select-assign-judge");
+const assignTeamsContainer = document.getElementById("assign-teams-container");
 
 const canvas = document.getElementById("sign-pad");
 const ctx = canvas.getContext("2d");
@@ -103,6 +109,21 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-confirm-add-region").addEventListener("click", submitCreateTournament);
   document.getElementById("btn-switch-region").addEventListener("click", submitSwitchRegion);
 
+  // 管理員：評審向度與隊伍勾選指派視窗事件
+  document.getElementById("btn-open-assign-modal").addEventListener("click", openAssignModal);
+  document.getElementById("btn-cancel-assign").addEventListener("click", () => {
+    modalAssignJudge.style.display = "none";
+  });
+  document.getElementById("btn-save-assign").addEventListener("click", submitSaveJudgeAssignment);
+  selectAssignJudge.addEventListener("change", onAssignJudgeSelectChange);
+
+  // 隊伍快速批次選取按鈕
+  document.getElementById("btn-team-select-all").addEventListener("click", () => setAllTeamCheckboxes(true));
+  document.getElementById("btn-team-clear").addEventListener("click", () => setAllTeamCheckboxes(false));
+  document.getElementById("btn-team-select-gae").addEventListener("click", () => filterTeamCheckboxesByPrefix("GAE"));
+  document.getElementById("btn-team-select-gaj").addEventListener("click", () => filterTeamCheckboxesByPrefix("GAJ"));
+  document.getElementById("btn-team-select-gah").addEventListener("click", () => filterTeamCheckboxesByPrefix("GAH"));
+
   window.addEventListener("resize", () => {
     if (pageScoring.classList.contains("active")) resizeCanvas(hasSignature);
   });
@@ -151,7 +172,7 @@ async function handleLogin() {
       currentJudge = data.judgeName;
       currentPass = pass;
       isAdminUser = (user.toLowerCase() === "admin") || !!data.isAdmin;
-      currentJudgeRole = data.judgeRole || "all";
+      currentAssignedSheets = data.assignedSheets || ["sheet1", "sheet2", "sheet3", "sheet4"];
       currentRegionName = data.regionName || "";
       
       assignedTeams = data.teams || [];
@@ -193,7 +214,7 @@ async function reLoginDivision(targetDivision) {
     const res = await fetch(`${API_URL}?action=login&username=${encodeURIComponent(currentUsername)}&password=${encodeURIComponent(currentPass)}&division=${encodeURIComponent(currentDivision)}&_t=${Date.now()}`);
     const data = await res.json();
     if (data.success) {
-      currentJudgeRole = data.judgeRole || "all";
+      currentAssignedSheets = data.assignedSheets || ["sheet1", "sheet2", "sheet3", "sheet4"];
       assignedTeams = data.teams || [];
       scoresCache = data.existingScores || {};
       assignedTeams.forEach(t => { teamDisplayState[t.teamId] = "visible"; });
@@ -221,14 +242,14 @@ function updateUserDisplayInfo() {
 
   if (roleTag) {
     if (currentDivision === "advanced" && !isAdminUser) {
-      const roleMap = {
-        flow: "關卡與流暢度",
-        green: "科學與綠能",
-        creative: "創意關卡",
-        structure: "整體機構設計",
-        all: "全向度"
-      };
-      roleTag.textContent = roleMap[currentJudgeRole] || "評審";
+      const sheetLabels = currentAssignedSheets.map(s => {
+        if (s === "sheet1") return "表1";
+        if (s === "sheet2") return "表2";
+        if (s === "sheet3") return "表3";
+        if (s === "sheet4") return "表4";
+        return s;
+      });
+      roleTag.textContent = `負責：${sheetLabels.join("+")}`;
       roleTag.style.display = "inline-block";
     } else {
       roleTag.style.display = "none";
@@ -334,6 +355,168 @@ async function submitSwitchRegion() {
     }
   } catch (err) {
     alert("切換賽事錯誤：" + err.message);
+  }
+}
+
+// -------------------------------------------------------------
+// 管理員：評審向度與隊伍勾選指派功能
+// -------------------------------------------------------------
+async function openAssignModal() {
+  modalAssignJudge.style.display = "flex";
+  selectAssignJudge.innerHTML = "<option>載入評審中...</option>";
+  assignTeamsContainer.innerHTML = "<div style='color:#666;'>載入隊伍清單中...</div>";
+
+  try {
+    const res = await fetch(`${API_URL}?action=getJudgeAssignments&division=${encodeURIComponent(currentDivision)}&_t=${Date.now()}`);
+    const data = await res.json();
+
+    if (data.success) {
+      cachedAdminJudges = data.judges || [];
+      cachedAdminAllTeams = data.allTeams || [];
+
+      selectAssignJudge.innerHTML = "";
+      cachedAdminJudges.forEach(j => {
+        const opt = document.createElement("option");
+        opt.value = j.username;
+        opt.textContent = `${j.name} (${j.username})`;
+        selectAssignJudge.appendChild(opt);
+      });
+
+      renderTeamAssignmentCheckboxes();
+      onAssignJudgeSelectChange();
+    } else {
+      alert("載入指派資料失敗：" + data.message);
+    }
+  } catch (e) {
+    console.error("載入指派錯誤", e);
+    alert("載入評審指派設定連線錯誤！");
+  }
+}
+
+function renderTeamAssignmentCheckboxes() {
+  assignTeamsContainer.innerHTML = "";
+  cachedAdminAllTeams.forEach(t => {
+    const lbl = document.createElement("label");
+    lbl.style.display = "flex";
+    lbl.style.alignItems = "center";
+    lbl.style.gap = "4px";
+    lbl.style.fontSize = "13px";
+    lbl.innerHTML = `<input type="checkbox" class="chk-assign-team" value="${t.teamId}"> ${t.teamId}`;
+    assignTeamsContainer.appendChild(lbl);
+  });
+}
+
+function onAssignJudgeSelectChange() {
+  const selectedUser = selectAssignJudge.value;
+  const judgeObj = cachedAdminJudges.find(j => j.username === selectedUser);
+  if (!judgeObj) return;
+
+  // 1. 回填負責評分表向度勾選
+  const groupSheets = document.getElementById("group-assign-sheets");
+  if (currentDivision === "advanced") {
+    groupSheets.style.display = "block";
+    const rawSheets = String(judgeObj.assignedSheets || "all").toLowerCase();
+    const isAll = (rawSheets === "all" || rawSheets === "");
+    const activeSheets = rawSheets.split(/[\s,，、]+/);
+
+    document.querySelectorAll(".chk-assign-sheet").forEach(chk => {
+      chk.checked = isAll || activeSheets.indexOf(chk.value) !== -1;
+    });
+  } else {
+    groupSheets.style.display = "none";
+  }
+
+  // 2. 回填負責隊伍勾選
+  const assignedTeamTokens = parseLocalTeamRange(judgeObj.teams);
+  document.querySelectorAll(".chk-assign-team").forEach(chk => {
+    chk.checked = assignedTeamTokens.indexOf(chk.value) !== -1;
+  });
+}
+
+function parseLocalTeamRange(rawStr) {
+  if (!rawStr) return [];
+  const tokens = String(rawStr).split(/[\s,，、]+/).filter(t => t.length > 0);
+  const result = [];
+
+  for (let i = 0; i < tokens.length; i++) {
+    const token = tokens[i].trim();
+    const rangeMatch = token.match(/^([A-Za-z]+)(\d+)[~～\-－]([A-Za-z]+)(\d+)$/);
+    if (rangeMatch) {
+      const prefixStart = rangeMatch[1].toUpperCase();
+      const numStart = parseInt(rangeMatch[2], 10);
+      const prefixEnd = rangeMatch[3].toUpperCase();
+      const numEnd = parseInt(rangeMatch[4], 10);
+      const padLen = rangeMatch[2].length;
+
+      if (prefixStart === prefixEnd && numStart <= numEnd) {
+        for (let n = numStart; n <= numEnd; n++) {
+          let paddedNum = String(n);
+          while (paddedNum.length < padLen) paddedNum = "0" + paddedNum;
+          result.push(prefixStart + paddedNum);
+        }
+      } else {
+        result.push(token);
+      }
+    } else {
+      result.push(token);
+    }
+  }
+  return result;
+}
+
+function setAllTeamCheckboxes(checked) {
+  document.querySelectorAll(".chk-assign-team").forEach(c => c.checked = checked);
+}
+
+function filterTeamCheckboxesByPrefix(prefix) {
+  document.querySelectorAll(".chk-assign-team").forEach(c => {
+    c.checked = c.value.toUpperCase().startsWith(prefix);
+  });
+}
+
+async function submitSaveJudgeAssignment() {
+  const targetUser = selectAssignJudge.value;
+  if (!targetUser) return;
+
+  const btn = document.getElementById("btn-save-assign");
+  btn.disabled = true;
+  btn.textContent = "儲存中...";
+
+  // 收集向度勾選
+  const checkedSheets = [];
+  document.querySelectorAll(".chk-assign-sheet:checked").forEach(c => checkedSheets.push(c.value));
+  const assignedSheetsStr = (checkedSheets.length === 4 || checkedSheets.length === 0) ? "all" : checkedSheets.join(",");
+
+  // 收集隊伍勾選
+  const checkedTeams = [];
+  document.querySelectorAll(".chk-assign-team:checked").forEach(c => checkedTeams.push(c.value));
+  const assignedTeamsStr = checkedTeams.join(",");
+
+  try {
+    const res = await fetch(`${API_URL}?action=updateJudgeAssignments`, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        adminUser: "admin",
+        division: currentDivision,
+        targetUsername: targetUser,
+        assignedSheetsStr: assignedSheetsStr,
+        assignedTeamsStr: assignedTeamsStr
+      })
+    });
+    const result = await res.json();
+    if (result.success) {
+      alert("【儲存成功】該評審向度與指派隊伍已更新！");
+      modalAssignJudge.style.display = "none";
+      await fetchLatestScores(false);
+    } else {
+      alert("儲存失敗：" + result.message);
+    }
+  } catch (e) {
+    alert("儲存指派錯誤：" + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "儲存指派設定";
   }
 }
 
@@ -643,6 +826,7 @@ function showAllScores() {
   });
 }
 
+// 開啟評分：動態過濾並僅顯示評審負責之評分表
 window.openScoring = function(teamId) {
   currentTeam = assignedTeams.find(t => t.teamId === teamId);
   const divName = (currentDivision === "basic") ? "基礎組" : "進階組";
@@ -664,23 +848,31 @@ window.openScoring = function(teamId) {
     if (signWrapper) signWrapper.style.display = "block";
     if (roleHint) roleHint.textContent = "請評審與選手完成簽名後送出。";
   } else {
-    const r = currentJudgeRole;
-    const bFlow = document.getElementById("adv-block-flow");
-    const bGreen = document.getElementById("adv-block-green");
-    const bCreative = document.getElementById("adv-block-creative");
-    const bStructure = document.getElementById("adv-block-structure");
+    // 進階組：依據 currentAssignedSheets 決定顯示第 1~4 張表
+    const sheets = currentAssignedSheets;
+    const hasS1 = isAdminUser || sheets.indexOf("sheet1") !== -1;
+    const hasS2 = isAdminUser || sheets.indexOf("sheet2") !== -1;
+    const hasS3 = isAdminUser || sheets.indexOf("sheet3") !== -1;
+    const hasS4 = isAdminUser || sheets.indexOf("sheet4") !== -1;
 
-    if (bFlow) bFlow.style.display = (r === "flow" || r === "all" || isAdminUser) ? "block" : "none";
-    if (bGreen) bGreen.style.display = (r === "green" || r === "all" || isAdminUser) ? "block" : "none";
-    if (bCreative) bCreative.style.display = (r === "creative" || r === "all" || isAdminUser) ? "block" : "none";
-    if (bStructure) bStructure.style.display = (r === "structure" || r === "all" || isAdminUser) ? "block" : "none";
+    const bS1 = document.getElementById("adv-block-sheet1");
+    const bS2 = document.getElementById("adv-block-sheet2");
+    const bS3 = document.getElementById("adv-block-sheet3");
+    const bS4 = document.getElementById("adv-block-sheet4");
 
-    if (r === "creative" || r === "structure") {
-      if (signWrapper) signWrapper.style.display = "none";
-      if (roleHint) roleHint.textContent = "本項目依規範選手不需簽名，點擊送出即可同步成績。";
-    } else {
+    if (bS1) bS1.style.display = hasS1 ? "block" : "none";
+    if (bS2) bS2.style.display = hasS2 ? "block" : "none";
+    if (bS3) bS3.style.display = hasS3 ? "block" : "none";
+    if (bS4) bS4.style.display = hasS4 ? "block" : "none";
+
+    // 只要有勾選第 1 張或第 2 張表，就必須強制簽名確認
+    const needSign = hasS1 || hasS2;
+    if (needSign) {
       if (signWrapper) signWrapper.style.display = "block";
-      if (roleHint) roleHint.textContent = "請評審與選手完成簽名確認後送出。";
+      if (roleHint) roleHint.textContent = "第一張或第二張評分表規範選手需簽名確認。";
+    } else {
+      if (signWrapper) signWrapper.style.display = "none";
+      if (roleHint) roleHint.textContent = "第三張與第四張評分表規範選手免簽名，點擊送出即可同步成績。";
     }
   }
 
@@ -721,6 +913,7 @@ function resetFormToDefaults() {
     document.querySelectorAll('#row-mission-std-basic .selectable[data-val="2.3333"], #row-mission-std-basic .selectable[data-val="2.3334"]').forEach(c => c.classList.add("active"));
 
   } else {
+    // 進階組預設值
     const advSt = document.querySelector('#row-adv-stage .selectable[data-val="8"]');
     if (advSt) advSt.classList.add("active");
 
@@ -861,6 +1054,7 @@ function calculateBasicScores() {
 }
 
 function calculateAdvancedScores() {
+  // 第 1 張表計算
   const stageEl = document.querySelector("#row-adv-stage .selectable.active");
   const stageCount = stageEl ? parseFloat(stageEl.dataset.val) : 8;
   const stageScore = stageCount * 2;
@@ -876,6 +1070,7 @@ function calculateAdvancedScores() {
   if (advFlRawEl) advFlRawEl.textContent = flRaw;
   if (advFlWeightEl) advFlWeightEl.textContent = fluencyWeighted;
 
+  // 第 2 張表計算
   function getRowScore(rowId) {
     const r = document.getElementById(rowId);
     if (!r) return 0;
@@ -901,6 +1096,7 @@ function calculateAdvancedScores() {
   const advSciEl = document.getElementById("score-adv-science");
   if (advSciEl) advSciEl.textContent = sciScore;
 
+  // 第 3 張表計算
   function getSingleVal(rowId) {
     const el = document.querySelector(`#${rowId} .selectable.active`);
     return el ? parseFloat(el.dataset.val) : 0;
@@ -921,6 +1117,7 @@ function calculateAdvancedScores() {
   const cTotEl = document.getElementById("score-adv-creative-total");
   if (cTotEl) cTotEl.textContent = creativeTotal;
 
+  // 第 4 張表計算
   const d1 = getSingleVal("row-adv-d1");
   const d2 = getSingleVal("row-adv-d2");
   const d1El = document.getElementById("score-adv-d1");
@@ -931,13 +1128,18 @@ function calculateAdvancedScores() {
   const dTotEl = document.getElementById("score-adv-design-total");
   if (dTotEl) dTotEl.textContent = designTotal;
 
+  // 本次負責評分表小計結算
   let subtotal = 0;
-  const r = currentJudgeRole;
-  if (r === "flow") subtotal = stageScore + fluencyWeighted;
-  else if (r === "green") subtotal = greenTotal + sciScore;
-  else if (r === "creative") subtotal = creativeTotal;
-  else if (r === "structure") subtotal = designTotal;
-  else subtotal = stageScore + fluencyWeighted + greenTotal + sciScore + creativeTotal + designTotal;
+  const sheets = currentAssignedSheets;
+  const hasS1 = isAdminUser || sheets.indexOf("sheet1") !== -1;
+  const hasS2 = isAdminUser || sheets.indexOf("sheet2") !== -1;
+  const hasS3 = isAdminUser || sheets.indexOf("sheet3") !== -1;
+  const hasS4 = isAdminUser || sheets.indexOf("sheet4") !== -1;
+
+  if (hasS1) subtotal += (stageScore + fluencyWeighted);
+  if (hasS2) subtotal += (greenTotal + sciScore);
+  if (hasS3) subtotal += creativeTotal;
+  if (hasS4) subtotal += designTotal;
 
   const finTotEl = document.getElementById("final-total-score");
   if (finTotEl) finTotEl.textContent = Number(subtotal.toFixed(2));
@@ -1021,11 +1223,13 @@ function clearCanvas() {
 
 async function submitScore() {
   const isAdv = (currentDivision === "advanced");
-  const r = currentJudgeRole;
-  const needSign = !isAdv || (r === "flow" || r === "green" || r === "all" || isAdminUser);
+  const sheets = currentAssignedSheets;
+  const hasS1 = isAdminUser || sheets.indexOf("sheet1") !== -1;
+  const hasS2 = isAdminUser || sheets.indexOf("sheet2") !== -1;
+  const needSign = !isAdv || hasS1 || hasS2;
 
   if (needSign && !hasSignature) {
-    alert("請完成簽名確認後再行送出！");
+    alert("第一張或第二張評分表規範選手需完成簽名確認後再行送出！");
     return;
   }
 
@@ -1051,19 +1255,22 @@ async function submitScore() {
     teamName: currentTeam.teamName,
     judgeName: currentJudge,
     username: currentUsername,
-    judgeRole: currentJudgeRole,
+    sheetTagsStr: isAdv ? currentAssignedSheets.join(",") : "basic",
     timestamp: timestamp,
     signature: signatureData
   };
 
   if (isAdv) {
-    if (r === "flow" || r === "all" || isAdminUser) {
+    const hasS3 = isAdminUser || sheets.indexOf("sheet3") !== -1;
+    const hasS4 = isAdminUser || sheets.indexOf("sheet4") !== -1;
+
+    if (hasS1) {
       const st = document.getElementById("score-adv-stage");
       const fl = document.getElementById("score-adv-fluency-weighted");
       payload.stageCountScore = st ? parseFloat(st.textContent) || 0 : 0;
       payload.fluencyWeighted = fl ? parseFloat(fl.textContent) || 0 : 0;
     }
-    if (r === "green" || r === "all" || isAdminUser) {
+    if (hasS2) {
       const g1 = document.getElementById("score-adv-green1");
       const g2 = document.getElementById("score-adv-green2");
       const g3 = document.getElementById("score-adv-green3");
@@ -1073,11 +1280,11 @@ async function submitScore() {
       payload.green3Score = g3 ? parseFloat(g3.textContent) || 0 : 0;
       payload.scienceScore = sc ? parseFloat(sc.textContent) || 0 : 0;
     }
-    if (r === "creative" || r === "all" || isAdminUser) {
+    if (hasS3) {
       const cr = document.getElementById("score-adv-creative-total");
       payload.creativeScore = cr ? parseFloat(cr.textContent) || 0 : 0;
     }
-    if (r === "structure" || r === "all" || isAdminUser) {
+    if (hasS4) {
       const ds = document.getElementById("score-adv-design-total");
       payload.designScore = ds ? parseFloat(ds.textContent) || 0 : 0;
     }
