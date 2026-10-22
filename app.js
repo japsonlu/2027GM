@@ -4,9 +4,10 @@ let currentJudge = null;
 let currentPass = null;
 let currentUsername = null;
 let isAdminUser = false;
-let currentDivision = "advanced"; // 預設或當前模式 ("basic" | "advanced")
-let currentSortMode = "scoreDesc"; // "teamId" | "scoreDesc"
-let currentGroupFilter = "GAE"; // "GAE" | "GAJ" | "GAH"
+let currentJudgeRole = "all"; // "flow" | "green" | "creative" | "structure" | "all"
+let currentDivision = "advanced"; // "basic" | "advanced"
+let currentSortMode = "scoreDesc";
+let currentGroupFilter = "GAE";
 let currentRegionName = "";
 
 let assignedTeams = [];
@@ -20,7 +21,7 @@ const pageSummary = document.getElementById("page-summary");
 const pageScoring = document.getElementById("page-scoring");
 const judgeDisplay = document.getElementById("judge-display");
 const regionTag = document.getElementById("region-tag");
-const divisionTag = document.getElementById("division-tag");
+const roleTag = document.getElementById("role-tag");
 const teamListBody = document.getElementById("team-list-body");
 const summaryThead = document.getElementById("summary-thead");
 
@@ -45,16 +46,16 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-hide-all").addEventListener("click", hideAllScores);
   document.getElementById("btn-show-all").addEventListener("click", showAllScores);
 
-  // 組別切換按鈕
+  // 頂部常駐組別切換按鈕（所有評審隨時可切換）
   document.querySelectorAll(".btn-division-toggle").forEach(btn => {
     btn.addEventListener("click", function() {
-      currentDivision = this.dataset.division;
-      document.querySelectorAll(".btn-division-toggle").forEach(b => {
-        b.className = "btn btn-secondary btn-division-toggle";
-      });
-      this.className = "btn btn-primary btn-division-toggle";
-      updateDivisionBadge();
-      fetchLatestScores(true);
+      const targetDiv = this.dataset.division;
+      if (currentDivision === targetDiv && assignedTeams.length > 0) return;
+      currentDivision = targetDiv;
+      updateHeaderDivisionButtons();
+      if (currentUsername && currentPass) {
+        reLoginDivision(targetDiv);
+      }
     });
   });
 
@@ -106,12 +107,18 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-function updateDivisionBadge() {
-  divisionTag.textContent = (currentDivision === "basic") ? "基礎組" : "進階組";
-  divisionTag.style.display = "inline-block";
+function updateHeaderDivisionButtons() {
+  document.querySelectorAll(".btn-division-toggle").forEach(b => {
+    if (b.dataset.division === currentDivision) {
+      b.className = "btn btn-primary btn-division-toggle";
+    } else {
+      b.className = "btn btn-secondary btn-division-toggle";
+    }
+  });
 }
 
 async function handleLogin() {
+  const divSelect = document.getElementById("login-division").value;
   const user = document.getElementById("login-user").value.trim();
   const pass = document.getElementById("login-pass").value.trim();
 
@@ -119,6 +126,9 @@ async function handleLogin() {
     alert("請輸入評審帳號與密碼！");
     return;
   }
+
+  currentDivision = divSelect;
+  updateHeaderDivisionButtons();
 
   const btn = document.getElementById("btn-login");
   btn.disabled = true;
@@ -133,6 +143,7 @@ async function handleLogin() {
       currentJudge = data.judgeName;
       currentPass = pass;
       isAdminUser = (user.toLowerCase() === "admin") || !!data.isAdmin;
+      currentJudgeRole = data.judgeRole || "all";
       currentRegionName = data.regionName || "";
       
       assignedTeams = data.teams || [];
@@ -140,13 +151,7 @@ async function handleLogin() {
 
       assignedTeams.forEach(t => { teamDisplayState[t.teamId] = "visible"; });
 
-      judgeDisplay.textContent = isAdminUser ? `系統管理員：${currentJudge}` : `評審：${currentJudge}`;
-      if (currentRegionName) {
-        regionTag.textContent = currentRegionName;
-        regionTag.style.display = "inline-block";
-      }
-      updateDivisionBadge();
-
+      updateUserDisplayInfo();
       loginView.style.display = "none";
       applyUserRoleUI();
 
@@ -168,6 +173,49 @@ async function handleLogin() {
   } finally {
     btn.disabled = false;
     btn.textContent = "登入系統";
+  }
+}
+
+// 評審在頂端點擊切換基礎組/進階組時，自動重抓對應組別資料
+async function reLoginDivision(targetDivision) {
+  currentDivision = targetDivision;
+  try {
+    const res = await fetch(`${API_URL}?action=login&username=${encodeURIComponent(currentUsername)}&password=${encodeURIComponent(currentPass)}&division=${encodeURIComponent(currentDivision)}&_t=${Date.now()}`);
+    const data = await res.json();
+    if (data.success) {
+      currentJudgeRole = data.judgeRole || "all";
+      assignedTeams = data.teams || [];
+      scoresCache = data.existingScores || {};
+      assignedTeams.forEach(t => { teamDisplayState[t.teamId] = "visible"; });
+      updateUserDisplayInfo();
+      renderTeamList();
+    }
+  } catch (e) {
+    console.error("切換組別連線失敗", e);
+  }
+}
+
+function updateUserDisplayInfo() {
+  judgeDisplay.textContent = isAdminUser ? `系統管理員：${currentJudge}` : `評審：${currentJudge}`;
+  
+  if (currentRegionName) {
+    regionTag.textContent = currentRegionName;
+    regionTag.style.display = "inline-block";
+  }
+
+  // 顯示評審在進階組負責的角色項目
+  if (currentDivision === "advanced" && !isAdminUser) {
+    const roleMap = {
+      flow: "關卡與流暢度",
+      green: "科學與綠能",
+      creative: "創意關卡",
+      structure: "整體機構設計",
+      all: "全向度"
+    };
+    roleTag.textContent = roleMap[currentJudgeRole] || "評審";
+    roleTag.style.display = "inline-block";
+  } else {
+    roleTag.style.display = "none";
   }
 }
 
@@ -230,7 +278,7 @@ async function submitCreateTournament() {
     const result = await res.json();
 
     if (result.success) {
-      alert(`【建立成功！】\n基礎組表單：${result.basicName}\n進階組表單：${result.advancedName}\n已全數建立至指定雲端資料夾。`);
+      alert(`【建立成功！】\n基礎組表單：${result.basicName}\n進階組表單：${result.advancedName}`);
       modalAddRegion.style.display = "none";
       document.getElementById("input-new-region-name").value = "";
       document.getElementById("input-new-region-date").value = "";
@@ -307,11 +355,10 @@ function getDisplayScore(valStr, isHidden) {
   return isHidden ? "***" : valStr;
 }
 
-// 渲染總表表頭與隊伍列表 (依據 PDF 指定欄位動態產生)
+// 渲染總表表頭與隊伍列表
 function renderTeamList() {
   const isAdv = (currentDivision === "advanced");
 
-  // 渲染表頭
   if (isAdv) {
     summaryThead.innerHTML = `
       <tr>
@@ -368,7 +415,6 @@ function renderTeamList() {
     return;
   }
 
-  // 排序
   const sortedTeams = [...filteredTeams].sort((a, b) => {
     const aScore = scoresCache[a.teamId];
     const bScore = scoresCache[b.teamId];
@@ -392,7 +438,6 @@ function renderTeamList() {
     }
   });
 
-  // 計算名次 (依總分降冪分配名次，同分同名次)
   const rankMap = {};
   const scoredTeamsForRank = [...sortedTeams]
     .map(t => ({ teamId: t.teamId, total: (scoresCache[t.teamId] && scoresCache[t.teamId].totalScore !== undefined && scoresCache[t.teamId].totalScore !== "") ? parseFloat(scoresCache[t.teamId].totalScore) : null }))
@@ -576,6 +621,7 @@ function showAllScores() {
   });
 }
 
+// 開啟評分頁面：根據評審角色過濾呈現向度與簽名板
 window.openScoring = function(teamId) {
   currentTeam = assignedTeams.find(t => t.teamId === teamId);
   const divName = (currentDivision === "basic") ? "基礎組" : "進階組";
@@ -586,13 +632,32 @@ window.openScoring = function(teamId) {
   document.getElementById("division-basic-section").style.display = isBasic ? "block" : "none";
   document.getElementById("division-advanced-section").style.display = isBasic ? "none" : "block";
 
-  const existing = scoresCache[teamId];
-  if (existing && existing.totalScore !== undefined && existing.totalScore !== "") {
-    loadExistingScoresToForm(existing);
+  // 向度與簽名板角色分流
+  const signWrapper = document.getElementById("sign-wrapper");
+  const roleHint = document.getElementById("scoring-role-hint");
+
+  if (isBasic) {
+    signWrapper.style.display = "block";
+    roleHint.textContent = "請評審與選手完成簽名後送出。";
   } else {
-    resetFormToDefaults();
+    // 進階組：依角色隱藏無關向度
+    const r = currentJudgeRole;
+    document.getElementById("adv-block-flow").style.display = (r === "flow" || r === "all" || isAdminUser) ? "block" : "none";
+    document.getElementById("adv-block-green").style.display = (r === "green" || r === "all" || isAdminUser) ? "block" : "none";
+    document.getElementById("adv-block-creative").style.display = (r === "creative" || r === "all" || isAdminUser) ? "block" : "none";
+    document.getElementById("adv-block-structure").style.display = (r === "structure" || r === "all" || isAdminUser) ? "block" : "none";
+
+    // 第三張評分表（creative / structure）規範不需簽名
+    if (r === "creative" || r === "structure") {
+      signWrapper.style.display = "none";
+      roleHint.textContent = "本項目依規範選手不需簽名，點擊送出即可同步成績。";
+    } else {
+      signWrapper.style.display = "block";
+      roleHint.textContent = "請評審與選手完成簽名確認後送出。";
+    }
   }
 
+  resetFormToDefaults();
   calculateAllScores();
   switchPage("scoring");
 
@@ -657,30 +722,6 @@ function resetFormToDefaults() {
     if (d1) d1.classList.add("active");
     const d2 = document.querySelector('#row-adv-d2 .selectable[data-val="2"]');
     if (d2) d2.classList.add("active");
-  }
-}
-
-// 支援重評時回填前次評分
-function loadExistingScoresToForm(score) {
-  resetFormToDefaults();
-
-  function selectVal(rowId, val) {
-    if (val === undefined || val === null || val === "") return;
-    const row = document.getElementById(rowId);
-    if (!row) return;
-    const target = row.querySelector(`.selectable[data-val="${val}"]`);
-    if (target) {
-      row.querySelectorAll(".selectable").forEach(c => c.classList.remove("active"));
-      target.classList.add("active");
-    }
-  }
-
-  if (currentDivision === "advanced") {
-    if (score.stageCountScore) {
-      const count = Number(score.stageCountScore) / 2;
-      selectVal("row-adv-stage", count);
-    }
-    if (score.scienceScore) selectVal("row-adv-science", score.scienceScore);
   }
 }
 
@@ -780,15 +821,12 @@ function calculateBasicScores() {
   document.getElementById("final-total-score").textContent = total;
 }
 
-// 進階組計分邏輯 (對齊 2027GM 評分標準)
 function calculateAdvancedScores() {
-  // 1. 關卡數量 (16分)
   const stageEl = document.querySelector("#row-adv-stage .selectable.active");
   const stageCount = stageEl ? parseFloat(stageEl.dataset.val) : 8;
   const stageScore = stageCount * 2;
   document.getElementById("score-adv-stage").textContent = stageScore;
 
-  // 2. 流暢度加權 (20分)
   const flEl = document.querySelector("#row-adv-fluency .selectable.active");
   let flDrops = flEl ? parseFloat(flEl.dataset.val) : 0;
   let flRaw = Math.max(0, 20 - flDrops * 2);
@@ -796,7 +834,6 @@ function calculateAdvancedScores() {
   document.getElementById("score-adv-fluency-raw").textContent = flRaw;
   document.getElementById("score-adv-fluency-weighted").textContent = fluencyWeighted;
 
-  // 3. 綠能 1, 2, 3 (24分)
   function getRowScore(rowId) {
     const r = document.getElementById(rowId);
     let s = 0;
@@ -812,12 +849,10 @@ function calculateAdvancedScores() {
   const greenTotal = g1 + g2 + g3;
   document.getElementById("score-adv-green-total").textContent = greenTotal;
 
-  // 4. 科學概念 (16分)
   const sciEl = document.querySelector("#row-adv-science .selectable.active");
   const sciScore = sciEl ? parseFloat(sciEl.dataset.val) : 16;
   document.getElementById("score-adv-science").textContent = sciScore;
 
-  // 5. 創意關卡 (16分)
   function getSingleVal(rowId) {
     const el = document.querySelector(`#${rowId} .selectable.active`);
     return el ? parseFloat(el.dataset.val) : 0;
@@ -833,7 +868,6 @@ function calculateAdvancedScores() {
   const creativeTotal = Number((c1 + c2 + c3 + c4).toFixed(2));
   document.getElementById("score-adv-creative-total").textContent = creativeTotal;
 
-  // 6. 整體機構設計 (8分)
   const d1 = getSingleVal("row-adv-d1");
   const d2 = getSingleVal("row-adv-d2");
   document.getElementById("score-adv-d1").textContent = d1;
@@ -841,9 +875,16 @@ function calculateAdvancedScores() {
   const designTotal = Number((d1 + d2).toFixed(2));
   document.getElementById("score-adv-design-total").textContent = designTotal;
 
-  // 總分 (100分)
-  const finalTotal = Number((stageScore + fluencyWeighted + greenTotal + sciScore + creativeTotal + designTotal).toFixed(2));
-  document.getElementById("final-total-score").textContent = finalTotal;
+  // 結算小計（若分工評審，則呈現該向度的小計）
+  let subtotal = 0;
+  const r = currentJudgeRole;
+  if (r === "flow") subtotal = stageScore + fluencyWeighted;
+  else if (r === "green") subtotal = greenTotal + sciScore;
+  else if (r === "creative") subtotal = creativeTotal;
+  else if (r === "structure") subtotal = designTotal;
+  else subtotal = stageScore + fluencyWeighted + greenTotal + sciScore + creativeTotal + designTotal;
+
+  document.getElementById("final-total-score").textContent = Number(subtotal.toFixed(2));
 }
 
 function resizeCanvas(preserveExisting = false) {
@@ -919,8 +960,12 @@ function clearCanvas() {
 }
 
 async function submitScore() {
-  if (!hasSignature) {
-    alert("請評審完成下方簽名後再行送出！");
+  const isAdv = (currentDivision === "advanced");
+  const r = currentJudgeRole;
+  const needSign = !isAdv || (r === "flow" || r === "green" || r === "all" || isAdminUser);
+
+  if (needSign && !hasSignature) {
+    alert("請完成簽名確認後再行送出！");
     return;
   }
 
@@ -936,8 +981,7 @@ async function submitScore() {
     String(now.getMinutes()).padStart(2, "0") + ":" +
     String(now.getSeconds()).padStart(2, "0");
 
-  const signatureData = canvas.toDataURL("image/png");
-  const isAdv = (currentDivision === "advanced");
+  const signatureData = hasSignature ? canvas.toDataURL("image/png") : "";
 
   let payload = {
     division: currentDivision,
@@ -947,20 +991,29 @@ async function submitScore() {
     teamName: currentTeam.teamName,
     judgeName: currentJudge,
     username: currentUsername,
+    judgeRole: currentJudgeRole,
     timestamp: timestamp,
     signature: signatureData
   };
 
   if (isAdv) {
-    payload.stageCountScore = parseFloat(document.getElementById("score-adv-stage").textContent) || 0;
-    payload.fluencyWeighted = parseFloat(document.getElementById("score-adv-fluency-weighted").textContent) || 0;
-    payload.scienceScore = parseFloat(document.getElementById("score-adv-science").textContent) || 0;
-    payload.green1Score = parseFloat(document.getElementById("score-adv-green1").textContent) || 0;
-    payload.green2Score = parseFloat(document.getElementById("score-adv-green2").textContent) || 0;
-    payload.green3Score = parseFloat(document.getElementById("score-adv-green3").textContent) || 0;
-    payload.creativeScore = parseFloat(document.getElementById("score-adv-creative-total").textContent) || 0;
-    payload.designScore = parseFloat(document.getElementById("score-adv-design-total").textContent) || 0;
-    payload.totalScore = parseFloat(document.getElementById("final-total-score").textContent) || 0;
+    if (r === "flow" || r === "all" || isAdminUser) {
+      payload.stageCountScore = parseFloat(document.getElementById("score-adv-stage").textContent) || 0;
+      payload.fluencyWeighted = parseFloat(document.getElementById("score-adv-fluency-weighted").textContent) || 0;
+    }
+    if (r === "green" || r === "all" || isAdminUser) {
+      payload.green1Score = parseFloat(document.getElementById("score-adv-green1").textContent) || 0;
+      payload.green2Score = parseFloat(document.getElementById("score-adv-green2").textContent) || 0;
+      payload.green3Score = parseFloat(document.getElementById("score-adv-green3").textContent) || 0;
+      payload.scienceScore = parseFloat(document.getElementById("score-adv-science").textContent) || 0;
+    }
+    if (r === "creative" || r === "all" || isAdminUser) {
+      payload.creativeScore = parseFloat(document.getElementById("score-adv-creative-total").textContent) || 0;
+    }
+    if (r === "structure" || r === "all" || isAdminUser) {
+      payload.designScore = parseFloat(document.getElementById("score-adv-design-total").textContent) || 0;
+    }
+    payload.sectionSubtotal = parseFloat(document.getElementById("final-total-score").textContent) || 0;
   } else {
     payload.stageScore = parseFloat(document.getElementById("score-stage-basic").textContent) || 0;
     payload.fluencyScore = parseFloat(document.getElementById("score-fluency-weighted-basic").textContent) || 0;
@@ -979,17 +1032,11 @@ async function submitScore() {
     const result = await res.json();
 
     if (result.success) {
-      alert("成績已成功同步至試算表！");
-      scoresCache[currentTeam.teamId] = payload;
-      teamDisplayState[currentTeam.teamId] = "visible";
-
+      alert("成績已成功同步儲存！");
       clearCanvas();
       hasSignature = false;
-      canvas.width = 0;
-      canvas.height = 0;
-
       switchPage("summary");
-      renderTeamList();
+      await fetchLatestScores(false);
     } else {
       alert("儲存失敗：" + result.message);
     }
