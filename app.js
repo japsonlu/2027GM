@@ -4,8 +4,8 @@ let currentJudge = null;
 let currentPass = null;
 let currentUsername = null;
 let isAdminUser = false;
-let currentDivision = "basic"; // "basic" | "advanced"
-let currentSortMode = "teamId"; // "teamId" | "scoreDesc"
+let currentDivision = "advanced"; // 預設或當前模式 ("basic" | "advanced")
+let currentSortMode = "scoreDesc"; // "teamId" | "scoreDesc"
 let currentGroupFilter = "GAE"; // "GAE" | "GAJ" | "GAH"
 let currentRegionName = "";
 
@@ -22,6 +22,7 @@ const judgeDisplay = document.getElementById("judge-display");
 const regionTag = document.getElementById("region-tag");
 const divisionTag = document.getElementById("division-tag");
 const teamListBody = document.getElementById("team-list-body");
+const summaryThead = document.getElementById("summary-thead");
 
 const modalAddRegion = document.getElementById("modal-add-region");
 const selectActiveRegion = document.getElementById("select-active-region");
@@ -41,11 +42,10 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-clear-sign").addEventListener("click", clearCanvas);
   document.getElementById("btn-submit").addEventListener("click", submitScore);
 
-  // 評審成績顯示切換
   document.getElementById("btn-hide-all").addEventListener("click", hideAllScores);
   document.getElementById("btn-show-all").addEventListener("click", showAllScores);
 
-  // 第一列：基礎組 / 進階組 切換
+  // 組別切換按鈕
   document.querySelectorAll(".btn-division-toggle").forEach(btn => {
     btn.addEventListener("click", function() {
       currentDivision = this.dataset.division;
@@ -58,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 第二列：國小 / 國中 / 高中 篩選
+  // 年段篩選
   document.querySelectorAll(".btn-filter-group").forEach(btn => {
     btn.addEventListener("click", function() {
       currentGroupFilter = this.dataset.filter;
@@ -70,7 +70,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 第二列：排序按鈕
+  // 排序
   document.getElementById("btn-sort-teamid").addEventListener("click", () => {
     currentSortMode = "teamId";
     renderTeamList();
@@ -80,18 +80,18 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTeamList();
   });
 
-  // 匯出 PDF 按鈕
+  // 匯出 PDF
   const btnExportPdf = document.getElementById("btn-export-pdf");
   if (btnExportPdf) {
     btnExportPdf.addEventListener("click", exportSummaryToPdf);
   }
 
-  // 同步雲端成績
+  // 同步成績
   document.querySelectorAll(".btn-sync-cloud").forEach(btn => {
     btn.addEventListener("click", () => fetchLatestScores(true));
   });
 
-  // 賽事新增與切換控制 (管理員專用)
+  // 賽事新增與切換
   document.getElementById("btn-open-add-region").addEventListener("click", () => {
     modalAddRegion.style.display = "flex";
   });
@@ -151,7 +151,6 @@ async function handleLogin() {
       applyUserRoleUI();
 
       if (isAdminUser) loadRegionsList();
-
       renderTeamList();
 
       if (syncTimer) clearInterval(syncTimer);
@@ -175,19 +174,13 @@ async function handleLogin() {
 function applyUserRoleUI() {
   const judgeActions = document.getElementById("judge-actions");
   const adminActionsBar = document.getElementById("admin-actions-bar");
-  const thHideScore = document.querySelector(".th-hide-score");
-  const thLastAction = document.getElementById("th-last-action");
 
   if (isAdminUser) {
     judgeActions.style.display = "none";
     adminActionsBar.style.display = "flex";
-    if (thHideScore) thHideScore.style.display = "none";
-    if (thLastAction) thLastAction.textContent = "評分者";
   } else {
     judgeActions.style.display = "flex";
     adminActionsBar.style.display = "none";
-    if (thHideScore) thHideScore.style.display = "";
-    if (thLastAction) thLastAction.textContent = "操作";
   }
 }
 
@@ -256,7 +249,6 @@ async function submitCreateTournament() {
 async function submitSwitchRegion() {
   const targetRegion = selectActiveRegion.value;
   if (!targetRegion) return;
-
   if (!confirm(`確定要將系統賽事鎖定為「${targetRegion}」嗎？`)) return;
 
   try {
@@ -292,7 +284,7 @@ async function fetchLatestScores(showNotice = false) {
       assignedTeams = data.teams || assignedTeams;
       scoresCache = data.existingScores || data.scores || {};
       renderTeamList();
-      if (showNotice) alert("【同步成功】已重新取得試算表最新成績！");
+      if (showNotice) alert("【同步成功】已重新取得最新評分數據！");
     } else {
       if (showNotice) alert("同步失敗：" + (data.message || "伺服器未回傳成績"));
     }
@@ -315,11 +307,54 @@ function getDisplayScore(valStr, isHidden) {
   return isHidden ? "***" : valStr;
 }
 
+// 渲染總表表頭與隊伍列表 (依據 PDF 指定欄位動態產生)
 function renderTeamList() {
+  const isAdv = (currentDivision === "advanced");
+
+  // 渲染表頭
+  if (isAdv) {
+    summaryThead.innerHTML = `
+      <tr>
+        <th>組別</th>
+        <th>隊伍<br>編號</th>
+        <th>學校名稱</th>
+        <th>隊伍名稱</th>
+        <th>關卡<br>數量</th>
+        <th>流暢<br>加權</th>
+        <th>科學<br>概念</th>
+        <th>綠能<br>一</th>
+        <th>綠能<br>二</th>
+        <th>綠能<br>三</th>
+        <th>創意<br>關卡</th>
+        <th>整體<br>機構設計</th>
+        <th>總分</th>
+        ${isAdminUser ? "<th>名次</th>" : '<th class="th-hide-score">隱藏</th>'}
+        <th id="th-last-action">${isAdminUser ? "評分評審" : "操作"}</th>
+      </tr>
+    `;
+  } else {
+    summaryThead.innerHTML = `
+      <tr>
+        <th>組別</th>
+        <th>隊伍<br>編號</th>
+        <th>學校名稱</th>
+        <th>隊伍名稱</th>
+        <th>關卡<br>(16)</th>
+        <th>流暢度<br>(20)</th>
+        <th>內容<br>(10)</th>
+        <th>規範<br>(21)</th>
+        <th>任務<br>(33)</th>
+        <th>總分<br>(100)</th>
+        ${isAdminUser ? "<th>名次</th>" : '<th class="th-hide-score">隱藏</th>'}
+        <th id="th-last-action">${isAdminUser ? "評審" : "操作"}</th>
+      </tr>
+    `;
+  }
+
   teamListBody.innerHTML = "";
 
   if (assignedTeams.length === 0) {
-    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#d32f2f; padding: 24px;">查無【${currentDivision === "basic" ? "基礎組" : "進階組"}】可評分的隊伍，請確認該組別試算表！</td></tr>`;
+    teamListBody.innerHTML = `<tr><td colspan="15" style="color:#d32f2f; padding: 24px;">查無【${isAdv ? "進階組" : "基礎組"}】可評分的隊伍，請確認該組別試算表！</td></tr>`;
     return;
   }
 
@@ -329,10 +364,11 @@ function renderTeamList() {
   }
 
   if (filteredTeams.length === 0) {
-    teamListBody.innerHTML = `<tr><td colspan="12" style="color:#666; padding: 24px;">查無此年段之隊伍！</td></tr>`;
+    teamListBody.innerHTML = `<tr><td colspan="15" style="color:#666; padding: 24px;">查無此年段之隊伍！</td></tr>`;
     return;
   }
 
+  // 排序
   const sortedTeams = [...filteredTeams].sort((a, b) => {
     const aScore = scoresCache[a.teamId];
     const bScore = scoresCache[b.teamId];
@@ -356,44 +392,95 @@ function renderTeamList() {
     }
   });
 
+  // 計算名次 (依總分降冪分配名次，同分同名次)
+  const rankMap = {};
+  const scoredTeamsForRank = [...sortedTeams]
+    .map(t => ({ teamId: t.teamId, total: (scoresCache[t.teamId] && scoresCache[t.teamId].totalScore !== undefined && scoresCache[t.teamId].totalScore !== "") ? parseFloat(scoresCache[t.teamId].totalScore) : null }))
+    .filter(t => t.total !== null)
+    .sort((a, b) => b.total - a.total);
+
+  scoredTeamsForRank.forEach((item, idx) => {
+    if (idx > 0 && item.total === scoredTeamsForRank[idx - 1].total) {
+      rankMap[item.teamId] = rankMap[scoredTeamsForRank[idx - 1].teamId];
+    } else {
+      rankMap[item.teamId] = idx + 1;
+    }
+  });
+
   sortedTeams.forEach(team => {
     const tr = document.createElement("tr");
     tr.id = `team-row-${team.teamId}`;
 
     const score = scoresCache[team.teamId] || {};
     const isScored = (score.totalScore !== undefined && score.totalScore !== null && score.totalScore !== "");
-
-    let stdRaw = score.stdScore;
-    if (stdRaw === undefined || stdRaw === null || stdRaw === "") {
-      stdRaw = score.missionStdScore !== undefined ? score.missionStdScore : score.ruleScore;
-    }
-
-    const stageVal = formatScoreVal(score.stageScore);
-    const fluencyVal = formatScoreVal(score.fluencyScore);
-    const taskVal = formatScoreVal(score.taskScore);
-    const stdVal = formatScoreVal(stdRaw);
-    const missionVal = formatScoreVal(score.missionScore);
-    const totalVal = formatScoreVal(score.totalScore);
-
     const isHidden = (teamDisplayState[team.teamId] === "hidden");
 
-    const hideBtnColumn = isAdminUser ? "" : `
-      <td>
-        <button class="btn ${isHidden ? "btn-primary" : "btn-secondary"}" 
-                style="padding: 4px 6px; font-size:11px;" 
-                id="btn-toggle-${team.teamId}" 
-                onclick="toggleScoreState('${team.teamId}')">
-          ${isHidden ? "顯示" : "隱藏"}
-        </button>
-      </td>
-    `;
+    let midColsHtml = "";
 
-    let lastColumnHtml = "";
-    if (isAdminUser) {
-      const judgeName = score.judgeName || "";
-      lastColumnHtml = `<td style="font-weight: 500; color: #333;">${judgeName}</td>`;
+    if (isAdv) {
+      const stageVal = formatScoreVal(score.stageCountScore);
+      const fluVal = formatScoreVal(score.fluencyWeighted);
+      const sciVal = formatScoreVal(score.scienceScore);
+      const g1Val = formatScoreVal(score.green1Score);
+      const g2Val = formatScoreVal(score.green2Score);
+      const g3Val = formatScoreVal(score.green3Score);
+      const crVal = formatScoreVal(score.creativeScore);
+      const dsVal = formatScoreVal(score.designScore);
+      const totVal = formatScoreVal(score.totalScore);
+
+      midColsHtml = `
+        <td class="score-col" data-val="${stageVal}">${getDisplayScore(stageVal, isHidden)}</td>
+        <td class="score-col" data-val="${fluVal}">${getDisplayScore(fluVal, isHidden)}</td>
+        <td class="score-col" data-val="${sciVal}">${getDisplayScore(sciVal, isHidden)}</td>
+        <td class="score-col" data-val="${g1Val}">${getDisplayScore(g1Val, isHidden)}</td>
+        <td class="score-col" data-val="${g2Val}">${getDisplayScore(g2Val, isHidden)}</td>
+        <td class="score-col" data-val="${g3Val}">${getDisplayScore(g3Val, isHidden)}</td>
+        <td class="score-col" data-val="${crVal}">${getDisplayScore(crVal, isHidden)}</td>
+        <td class="score-col" data-val="${dsVal}">${getDisplayScore(dsVal, isHidden)}</td>
+        <td class="score-col" data-val="${totVal}" style="font-weight:bold; color:var(--primary);">${getDisplayScore(totVal, isHidden)}</td>
+      `;
     } else {
-      lastColumnHtml = `
+      let stdRaw = score.stdScore;
+      if (stdRaw === undefined || stdRaw === null || stdRaw === "") {
+        stdRaw = score.missionStdScore !== undefined ? score.missionStdScore : score.ruleScore;
+      }
+      const stageVal = formatScoreVal(score.stageScore);
+      const fluVal = formatScoreVal(score.fluencyScore);
+      const taskVal = formatScoreVal(score.taskScore);
+      const stdVal = formatScoreVal(stdRaw);
+      const misVal = formatScoreVal(score.missionScore);
+      const totVal = formatScoreVal(score.totalScore);
+
+      midColsHtml = `
+        <td class="score-col" data-val="${stageVal}">${getDisplayScore(stageVal, isHidden)}</td>
+        <td class="score-col" data-val="${fluVal}">${getDisplayScore(fluVal, isHidden)}</td>
+        <td class="score-col" data-val="${taskVal}">${getDisplayScore(taskVal, isHidden)}</td>
+        <td class="score-col" data-val="${stdVal}">${getDisplayScore(stdVal, isHidden)}</td>
+        <td class="score-col" data-val="${misVal}">${getDisplayScore(misVal, isHidden)}</td>
+        <td class="score-col" data-val="${totVal}" style="font-weight:bold; color:var(--primary);">${getDisplayScore(totVal, isHidden)}</td>
+      `;
+    }
+
+    const rankOrHideCol = isAdminUser 
+      ? `<td style="font-weight:bold; color:#d32f2f;">${rankMap[team.teamId] || "-"}</td>`
+      : `
+        <td>
+          <button class="btn ${isHidden ? "btn-primary" : "btn-secondary"}" 
+                  style="padding: 4px 6px; font-size:11px;" 
+                  id="btn-toggle-${team.teamId}" 
+                  onclick="toggleScoreState('${team.teamId}')">
+            ${isHidden ? "顯示" : "隱藏"}
+          </button>
+        </td>
+      `;
+
+    let lastCol = "";
+    if (isAdminUser) {
+      const judgeName = score.judgeName || "未評分";
+      const isMulti = score.judgeCount && score.judgeCount > 1;
+      lastCol = `<td style="font-size:12px; color:${isMulti ? '#1565c0' : '#444'}; font-weight:${isMulti ? 'bold' : 'normal'};">${judgeName}</td>`;
+    } else {
+      lastCol = `
         <td>
           <button class="btn ${isScored ? "btn-danger" : "btn-success"}" 
                   style="padding: 5px 8px; font-size:12px;" 
@@ -409,20 +496,15 @@ function renderTeamList() {
       <td style="font-weight:bold;">${team.teamId}</td>
       <td>${team.school}</td>
       <td>${team.teamName}</td>
-      <td class="score-col" data-val="${stageVal}">${getDisplayScore(stageVal, isHidden)}</td>
-      <td class="score-col" data-val="${fluencyVal}">${getDisplayScore(fluencyVal, isHidden)}</td>
-      <td class="score-col" data-val="${taskVal}">${getDisplayScore(taskVal, isHidden)}</td>
-      <td class="score-col" data-val="${stdVal}">${getDisplayScore(stdVal, isHidden)}</td>
-      <td class="score-col" data-val="${missionVal}">${getDisplayScore(missionVal, isHidden)}</td>
-      <td class="score-col" data-val="${totalVal}" style="font-weight:bold; color:var(--primary);">${getDisplayScore(totalVal, isHidden)}</td>
-      ${hideBtnColumn}
-      ${lastColumnHtml}
+      ${midColsHtml}
+      ${rankOrHideCol}
+      ${lastCol}
     `;
+
     teamListBody.appendChild(tr);
   });
 }
 
-// 匯出 PDF：抬頭與檔名格式處理
 function exportSummaryToPdf() {
   let groupName = "國小組";
   if (currentGroupFilter === "GAJ") groupName = "國中組";
@@ -430,7 +512,6 @@ function exportSummaryToPdf() {
 
   const divName = (currentDivision === "basic") ? "基礎組" : "進階組";
   const tourName = currentRegionName || (regionTag.textContent || "賽事");
-  
   const fullTitle = `${tourName}${divName}${groupName}`;
 
   const banner = document.getElementById("print-header-banner");
@@ -505,7 +586,13 @@ window.openScoring = function(teamId) {
   document.getElementById("division-basic-section").style.display = isBasic ? "block" : "none";
   document.getElementById("division-advanced-section").style.display = isBasic ? "none" : "block";
 
-  resetFormToDefaults();
+  const existing = scoresCache[teamId];
+  if (existing && existing.totalScore !== undefined && existing.totalScore !== "") {
+    loadExistingScoresToForm(existing);
+  } else {
+    resetFormToDefaults();
+  }
+
   calculateAllScores();
   switchPage("scoring");
 
@@ -521,24 +608,80 @@ window.openScoring = function(teamId) {
 };
 
 function resetFormToDefaults() {
-  document.querySelectorAll(".toggleable").forEach(cell => cell.classList.remove("active"));
+  document.querySelectorAll(".selectable").forEach(c => c.classList.remove("active"));
+  document.querySelectorAll(".toggleable").forEach(c => c.classList.remove("active"));
 
-  document.querySelectorAll("#row-stage .selectable").forEach(c => c.classList.remove("active"));
-  document.querySelector('#row-stage .selectable[data-val="8"]').classList.add("active");
+  if (currentDivision === "basic") {
+    const stEl = document.querySelector('#row-stage-basic .selectable[data-val="8"]');
+    if (stEl) stEl.classList.add("active");
 
-  document.querySelectorAll("#row-fluency .selectable").forEach(c => c.classList.remove("active"));
-  document.querySelector('#row-fluency .selectable[data-val="0"]').classList.add("active");
+    const flEl = document.querySelector('#row-fluency-basic .selectable[data-val="0"]');
+    if (flEl) flEl.classList.add("active");
 
-  ["row-task-1", "row-task-2"].forEach(rowId => {
+    ["row-task-1", "row-task-2"].forEach(rowId => {
+      const row = document.getElementById(rowId);
+      if (row) {
+        row.querySelector('.selectable[data-val="3"]').classList.add("active");
+        row.querySelector('.selectable[data-val="2"]').classList.add("active");
+      }
+    });
+
+    document.querySelectorAll('#row-mission-std-basic .selectable[data-val="2.3333"], #row-mission-std-basic .selectable[data-val="2.3334"]').forEach(c => c.classList.add("active"));
+
+  } else {
+    const advSt = document.querySelector('#row-adv-stage .selectable[data-val="8"]');
+    if (advSt) advSt.classList.add("active");
+
+    const advFl = document.querySelector('#row-adv-fluency .selectable[data-val="0"]');
+    if (advFl) advFl.classList.add("active");
+
+    ["row-adv-green1", "row-adv-green2", "row-adv-green3"].forEach(rowId => {
+      const row = document.getElementById(rowId);
+      if (row) {
+        const stdCell = row.querySelector('.selectable[data-val="3"]');
+        const runCell = row.querySelector('.selectable[data-val="5"]');
+        if (stdCell) stdCell.classList.add("active");
+        if (runCell) runCell.classList.add("active");
+      }
+    });
+
+    const advSci = document.querySelector('#row-adv-science .selectable[data-val="16"]');
+    if (advSci) advSci.classList.add("active");
+
+    ["row-adv-c1", "row-adv-c2", "row-adv-c3", "row-adv-c4"].forEach(rowId => {
+      const row = document.getElementById(rowId);
+      if (row) row.querySelector('.selectable[data-val="4"]').classList.add("active");
+    });
+
+    const d1 = document.querySelector('#row-adv-d1 .selectable[data-val="6"]');
+    if (d1) d1.classList.add("active");
+    const d2 = document.querySelector('#row-adv-d2 .selectable[data-val="2"]');
+    if (d2) d2.classList.add("active");
+  }
+}
+
+// 支援重評時回填前次評分
+function loadExistingScoresToForm(score) {
+  resetFormToDefaults();
+
+  function selectVal(rowId, val) {
+    if (val === undefined || val === null || val === "") return;
     const row = document.getElementById(rowId);
-    row.querySelectorAll(".selectable").forEach(c => c.classList.remove("active"));
-    row.querySelector('.selectable[data-val="3"]').classList.add("active");
-    row.querySelector('.selectable[data-val="2"]').classList.add("active");
-  });
+    if (!row) return;
+    const target = row.querySelector(`.selectable[data-val="${val}"]`);
+    if (target) {
+      row.querySelectorAll(".selectable").forEach(c => c.classList.remove("active"));
+      target.classList.add("active");
+    }
+  }
 
-  const stdSelector = (currentDivision === "basic") ? "#row-mission-std-basic" : "#row-mission-std-adv";
-  document.querySelectorAll(`${stdSelector} .selectable`).forEach(c => c.classList.remove("active"));
-  document.querySelectorAll(`${stdSelector} .selectable[data-val="2.3333"], ${stdSelector} .selectable[data-val="2.3334"]`).forEach(c => c.classList.add("active"));
+  if (currentDivision === "advanced") {
+    if (score.stageCountScore) {
+      const count = Number(score.stageCountScore) / 2;
+      selectVal("row-adv-stage", count);
+    }
+    if (score.scienceScore) selectVal("row-adv-science", score.scienceScore);
+  }
 }
 
 function switchPage(page) {
@@ -583,78 +726,124 @@ function setupSelectionHandlers() {
 }
 
 function calculateAllScores() {
-  const stageEl = document.querySelector("#row-stage .selectable.active");
+  if (currentDivision === "basic") {
+    calculateBasicScores();
+  } else {
+    calculateAdvancedScores();
+  }
+}
+
+function calculateBasicScores() {
+  const stageEl = document.querySelector("#row-stage-basic .selectable.active");
   const stageCount = stageEl ? parseFloat(stageEl.dataset.val) : 8;
   const stageScore = stageCount * 2;
-  document.getElementById("score-stage").textContent = stageScore;
+  document.getElementById("score-stage-basic").textContent = stageScore;
 
-  const fluencyEl = document.querySelector("#row-fluency .selectable.active");
+  const fluencyEl = document.querySelector("#row-fluency-basic .selectable.active");
   let fluencyRaw = 20;
   let fluencyWeighted = 20;
-
   if (fluencyEl) {
     const drops = parseFloat(fluencyEl.dataset.val);
     fluencyRaw = Math.max(0, 20 - drops * 2);
     fluencyWeighted = Number(((fluencyRaw * stageCount) / 8).toFixed(2));
   }
-  document.getElementById("score-fluency-raw").textContent = fluencyRaw;
-  document.getElementById("score-fluency-weighted").textContent = fluencyWeighted;
+  document.getElementById("score-fluency-raw-basic").textContent = fluencyRaw;
+  document.getElementById("score-fluency-weighted-basic").textContent = fluencyWeighted;
 
   let taskTotal = 0;
   ["row-task-1", "row-task-2"].forEach(rowId => {
     const row = document.getElementById(rowId);
-    let subTotal = 0;
-    row.querySelectorAll(".selectable.active").forEach(cell => {
-      subTotal += parseFloat(cell.dataset.val);
-    });
-    row.querySelector(".task-row-total").textContent = subTotal;
-    taskTotal += subTotal;
+    let sub = 0;
+    row.querySelectorAll(".selectable.active").forEach(c => sub += parseFloat(c.dataset.val));
+    row.querySelector(".task-row-total").textContent = sub;
+    taskTotal += sub;
   });
   document.getElementById("score-task-total").textContent = taskTotal;
 
-  let stdTotal = 0;
-  let missionScoreTotal = 0;
+  let stdSum = 0;
+  document.querySelectorAll("#row-mission-std-basic .selectable.active").forEach(c => stdSum += parseFloat(c.dataset.val));
+  const stdTotal = Math.round(stdSum);
+  document.getElementById("score-mission-std-sum-basic").textContent = stdTotal;
 
-  if (currentDivision === "basic") {
-    let stdSum = 0;
-    document.querySelectorAll("#row-mission-std-basic .selectable.active").forEach(c => {
-      stdSum += parseFloat(c.dataset.val);
-    });
-    stdTotal = Math.round(stdSum);
-    document.getElementById("score-mission-std-sum-basic").textContent = stdTotal;
+  let zoneSum = 0;
+  ["row-zone-basic-1", "row-zone-basic-2", "row-zone-basic-3"].forEach(rowId => {
+    const row = document.getElementById(rowId);
+    let rowScore = 0;
+    row.querySelectorAll(".selectable.active").forEach(c => rowScore += parseFloat(c.dataset.val));
+    row.querySelector(".zone-row-total-basic").textContent = rowScore;
+    zoneSum += rowScore;
+  });
+  const missionScoreTotal = Number(zoneSum.toFixed(2));
+  document.getElementById("score-mission-total-basic").textContent = missionScoreTotal;
 
-    let zoneSum = 0;
-    ["row-zone-basic-1", "row-zone-basic-2", "row-zone-basic-3"].forEach(rowId => {
-      const row = document.getElementById(rowId);
-      let rowScore = 0;
-      row.querySelectorAll(".selectable.active").forEach(c => rowScore += parseFloat(c.dataset.val));
-      row.querySelector(".zone-row-total-basic").textContent = rowScore;
-      zoneSum += rowScore;
-    });
-    missionScoreTotal = Number(zoneSum.toFixed(2));
-    document.getElementById("score-mission-total-basic").textContent = missionScoreTotal;
-  } else {
-    let stdSum = 0;
-    document.querySelectorAll("#row-mission-std-adv .selectable.active").forEach(c => {
-      stdSum += parseFloat(c.dataset.val);
-    });
-    stdTotal = Math.round(stdSum);
-    document.getElementById("score-mission-std-sum-adv").textContent = stdTotal;
+  const total = Number((stageScore + fluencyWeighted + taskTotal + stdTotal + missionScoreTotal).toFixed(2));
+  document.getElementById("final-total-score").textContent = total;
+}
 
-    let zoneSum = 0;
-    ["row-zone-adv-1", "row-zone-adv-2", "row-zone-adv-3"].forEach(rowId => {
-      const row = document.getElementById(rowId);
-      let rowScore = 0;
-      row.querySelectorAll(".selectable.active").forEach(c => rowScore += parseFloat(c.dataset.val));
-      row.querySelector(".zone-row-total-adv").textContent = rowScore;
-      zoneSum += rowScore;
-    });
-    missionScoreTotal = Number(zoneSum.toFixed(2));
-    document.getElementById("score-mission-total-adv").textContent = missionScoreTotal;
+// 進階組計分邏輯 (對齊 2027GM 評分標準)
+function calculateAdvancedScores() {
+  // 1. 關卡數量 (16分)
+  const stageEl = document.querySelector("#row-adv-stage .selectable.active");
+  const stageCount = stageEl ? parseFloat(stageEl.dataset.val) : 8;
+  const stageScore = stageCount * 2;
+  document.getElementById("score-adv-stage").textContent = stageScore;
+
+  // 2. 流暢度加權 (20分)
+  const flEl = document.querySelector("#row-adv-fluency .selectable.active");
+  let flDrops = flEl ? parseFloat(flEl.dataset.val) : 0;
+  let flRaw = Math.max(0, 20 - flDrops * 2);
+  let fluencyWeighted = Number(((flRaw * stageCount) / 8).toFixed(2));
+  document.getElementById("score-adv-fluency-raw").textContent = flRaw;
+  document.getElementById("score-adv-fluency-weighted").textContent = fluencyWeighted;
+
+  // 3. 綠能 1, 2, 3 (24分)
+  function getRowScore(rowId) {
+    const r = document.getElementById(rowId);
+    let s = 0;
+    r.querySelectorAll(".selectable.active").forEach(c => s += parseFloat(c.dataset.val));
+    return s;
   }
+  const g1 = getRowScore("row-adv-green1");
+  const g2 = getRowScore("row-adv-green2");
+  const g3 = getRowScore("row-adv-green3");
+  document.getElementById("score-adv-green1").textContent = g1;
+  document.getElementById("score-adv-green2").textContent = g2;
+  document.getElementById("score-adv-green3").textContent = g3;
+  const greenTotal = g1 + g2 + g3;
+  document.getElementById("score-adv-green-total").textContent = greenTotal;
 
-  const totalScore = Number((stageScore + fluencyWeighted + taskTotal + stdTotal + missionScoreTotal).toFixed(2));
-  document.getElementById("final-total-score").textContent = totalScore;
+  // 4. 科學概念 (16分)
+  const sciEl = document.querySelector("#row-adv-science .selectable.active");
+  const sciScore = sciEl ? parseFloat(sciEl.dataset.val) : 16;
+  document.getElementById("score-adv-science").textContent = sciScore;
+
+  // 5. 創意關卡 (16分)
+  function getSingleVal(rowId) {
+    const el = document.querySelector(`#${rowId} .selectable.active`);
+    return el ? parseFloat(el.dataset.val) : 0;
+  }
+  const c1 = getSingleVal("row-adv-c1");
+  const c2 = getSingleVal("row-adv-c2");
+  const c3 = getSingleVal("row-adv-c3");
+  const c4 = getSingleVal("row-adv-c4");
+  document.getElementById("score-adv-c1").textContent = c1;
+  document.getElementById("score-adv-c2").textContent = c2;
+  document.getElementById("score-adv-c3").textContent = c3;
+  document.getElementById("score-adv-c4").textContent = c4;
+  const creativeTotal = Number((c1 + c2 + c3 + c4).toFixed(2));
+  document.getElementById("score-adv-creative-total").textContent = creativeTotal;
+
+  // 6. 整體機構設計 (8分)
+  const d1 = getSingleVal("row-adv-d1");
+  const d2 = getSingleVal("row-adv-d2");
+  document.getElementById("score-adv-d1").textContent = d1;
+  document.getElementById("score-adv-d2").textContent = d2;
+  const designTotal = Number((d1 + d2).toFixed(2));
+  document.getElementById("score-adv-design-total").textContent = designTotal;
+
+  // 總分 (100分)
+  const finalTotal = Number((stageScore + fluencyWeighted + greenTotal + sciScore + creativeTotal + designTotal).toFixed(2));
+  document.getElementById("final-total-score").textContent = finalTotal;
 }
 
 function resizeCanvas(preserveExisting = false) {
@@ -739,18 +928,6 @@ async function submitScore() {
   btn.disabled = true;
   btn.textContent = "傳送成績中...";
 
-  const stageScore = parseFloat(document.getElementById("score-stage").textContent) || 0;
-  const fluencyScore = parseFloat(document.getElementById("score-fluency-weighted").textContent) || 0;
-  const taskScore = parseFloat(document.getElementById("score-task-total").textContent) || 0;
-
-  const stdSumId = (currentDivision === "basic") ? "score-mission-std-sum-basic" : "score-mission-std-sum-adv";
-  const missionSumId = (currentDivision === "basic") ? "score-mission-total-basic" : "score-mission-total-adv";
-
-  const stdScore = parseFloat(document.getElementById(stdSumId).textContent) || 0;
-  const missionScore = parseFloat(document.getElementById(missionSumId).textContent) || 0;
-  const totalScore = parseFloat(document.getElementById("final-total-score").textContent) || 0;
-  const signatureData = canvas.toDataURL("image/png");
-
   const now = new Date();
   const timestamp = now.getFullYear() + "/" +
     String(now.getMonth() + 1).padStart(2, "0") + "/" +
@@ -759,25 +936,39 @@ async function submitScore() {
     String(now.getMinutes()).padStart(2, "0") + ":" +
     String(now.getSeconds()).padStart(2, "0");
 
-  const payload = {
+  const signatureData = canvas.toDataURL("image/png");
+  const isAdv = (currentDivision === "advanced");
+
+  let payload = {
     division: currentDivision,
     group: currentTeam.group || "",
     teamId: currentTeam.teamId,
     school: currentTeam.school,
     teamName: currentTeam.teamName,
-    stageScore: stageScore,
-    fluencyScore: fluencyScore,
-    taskScore: taskScore,
-    stdScore: stdScore,
-    missionStdScore: stdScore,
-    ruleScore: stdScore,
-    missionScore: missionScore,
-    totalScore: totalScore,
     judgeName: currentJudge,
     username: currentUsername,
     timestamp: timestamp,
     signature: signatureData
   };
+
+  if (isAdv) {
+    payload.stageCountScore = parseFloat(document.getElementById("score-adv-stage").textContent) || 0;
+    payload.fluencyWeighted = parseFloat(document.getElementById("score-adv-fluency-weighted").textContent) || 0;
+    payload.scienceScore = parseFloat(document.getElementById("score-adv-science").textContent) || 0;
+    payload.green1Score = parseFloat(document.getElementById("score-adv-green1").textContent) || 0;
+    payload.green2Score = parseFloat(document.getElementById("score-adv-green2").textContent) || 0;
+    payload.green3Score = parseFloat(document.getElementById("score-adv-green3").textContent) || 0;
+    payload.creativeScore = parseFloat(document.getElementById("score-adv-creative-total").textContent) || 0;
+    payload.designScore = parseFloat(document.getElementById("score-adv-design-total").textContent) || 0;
+    payload.totalScore = parseFloat(document.getElementById("final-total-score").textContent) || 0;
+  } else {
+    payload.stageScore = parseFloat(document.getElementById("score-stage-basic").textContent) || 0;
+    payload.fluencyScore = parseFloat(document.getElementById("score-fluency-weighted-basic").textContent) || 0;
+    payload.taskScore = parseFloat(document.getElementById("score-task-total").textContent) || 0;
+    payload.stdScore = parseFloat(document.getElementById("score-mission-std-sum-basic").textContent) || 0;
+    payload.missionScore = parseFloat(document.getElementById("score-mission-total-basic").textContent) || 0;
+    payload.totalScore = parseFloat(document.getElementById("final-total-score").textContent) || 0;
+  }
 
   try {
     const res = await fetch(`${API_URL}?action=submitScore`, {
@@ -788,7 +979,7 @@ async function submitScore() {
     const result = await res.json();
 
     if (result.success) {
-      alert("成績已成功同步覆寫至試算表！");
+      alert("成績已成功同步至試算表！");
       scoresCache[currentTeam.teamId] = payload;
       teamDisplayState[currentTeam.teamId] = "visible";
 
