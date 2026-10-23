@@ -113,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
   safeBindClick("btn-save-assign", submitSaveJudgeAssignment);
   if (selectAssignJudge) selectAssignJudge.addEventListener("change", onAssignJudgeSelectChange);
 
-  // 檢視評審指派視窗
+  // 檢視評審指派視窗綁定
   safeBindClick("btn-open-coverage-matrix", openCoverageMatrixModal);
   safeBindClick("btn-close-coverage", () => {
     if (modalCoverageMatrix) modalCoverageMatrix.style.display = "none";
@@ -408,7 +408,7 @@ async function openAssignModal() {
   if (!modalAssignJudge) return;
   modalAssignJudge.style.display = "flex";
 
-  // 1. 預設先完全清空向度核取方塊（無藍勾勾）
+  // 預設先完全清空向度核取方塊（無藍勾勾）
   document.querySelectorAll(".chk-assign-sheet").forEach(c => c.checked = false);
 
   if (selectAssignJudge) selectAssignJudge.innerHTML = "<option>載入評審中...</option>";
@@ -471,7 +471,6 @@ function onAssignJudgeSelectChange() {
     if (groupSheets) groupSheets.style.display = "block";
     const rawSheets = String(judgeObj.assignedSheets || "").toLowerCase().trim();
 
-    // 只有在試算表真的寫了 "all" 或包含該代碼才勾選
     if (rawSheets) {
       const activeSheets = rawSheets.split(/[\s,，、]+/);
       document.querySelectorAll(".chk-assign-sheet").forEach(chk => {
@@ -482,7 +481,6 @@ function onAssignJudgeSelectChange() {
     if (groupSheets) groupSheets.style.display = "none";
   }
 
-  // 回填隊伍勾選
   const assignedTeamTokens = parseLocalTeamRange(judgeObj.teams);
   document.querySelectorAll(".chk-assign-team").forEach(chk => {
     chk.checked = assignedTeamTokens.indexOf(chk.value) !== -1;
@@ -502,7 +500,7 @@ function parseLocalTeamRange(rawStr) {
       const numStart = parseInt(rangeMatch[2], 10);
       const prefixEnd = rangeMatch[3].toUpperCase();
       const numEnd = parseInt(rangeMatch[4], 10);
-      var padLen = rangeMatch[2].length;
+      const padLen = rangeMatch[2].length;
 
       if (prefixStart === prefixEnd && numStart <= numEnd) {
         for (let n = numStart; n <= numEnd; n++) {
@@ -581,7 +579,7 @@ async function submitSaveJudgeAssignment() {
   }
 }
 
-// 檢視評審指派視窗 (Matrix)
+// 檢視評審指派視窗
 async function openCoverageMatrixModal() {
   if (!modalCoverageMatrix) return;
   modalCoverageMatrix.style.display = "flex";
@@ -742,7 +740,7 @@ function getDisplayScore(valStr, isHidden) {
   return isHidden ? "***" : valStr;
 }
 
-// 總表渲染：徹底拔除所有「名次」欄位
+// 總表渲染：完全不輸出「名次」欄位
 function renderTeamList() {
   const isAdv = (currentDivision === "advanced");
 
@@ -1075,12 +1073,14 @@ function resetFormToDefaults() {
     document.querySelectorAll('#row-mission-std-basic .selectable[data-val="2.3333"], #row-mission-std-basic .selectable[data-val="2.3334"]').forEach(c => c.classList.add("active"));
 
   } else {
+    // 第一張表預設
     const advSt = document.querySelector('#row-adv-stage .selectable[data-val="8"]');
     if (advSt) advSt.classList.add("active");
 
     const advFl = document.querySelector('#row-adv-fluency .selectable[data-val="0"]');
     if (advFl) advFl.classList.add("active");
 
+    // 第二張表預設
     ["row-adv-green1", "row-adv-green2", "row-adv-green3"].forEach(rowId => {
       const row = document.getElementById(rowId);
       if (row) {
@@ -1094,15 +1094,7 @@ function resetFormToDefaults() {
     const advSci = document.querySelector('#row-adv-science .selectable[data-val="16"]');
     if (advSci) advSci.classList.add("active");
 
-    ["row-adv-c1", "row-adv-c2", "row-adv-c3", "row-adv-c4"].forEach(rowId => {
-      const row = document.getElementById(rowId);
-      if (row) row.querySelector('.selectable[data-val="4"]').classList.add("active");
-    });
-
-    const d1 = document.querySelector('#row-adv-d1 .selectable[data-val="6"]');
-    if (d1) d1.classList.add("active");
-    const d2 = document.querySelector('#row-adv-d2 .selectable[data-val="2"]');
-    if (d2) d2.classList.add("active");
+    // 第三張表與第四張表：預設全部白色不選取，不主動添加 active
   }
 }
 
@@ -1153,9 +1145,15 @@ function setupSelectionHandlers() {
 
       if (isToggleable) {
         if (this.classList.contains("active")) {
+          // 點擊已選中的格子：變回白色取消選取
           this.classList.remove("active");
         } else {
-          parentRow.querySelectorAll(`.selectable[data-group="${group}"]`).forEach(c => c.classList.remove("active"));
+          // 點擊未選中的格子：清除同組其他格子，選中當前格子
+          if (group) {
+            parentRow.querySelectorAll(`.selectable[data-group="${group}"]`).forEach(c => c.classList.remove("active"));
+          } else {
+            parentRow.querySelectorAll(".selectable").forEach(c => c.classList.remove("active"));
+          }
           this.classList.add("active");
         }
       } else {
@@ -1279,6 +1277,7 @@ function calculateAdvancedScores() {
   const advSciEl = document.getElementById("score-adv-science");
   if (advSciEl) advSciEl.textContent = sciScore;
 
+  // 第 3 張表計算：未選時回傳 0，分數徽章同步顯示當前選取值
   function getSingleVal(rowId) {
     const el = document.querySelector(`#${rowId} .selectable.active`);
     return el ? parseFloat(el.dataset.val) : 0;
@@ -1299,6 +1298,7 @@ function calculateAdvancedScores() {
   const cTotEl = document.getElementById("score-adv-creative-total");
   if (cTotEl) cTotEl.textContent = creativeTotal;
 
+  // 第 4 張表計算：未選時回傳 0，分數徽章同步顯示當前選取值
   const d1 = getSingleVal("row-adv-d1");
   const d2 = getSingleVal("row-adv-d2");
   const d1El = document.getElementById("score-adv-d1");
