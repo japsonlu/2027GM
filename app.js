@@ -4,12 +4,12 @@ let currentJudge = null;
 let currentPass = null;
 let currentUsername = null;
 let isAdminUser = false;
-let currentAssignedSheets = ["sheet1", "sheet2", "sheet3", "sheet4"];
+let currentAssignedSheets = []; // 預設為空，由試算表指派設定決定
 let currentDivision = "basic";
 let currentSheetId = "";
 let currentTournamentName = "";
 let currentSortMode = "scoreDesc";
-let currentGroupFilter = "GAE";
+let currentGroupFilter = "E"; // E: 國小, J: 國中, H: 高中
 
 let assignedTeams = [];
 let scoresCache = {}; 
@@ -62,10 +62,10 @@ document.addEventListener("DOMContentLoaded", () => {
   safeBindClick("btn-hide-all", hideAllScores);
   safeBindClick("btn-show-all", showAllScores);
 
-  // 年段篩選
+  // 年段篩選按鈕 (支援 GAE/GBE, GAJ/GBJ, GAH/GBH)
   document.querySelectorAll(".btn-filter-group").forEach(btn => {
     btn.addEventListener("click", function() {
-      currentGroupFilter = this.dataset.filter;
+      currentGroupFilter = this.dataset.filter; // "E" 或 "J" 或 "H"
       document.querySelectorAll(".btn-filter-group").forEach(b => {
         b.className = "btn btn-secondary btn-filter-group";
       });
@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // 匯出 PDF
   safeBindClick("btn-export-pdf", exportSummaryToPdf);
 
-  // 同步成績按鈕
+  // 同步成績
   document.querySelectorAll(".btn-sync-cloud").forEach(btn => {
     btn.addEventListener("click", () => fetchLatestScores(true));
   });
@@ -109,12 +109,12 @@ document.addEventListener("DOMContentLoaded", () => {
   safeBindClick("btn-save-assign", submitSaveJudgeAssignment);
   if (selectAssignJudge) selectAssignJudge.addEventListener("change", onAssignJudgeSelectChange);
 
-  // 隊伍快速批次選取按鈕
+  // 隊伍批次勾選（自動依據基礎組 GA 或進階組 GB 對應）
   safeBindClick("btn-team-select-all", () => setAllTeamCheckboxes(true));
   safeBindClick("btn-team-clear", () => setAllTeamCheckboxes(false));
-  safeBindClick("btn-team-select-gae", () => filterTeamCheckboxesByPrefix("GAE"));
-  safeBindClick("btn-team-select-gaj", () => filterTeamCheckboxesByPrefix("GAJ"));
-  safeBindClick("btn-team-select-gah", () => filterTeamCheckboxesByPrefix("GAH"));
+  safeBindClick("btn-team-select-gae", () => filterTeamCheckboxesByLevel("E"));
+  safeBindClick("btn-team-select-gaj", () => filterTeamCheckboxesByLevel("J"));
+  safeBindClick("btn-team-select-gah", () => filterTeamCheckboxesByLevel("H"));
 
   window.addEventListener("resize", () => {
     if (pageScoring && pageScoring.classList.contains("active")) resizeCanvas(hasSignature);
@@ -171,7 +171,7 @@ async function handleLogin() {
       currentTournamentName = curTour ? curTour.name : "";
       currentDivision = curTour ? curTour.division : "basic";
 
-      currentAssignedSheets = data.assignedSheets || ["sheet1", "sheet2", "sheet3", "sheet4"];
+      currentAssignedSheets = data.assignedSheets || [];
       assignedTeams = data.teams || [];
       scoresCache = data.existingScores || {};
 
@@ -192,7 +192,6 @@ async function handleLogin() {
         renderTeamList();
       }
 
-      // 效能優化：拉長定時同步為 60 秒（避免塞車）
       if (syncTimer) clearInterval(syncTimer);
       syncTimer = setInterval(() => {
         if (pageSummary && pageSummary.classList.contains("active") && currentJudge) {
@@ -329,7 +328,7 @@ function updateUserDisplayInfo() {
         if (s === "sheet4") return "表4";
         return s;
       });
-      roleTag.textContent = `負責：${sheetLabels.join("+")}`;
+      roleTag.textContent = sheetLabels.length > 0 ? `負責：${sheetLabels.join("+")}` : "未指派向度";
       roleTag.style.display = "inline-block";
     } else {
       roleTag.style.display = "none";
@@ -443,6 +442,7 @@ function renderTeamAssignmentCheckboxes() {
   });
 }
 
+// 評審工作分配：預設不勾選向度，依試算表實際值回填
 function onAssignJudgeSelectChange() {
   if (!selectAssignJudge) return;
   const selectedUser = selectAssignJudge.value;
@@ -452,12 +452,12 @@ function onAssignJudgeSelectChange() {
   const groupSheets = document.getElementById("group-assign-sheets");
   if (currentDivision === "advanced") {
     if (groupSheets) groupSheets.style.display = "block";
-    const rawSheets = String(judgeObj.assignedSheets || "all").toLowerCase();
-    const isAll = (rawSheets === "all" || rawSheets === "");
-    const activeSheets = rawSheets.split(/[\s,，、]+/);
+    const rawSheets = String(judgeObj.assignedSheets || "").toLowerCase().trim();
 
+    // 核心調整：預設不要全勾。僅當試算表有明確記錄時才勾選
+    const activeSheets = rawSheets.split(/[\s,，、]+/);
     document.querySelectorAll(".chk-assign-sheet").forEach(chk => {
-      chk.checked = isAll || activeSheets.indexOf(chk.value) !== -1;
+      chk.checked = (rawSheets === "all") || (activeSheets.indexOf(chk.value) !== -1);
     });
   } else {
     if (groupSheets) groupSheets.style.display = "none";
@@ -504,7 +504,9 @@ function setAllTeamCheckboxes(checked) {
   document.querySelectorAll(".chk-assign-team").forEach(c => c.checked = checked);
 }
 
-function filterTeamCheckboxesByPrefix(prefix) {
+// 支援基礎組 (GA) 與進階組 (GB) 年段代碼快速勾選
+function filterTeamCheckboxesByLevel(levelCode) {
+  const prefix = (currentDivision === "advanced") ? `GB${levelCode}` : `GA${levelCode}`;
   document.querySelectorAll(".chk-assign-team").forEach(c => {
     c.checked = c.value.toUpperCase().startsWith(prefix);
   });
@@ -523,7 +525,7 @@ async function submitSaveJudgeAssignment() {
 
   const checkedSheets = [];
   document.querySelectorAll(".chk-assign-sheet:checked").forEach(c => checkedSheets.push(c.value));
-  const assignedSheetsStr = (checkedSheets.length === 4 || checkedSheets.length === 0) ? "all" : checkedSheets.join(",");
+  const assignedSheetsStr = checkedSheets.join(",");
 
   const checkedTeams = [];
   document.querySelectorAll(".chk-assign-team:checked").forEach(c => checkedTeams.push(c.value));
@@ -602,7 +604,7 @@ function getDisplayScore(valStr, isHidden) {
   return isHidden ? "***" : valStr;
 }
 
-// 渲染總表：完全移除「評分者 / 評審」欄位
+// 支援 GAE/GBE(國小)、GAJ/GBJ(國中)、GAH/GBH(高中) 年段篩選
 function renderTeamList() {
   const isAdv = (currentDivision === "advanced");
 
@@ -655,7 +657,9 @@ function renderTeamList() {
 
   let filteredTeams = assignedTeams;
   if (isAdminUser) {
-    filteredTeams = assignedTeams.filter(t => String(t.teamId).toUpperCase().startsWith(currentGroupFilter));
+    // 依據目前組別 (GA/GB) 與選擇的年段 (E/J/H) 篩選
+    const targetPrefix = isAdv ? `GB${currentGroupFilter}` : `GA${currentGroupFilter}`;
+    filteredTeams = assignedTeams.filter(t => String(t.teamId).toUpperCase().startsWith(targetPrefix));
   }
 
   if (filteredTeams.length === 0) {
@@ -792,8 +796,8 @@ function renderTeamList() {
 
 function exportSummaryToPdf() {
   let groupName = "國小組";
-  if (currentGroupFilter === "GAJ") groupName = "國中組";
-  else if (currentGroupFilter === "GAH") groupName = "高中組";
+  if (currentGroupFilter === "J") groupName = "國中組";
+  else if (currentGroupFilter === "H") groupName = "高中組";
 
   const fullTitle = `${currentTournamentName}${groupName}`;
 
