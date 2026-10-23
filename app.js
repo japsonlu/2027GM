@@ -4,24 +4,28 @@ let currentJudge = null;
 let currentPass = null;
 let currentUsername = null;
 let isAdminUser = false;
-let currentAssignedSheets = ["sheet1", "sheet2", "sheet3", "sheet4"]; // 評審被指派的向度列表
-let currentDivision = "advanced"; // "basic" | "advanced"
+let currentAssignedSheets = ["sheet1", "sheet2", "sheet3", "sheet4"];
+let currentDivision = "basic"; // 由當前鎖定或管理員點進的場次決定
+let currentSheetId = "";       // 當前場次的試算表 ID
+let currentTournamentName = "";
 let currentSortMode = "scoreDesc";
 let currentGroupFilter = "GAE";
-let currentRegionName = "";
 
 let assignedTeams = [];
 let scoresCache = {}; 
 let currentTeam = null;
 
+let allTournamentsList = [];
 let cachedAdminJudges = [];
 let cachedAdminAllTeams = [];
 
 const teamDisplayState = {};
 
 const loginView = document.getElementById("login-view");
+const pageAdminTournaments = document.getElementById("page-admin-tournaments");
 const pageSummary = document.getElementById("page-summary");
 const pageScoring = document.getElementById("page-scoring");
+
 const judgeDisplay = document.getElementById("judge-display");
 const regionTag = document.getElementById("region-tag");
 const divisionTag = document.getElementById("division-tag");
@@ -30,7 +34,6 @@ const teamListBody = document.getElementById("team-list-body");
 const summaryThead = document.getElementById("summary-thead");
 
 const modalAddRegion = document.getElementById("modal-add-region");
-const selectActiveRegion = document.getElementById("select-active-region");
 const modalAssignJudge = document.getElementById("modal-assign-judge");
 const selectAssignJudge = document.getElementById("select-assign-judge");
 const assignTeamsContainer = document.getElementById("assign-teams-container");
@@ -43,29 +46,21 @@ let syncTimer = null;
 
 document.addEventListener("DOMContentLoaded", () => {
   setupSelectionHandlers();
+  loadInitialActiveTournament();
 
-  // 登入與基礎按鈕綁定 (安全防呆檢查)
   safeBindClick("btn-login", handleLogin);
   safeBindClick("btn-logout", () => location.reload());
   safeBindClick("btn-back", () => switchPage("summary"));
+  safeBindClick("btn-back-to-tournaments", () => {
+    switchPage("adminTournaments");
+    loadAdminTournamentsLobby();
+  });
+
   safeBindClick("btn-clear-sign", clearCanvas);
   safeBindClick("btn-submit", submitScore);
 
   safeBindClick("btn-hide-all", hideAllScores);
   safeBindClick("btn-show-all", showAllScores);
-
-  // 頂部常駐組別切換按鈕
-  document.querySelectorAll(".btn-division-toggle").forEach(btn => {
-    btn.addEventListener("click", function() {
-      const targetDiv = this.dataset.division;
-      if (currentDivision === targetDiv && assignedTeams.length > 0) return;
-      currentDivision = targetDiv;
-      updateHeaderDivisionButtons();
-      if (currentUsername && currentPass) {
-        reLoginDivision(targetDiv);
-      }
-    });
-  });
 
   // 年段篩選
   document.querySelectorAll(".btn-filter-group").forEach(btn => {
@@ -97,17 +92,16 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("click", () => fetchLatestScores(true));
   });
 
-  // 賽事新增與切換
-  safeBindClick("btn-open-add-region", () => {
+  // 新增賽事
+  safeBindClick("btn-open-add-region-lobby", () => {
     if (modalAddRegion) modalAddRegion.style.display = "flex";
   });
   safeBindClick("btn-cancel-add-region", () => {
     if (modalAddRegion) modalAddRegion.style.display = "none";
   });
   safeBindClick("btn-confirm-add-region", submitCreateTournament);
-  safeBindClick("btn-switch-region", submitSwitchRegion);
 
-  // 管理員：評審向度與隊伍指派視窗綁定 (防呆保護)
+  // 評審指派視窗
   safeBindClick("btn-open-assign-modal", openAssignModal);
   safeBindClick("btn-cancel-assign", () => {
     if (modalAssignJudge) modalAssignJudge.style.display = "none";
@@ -115,7 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
   safeBindClick("btn-save-assign", submitSaveJudgeAssignment);
   if (selectAssignJudge) selectAssignJudge.addEventListener("change", onAssignJudgeSelectChange);
 
-  // 隊伍快速批次選取按鈕
+  // 隊伍批次勾選
   safeBindClick("btn-team-select-all", () => setAllTeamCheckboxes(true));
   safeBindClick("btn-team-clear", () => setAllTeamCheckboxes(false));
   safeBindClick("btn-team-select-gae", () => filterTeamCheckboxesByPrefix("GAE"));
@@ -132,25 +126,25 @@ function safeBindClick(id, handler) {
   if (el) el.addEventListener("click", handler);
 }
 
-function updateHeaderDivisionButtons() {
-  document.querySelectorAll(".btn-division-toggle").forEach(b => {
-    if (b.dataset.division === currentDivision) {
-      b.className = "btn btn-primary btn-division-toggle";
-    } else {
-      b.className = "btn btn-secondary btn-division-toggle";
+// 預先取得目前啟用中的賽事名稱顯示於登入畫面
+async function loadInitialActiveTournament() {
+  const el = document.getElementById("login-active-tour-name");
+  try {
+    const res = await fetch(`${API_URL}?action=getTournaments&_t=${Date.now()}`);
+    const data = await res.json();
+    if (data.success && data.config) {
+      allTournamentsList = data.config.tournaments || [];
+      const active = data.config.activeTournament;
+      if (active && el) {
+        el.textContent = active.name;
+      }
     }
-  });
-}
-
-function updateDivisionBadge() {
-  if (divisionTag) {
-    divisionTag.textContent = (currentDivision === "basic") ? "基礎組" : "進階組";
-    divisionTag.style.display = "inline-block";
+  } catch (e) {
+    if (el) el.textContent = "網路連線中...";
   }
 }
 
 async function handleLogin() {
-  const divSelect = document.getElementById("login-division") ? document.getElementById("login-division").value : currentDivision;
   const user = document.getElementById("login-user") ? document.getElementById("login-user").value.trim() : "";
   const pass = document.getElementById("login-pass") ? document.getElementById("login-pass").value.trim() : "";
 
@@ -159,9 +153,6 @@ async function handleLogin() {
     return;
   }
 
-  currentDivision = divSelect;
-  updateHeaderDivisionButtons();
-
   const btn = document.getElementById("btn-login");
   if (btn) {
     btn.disabled = true;
@@ -169,7 +160,7 @@ async function handleLogin() {
   }
 
   try {
-    const res = await fetch(`${API_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}&division=${encodeURIComponent(currentDivision)}&_t=${Date.now()}`);
+    const res = await fetch(`${API_URL}?action=login&username=${encodeURIComponent(user)}&password=${encodeURIComponent(pass)}&_t=${Date.now()}`);
     const data = await res.json();
 
     if (data.success) {
@@ -177,22 +168,33 @@ async function handleLogin() {
       currentJudge = data.judgeName;
       currentPass = pass;
       isAdminUser = (user.toLowerCase() === "admin") || !!data.isAdmin;
-      currentAssignedSheets = data.assignedSheets || ["sheet1", "sheet2", "sheet3", "sheet4"];
-      currentRegionName = data.regionName || "";
       
+      const curTour = data.currentTournament;
+      currentSheetId = curTour ? curTour.sheetId : "";
+      currentTournamentName = curTour ? curTour.name : "";
+      currentDivision = curTour ? curTour.division : "basic";
+
+      currentAssignedSheets = data.assignedSheets || ["sheet1", "sheet2", "sheet3", "sheet4"];
       assignedTeams = data.teams || [];
       scoresCache = data.existingScores || {};
 
       assignedTeams.forEach(t => { teamDisplayState[t.teamId] = "visible"; });
 
-      updateUserDisplayInfo();
-      updateDivisionBadge();
-
       if (loginView) loginView.style.display = "none";
-      applyUserRoleUI();
+      updateUserDisplayInfo();
 
-      if (isAdminUser) loadRegionsList();
-      renderTeamList();
+      if (isAdminUser) {
+        // 管理員預設進入「賽事總覽大廳」
+        document.getElementById("btn-back-to-tournaments").style.display = "inline-block";
+        switchPage("adminTournaments");
+        loadAdminTournamentsLobby();
+      } else {
+        // 一般評審直接進入當前鎖定之賽事總表
+        document.getElementById("btn-back-to-tournaments").style.display = "none";
+        applyUserRoleUI();
+        switchPage("summary");
+        renderTeamList();
+      }
 
       if (syncTimer) clearInterval(syncTimer);
       syncTimer = setInterval(() => {
@@ -214,23 +216,95 @@ async function handleLogin() {
   }
 }
 
-async function reLoginDivision(targetDivision) {
-  currentDivision = targetDivision;
-  updateDivisionBadge();
+// 管理員賽事大廳：條列呈現所有增列的比賽 (例如 桃園賽基礎組、桃園賽進階組)
+async function loadAdminTournamentsLobby() {
+  const container = document.getElementById("tournaments-cards-container");
+  if (!container) return;
+  container.innerHTML = "<div style='color:#666;'>載入所有賽事中...</div>";
+
   try {
-    const res = await fetch(`${API_URL}?action=login&username=${encodeURIComponent(currentUsername)}&password=${encodeURIComponent(currentPass)}&division=${encodeURIComponent(currentDivision)}&_t=${Date.now()}`);
+    const res = await fetch(`${API_URL}?action=getTournaments&_t=${Date.now()}`);
     const data = await res.json();
-    if (data.success) {
-      currentAssignedSheets = data.assignedSheets || ["sheet1", "sheet2", "sheet3", "sheet4"];
-      assignedTeams = data.teams || [];
-      scoresCache = data.existingScores || {};
-      assignedTeams.forEach(t => { teamDisplayState[t.teamId] = "visible"; });
-      updateUserDisplayInfo();
-      renderTeamList();
+
+    if (data.success && data.config) {
+      allTournamentsList = data.config.tournaments || [];
+      const activeTour = data.config.activeTournament;
+      container.innerHTML = "";
+
+      if (allTournamentsList.length === 0) {
+        container.innerHTML = "<div style='color:#999;'>尚無任何賽事，請點擊上方按鈕新增！</div>";
+        return;
+      }
+
+      allTournamentsList.forEach(t => {
+        const isLocked = activeTour && (activeTour.sheetId === t.sheetId);
+        const card = document.createElement("div");
+        card.className = `tournament-card ${isLocked ? "active-tour" : ""}`;
+
+        const divBadge = (t.division === "basic")
+          ? `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:12px;">🟢 基礎組</span>`
+          : `<span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:12px;">🔵 進階組</span>`;
+
+        card.innerHTML = `
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              ${divBadge}
+              ${isLocked ? '<span style="color:#2e7d32; font-weight:bold; font-size:12px;">🔒 現場鎖定中</span>' : ''}
+            </div>
+            <h3 style="margin:0 0 10px 0; font-size:17px; color:#222;">${t.name}</h3>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:14px;">
+            <button class="btn btn-secondary" style="flex:1; padding:6px 8px; font-size:12px;" onclick="adminLockTournament('${t.sheetId}')">
+              ${isLocked ? "重新鎖定" : "🔒 鎖定此場"}
+            </button>
+            <button class="btn btn-primary" style="flex:1; padding:6px 8px; font-size:12px;" onclick="adminEnterTournament('${t.sheetId}', '${t.name}', '${t.division}')">
+              📊 查看成績
+            </button>
+          </div>
+        `;
+        container.appendChild(card);
+      });
     }
   } catch (e) {
-    console.error("切換組別連線失敗", e);
+    container.innerHTML = "<div style='color:#d32f2f;'>載入賽事失敗，請檢查網路連線！</div>";
   }
+}
+
+// 管理員鎖定指定場次（評審裝置將連入此場次）
+async function adminLockTournament(sheetId) {
+  if (!confirm("確定要將現場所有評審端鎖定到這個場次嗎？")) return;
+  try {
+    const res = await fetch(`${API_URL}?action=lockTournament`, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ adminUser: "admin", sheetId: sheetId })
+    });
+    const result = await res.json();
+    if (result.success) {
+      alert(result.message);
+      loadAdminTournamentsLobby();
+    } else {
+      alert("鎖定失敗：" + result.message);
+    }
+  } catch (e) {
+    alert("鎖定失敗：" + e.message);
+  }
+}
+
+// 管理員進入特定賽事查看、排序與匯出成績
+async function adminEnterTournament(sheetId, name, division) {
+  currentSheetId = sheetId;
+  currentTournamentName = name;
+  currentDivision = division;
+
+  updateUserDisplayInfo();
+  applyUserRoleUI();
+
+  const titleEl = document.getElementById("admin-current-view-title");
+  if (titleEl) titleEl.textContent = `【${currentTournamentName}】成績總表`;
+
+  switchPage("summary");
+  await fetchLatestScores(true);
 }
 
 function updateUserDisplayInfo() {
@@ -239,12 +313,17 @@ function updateUserDisplayInfo() {
   }
   
   if (regionTag) {
-    if (currentRegionName) {
-      regionTag.textContent = currentRegionName;
+    if (currentTournamentName) {
+      regionTag.textContent = currentTournamentName;
       regionTag.style.display = "inline-block";
     } else {
       regionTag.style.display = "none";
     }
+  }
+
+  if (divisionTag) {
+    divisionTag.textContent = (currentDivision === "basic") ? "基礎組" : "進階組";
+    divisionTag.style.display = "inline-block";
   }
 
   if (roleTag) {
@@ -277,34 +356,6 @@ function applyUserRoleUI() {
   }
 }
 
-async function loadRegionsList() {
-  try {
-    const res = await fetch(`${API_URL}?action=getRegions&_t=${Date.now()}`);
-    const data = await res.json();
-    if (data.success && data.config) {
-      if (selectActiveRegion) {
-        selectActiveRegion.innerHTML = "";
-        data.config.regions.forEach(r => {
-          const opt = document.createElement("option");
-          opt.value = r.name;
-          opt.textContent = r.name;
-          if (r.active) opt.selected = true;
-          selectActiveRegion.appendChild(opt);
-        });
-      }
-      if (data.config.activeRegion) {
-        currentRegionName = data.config.activeRegion.name;
-        if (regionTag) {
-          regionTag.textContent = currentRegionName;
-          regionTag.style.display = "inline-block";
-        }
-      }
-    }
-  } catch (e) {
-    console.error("載入賽事清單失敗", e);
-  }
-}
-
 async function submitCreateTournament() {
   const inputName = document.getElementById("input-new-region-name");
   const inputDate = document.getElementById("input-new-region-date");
@@ -332,11 +383,11 @@ async function submitCreateTournament() {
     const result = await res.json();
 
     if (result.success) {
-      alert(`【建立成功！】\n基礎組表單：${result.basicName}\n進階組表單：${result.advancedName}`);
+      alert(`【建立成功！】\n基礎組：${result.basicName}\n進階組：${result.advancedName}`);
       if (modalAddRegion) modalAddRegion.style.display = "none";
       if (inputName) inputName.value = "";
       if (inputDate) inputDate.value = "";
-      await loadRegionsList();
+      loadAdminTournamentsLobby();
     } else {
       alert("建立失敗：" + result.message);
     }
@@ -345,38 +396,12 @@ async function submitCreateTournament() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = "建立賽事表單";
+      btn.textContent = "建立賽事";
     }
   }
 }
 
-async function submitSwitchRegion() {
-  if (!selectActiveRegion) return;
-  const targetRegion = selectActiveRegion.value;
-  if (!targetRegion) return;
-  if (!confirm(`確定要將系統賽事鎖定為「${targetRegion}」嗎？`)) return;
-
-  try {
-    const res = await fetch(`${API_URL}?action=switchRegion`, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ adminUser: "admin", regionName: targetRegion })
-    });
-    const result = await res.json();
-    if (result.success) {
-      alert(result.message);
-      location.reload();
-    } else {
-      alert("切換失敗：" + result.message);
-    }
-  } catch (err) {
-    alert("切換賽事錯誤：" + err.message);
-  }
-}
-
-// -------------------------------------------------------------
-// 管理員：評審向度與隊伍勾選指派功能
-// -------------------------------------------------------------
+// 評審指派視窗
 async function openAssignModal() {
   if (!modalAssignJudge) return;
   modalAssignJudge.style.display = "flex";
@@ -384,7 +409,7 @@ async function openAssignModal() {
   if (assignTeamsContainer) assignTeamsContainer.innerHTML = "<div style='color:#666;'>載入隊伍清單中...</div>";
 
   try {
-    const res = await fetch(`${API_URL}?action=getJudgeAssignments&division=${encodeURIComponent(currentDivision)}&_t=${Date.now()}`);
+    const res = await fetch(`${API_URL}?action=getJudgeAssignments&sheetId=${encodeURIComponent(currentSheetId)}&division=${encodeURIComponent(currentDivision)}&_t=${Date.now()}`);
     const data = await res.json();
 
     if (data.success) {
@@ -407,7 +432,6 @@ async function openAssignModal() {
       alert("載入指派資料失敗：" + data.message);
     }
   } catch (e) {
-    console.error("載入指派錯誤", e);
     alert("載入評審指派設定連線錯誤！");
   }
 }
@@ -432,7 +456,6 @@ function onAssignJudgeSelectChange() {
   const judgeObj = cachedAdminJudges.find(j => j.username === selectedUser);
   if (!judgeObj) return;
 
-  // 1. 回填負責評分表向度勾選
   const groupSheets = document.getElementById("group-assign-sheets");
   if (currentDivision === "advanced") {
     if (groupSheets) groupSheets.style.display = "block";
@@ -447,7 +470,6 @@ function onAssignJudgeSelectChange() {
     if (groupSheets) groupSheets.style.display = "none";
   }
 
-  // 2. 回填負責隊伍勾選
   const assignedTeamTokens = parseLocalTeamRange(judgeObj.teams);
   document.querySelectorAll(".chk-assign-team").forEach(chk => {
     chk.checked = assignedTeamTokens.indexOf(chk.value) !== -1;
@@ -520,6 +542,7 @@ async function submitSaveJudgeAssignment() {
       headers: { "Content-Type": "text/plain" },
       body: JSON.stringify({
         adminUser: "admin",
+        sheetId: currentSheetId,
         division: currentDivision,
         targetUsername: targetUser,
         assignedSheetsStr: assignedSheetsStr,
@@ -539,7 +562,7 @@ async function submitSaveJudgeAssignment() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = "儲存指派設定";
+      btn.textContent = "儲存指派";
     }
   }
 }
@@ -551,7 +574,7 @@ async function fetchLatestScores(showNotice = false) {
   if (showNotice) syncBtns.forEach(b => { b.disabled = true; b.textContent = "同步中..."; });
 
   try {
-    const fetchUrl = `${API_URL}?action=getScores&judgeName=${encodeURIComponent(currentJudge)}&username=${encodeURIComponent(currentUsername || "")}&division=${encodeURIComponent(currentDivision)}&_t=${Date.now()}`;
+    const fetchUrl = `${API_URL}?action=getScores&judgeName=${encodeURIComponent(currentJudge)}&username=${encodeURIComponent(currentUsername || "")}&sheetId=${encodeURIComponent(currentSheetId)}&_t=${Date.now()}`;
     const res = await fetch(fetchUrl);
     const data = await res.json();
 
@@ -630,7 +653,7 @@ function renderTeamList() {
   teamListBody.innerHTML = "";
 
   if (assignedTeams.length === 0) {
-    teamListBody.innerHTML = `<tr><td colspan="15" style="color:#d32f2f; padding: 24px;">查無【${isAdv ? "進階組" : "基礎組"}】可評分的隊伍，請確認該組別試算表！</td></tr>`;
+    teamListBody.innerHTML = `<tr><td colspan="15" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認該組別試算表！</td></tr>`;
     return;
   }
 
@@ -784,9 +807,7 @@ function exportSummaryToPdf() {
   if (currentGroupFilter === "GAJ") groupName = "國中組";
   else if (currentGroupFilter === "GAH") groupName = "高中組";
 
-  const divName = (currentDivision === "basic") ? "基礎組" : "進階組";
-  const tourName = currentRegionName || (regionTag ? regionTag.textContent : "賽事");
-  const fullTitle = `${tourName}${divName}${groupName}`;
+  const fullTitle = `${currentTournamentName}${groupName}`;
 
   const banner = document.getElementById("print-header-banner");
   if (banner) banner.textContent = fullTitle;
@@ -850,13 +871,11 @@ function showAllScores() {
   });
 }
 
-// 開啟評分：支援「重評自動回填先前分數」
 window.openScoring = function(teamId) {
   currentTeam = assignedTeams.find(t => t.teamId === teamId);
-  const divName = (currentDivision === "basic") ? "基礎組" : "進階組";
   const infoEl = document.getElementById("current-team-info");
   if (infoEl) {
-    infoEl.textContent = `評分對象：【${divName}】[${currentTeam.teamId}] ${currentTeam.school} - ${currentTeam.teamName}`;
+    infoEl.textContent = `評分對象：【${currentTournamentName}】[${currentTeam.teamId}] ${currentTeam.school} - ${currentTeam.teamName}`;
   }
 
   const isBasic = (currentDivision === "basic");
@@ -872,7 +891,6 @@ window.openScoring = function(teamId) {
     if (signWrapper) signWrapper.style.display = "block";
     if (roleHint) roleHint.textContent = "請評審與選手完成簽名後送出。";
   } else {
-    // 進階組：依據 currentAssignedSheets 決定顯示第 1~4 張表
     const sheets = currentAssignedSheets;
     const hasS1 = isAdminUser || sheets.indexOf("sheet1") !== -1;
     const hasS2 = isAdminUser || sheets.indexOf("sheet2") !== -1;
@@ -889,7 +907,6 @@ window.openScoring = function(teamId) {
     if (bS3) bS3.style.display = hasS3 ? "block" : "none";
     if (bS4) bS4.style.display = hasS4 ? "block" : "none";
 
-    // 只要有勾選第 1 張或第 2 張表，就必須強制簽名確認
     const needSign = hasS1 || hasS2;
     if (needSign) {
       if (signWrapper) signWrapper.style.display = "block";
@@ -900,7 +917,6 @@ window.openScoring = function(teamId) {
     }
   }
 
-  // 重評回填防呆判定
   const existingScore = scoresCache[teamId];
   if (existingScore && existingScore.totalScore !== undefined && existingScore.totalScore !== "") {
     loadExistingScoresToForm(existingScore);
@@ -946,7 +962,6 @@ function resetFormToDefaults() {
     document.querySelectorAll('#row-mission-std-basic .selectable[data-val="2.3333"], #row-mission-std-basic .selectable[data-val="2.3334"]').forEach(c => c.classList.add("active"));
 
   } else {
-    // 進階組預設值
     const advSt = document.querySelector('#row-adv-stage .selectable[data-val="8"]');
     if (advSt) advSt.classList.add("active");
 
@@ -978,7 +993,6 @@ function resetFormToDefaults() {
   }
 }
 
-// 支援重評時回填前次評分資料
 function loadExistingScoresToForm(score) {
   resetFormToDefaults();
 
@@ -1003,16 +1017,17 @@ function loadExistingScoresToForm(score) {
 }
 
 function switchPage(page) {
-  const pTitle = document.getElementById("page-title");
-  if (page === "summary") {
+  if (pageAdminTournaments) pageAdminTournaments.classList.remove("active");
+  if (pageSummary) pageSummary.classList.remove("active");
+  if (pageScoring) pageScoring.classList.remove("active");
+
+  if (page === "adminTournaments") {
+    if (pageAdminTournaments) pageAdminTournaments.classList.add("active");
+  } else if (page === "summary") {
     if (pageSummary) pageSummary.classList.add("active");
-    if (pageScoring) pageScoring.classList.remove("active");
-    if (pTitle) pTitle.textContent = "總評分表";
     renderTeamList();
-  } else {
-    if (pageSummary) pageSummary.classList.remove("active");
+  } else if (page === "scoring") {
     if (pageScoring) pageScoring.classList.add("active");
-    if (pTitle) pTitle.textContent = "隊伍評分表";
   }
 }
 
@@ -1111,7 +1126,6 @@ function calculateBasicScores() {
 }
 
 function calculateAdvancedScores() {
-  // 第 1 張表計算
   const stageEl = document.querySelector("#row-adv-stage .selectable.active");
   const stageCount = stageEl ? parseFloat(stageEl.dataset.val) : 8;
   const stageScore = stageCount * 2;
@@ -1127,7 +1141,6 @@ function calculateAdvancedScores() {
   if (advFlRawEl) advFlRawEl.textContent = flRaw;
   if (advFlWeightEl) advFlWeightEl.textContent = fluencyWeighted;
 
-  // 第 2 張表計算
   function getRowScore(rowId) {
     const r = document.getElementById(rowId);
     if (!r) return 0;
@@ -1153,7 +1166,6 @@ function calculateAdvancedScores() {
   const advSciEl = document.getElementById("score-adv-science");
   if (advSciEl) advSciEl.textContent = sciScore;
 
-  // 第 3 張表計算
   function getSingleVal(rowId) {
     const el = document.querySelector(`#${rowId} .selectable.active`);
     return el ? parseFloat(el.dataset.val) : 0;
@@ -1174,7 +1186,6 @@ function calculateAdvancedScores() {
   const cTotEl = document.getElementById("score-adv-creative-total");
   if (cTotEl) cTotEl.textContent = creativeTotal;
 
-  // 第 4 張表計算
   const d1 = getSingleVal("row-adv-d1");
   const d2 = getSingleVal("row-adv-d2");
   const d1El = document.getElementById("score-adv-d1");
@@ -1185,7 +1196,6 @@ function calculateAdvancedScores() {
   const dTotEl = document.getElementById("score-adv-design-total");
   if (dTotEl) dTotEl.textContent = designTotal;
 
-  // 本次負責評分表小計結算
   let subtotal = 0;
   const sheets = currentAssignedSheets;
   const hasS1 = isAdminUser || sheets.indexOf("sheet1") !== -1;
@@ -1308,6 +1318,7 @@ async function submitScore() {
 
   let payload = {
     division: currentDivision,
+    sheetId: currentSheetId,
     group: currentTeam.group || "",
     teamId: currentTeam.teamId,
     school: currentTeam.school,
