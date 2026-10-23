@@ -230,7 +230,7 @@
     </div>
   </div>
 
-  <!-- 管理員：檢視評審指派視窗 (去掉「矩陣」) -->
+  <!-- 管理員：檢視評審指派視窗 -->
   <div id="modal-coverage-matrix" class="modal-overlay" style="display: none;">
     <div class="modal-card modal-card-large">
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -293,7 +293,6 @@
         <div style="display: flex; gap: 6px; align-items: center;">
           <span style="font-weight:bold; font-size:14px; color:#1976d2;" id="admin-current-view-title">當前查看賽事</span>
           <button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px; background:#4a148c;" id="btn-open-assign-modal">⚙️ 評審向度與隊伍指派</button>
-          <!-- 已改為：檢視評審指派 -->
           <button class="btn btn-success" style="padding: 5px 10px; font-size: 12px; background:#2e7d32;" id="btn-open-coverage-matrix">📋 檢視評審指派</button>
         </div>
         <div style="display: flex; gap: 6px; align-items: center;">
@@ -546,22 +545,29 @@
         </div>
       </div>
 
+      <!-- 第三張表：預設無勾選，可點選與反點取消 -->
       <div id="adv-block-sheet3">
         <div style="background: #fff3e0; padding: 6px 12px; border-radius: 4px; font-weight: bold; color: #e65100; margin: 18px 0 8px 0;">
           【第三張評分表】創意關卡 (選手不需簽名，多位評審自動平均)
         </div>
         <div class="section-title">創意關卡(16 分)：</div>
+        
         <div class="sub-title">1. 機關獨特性(4分)</div>
         <div class="table-responsive">
           <table>
             <thead><tr><th>0</th><th>0.5</th><th>1</th><th>1.5</th><th>2</th><th>2.5</th><th>3</th><th>3.5</th><th>4</th><th>得分</th></tr></thead>
             <tbody>
               <tr id="row-adv-c1">
-                <td class="selectable" data-group="c1_u" data-val="0">0</td><td class="selectable" data-group="c1_u" data-val="0.5">0.5</td>
-                <td class="selectable" data-group="c1_u" data-val="1">1</td><td class="selectable" data-group="c1_u" data-val="1.5">1.5</td>
-                <td class="selectable" data-group="c1_u" data-val="2">2</td><td class="selectable" data-group="c1_u" data-val="2.5">2.5</td>
-                <td class="selectable" data-group="c1_u" data-val="3">3</td><td class="selectable" data-group="c1_u" data-val="3.5">3.5</td>
-                <td class="selectable active" data-group="c1_u" data-val="4">4</td><td id="score-adv-c1" class="score-badge">4</td>
+                <td class="selectable toggleable" data-group="c1_u" data-val="0">0</td>
+                <td class="selectable toggleable" data-group="c1_u" data-val="0.5">0.5</td>
+                <td class="selectable toggleable" data-group="c1_u" data-val="1">1</td>
+                <td class="selectable toggleable" data-group="c1_u" data-val="1.5">1.5</td>
+                <td class="selectable toggleable" data-group="c1_u" data-val="2">2</td>
+                <td class="selectable toggleable" data-group="c1_u" data-val="2.5">2.5</td>
+                <td class="selectable toggleable" data-group="c1_u" data-val="3">3</td>
+                <td class="selectable toggleable" data-group="c1_u" data-val="3.5">3.5</td>
+                <td class="selectable toggleable" data-group="c1_u" data-val="4">4</td>
+                <td id="score-adv-c1" class="score-badge">0</td>
               </tr>
             </tbody>
           </table>
@@ -573,11 +579,16 @@
             <thead><tr><th>0</th><th>0.5</th><th>1</th><th>1.5</th><th>2</th><th>2.5</th><th>3</th><th>3.5</th><th>4</th><th>得分</th></tr></thead>
             <tbody>
               <tr id="row-adv-c2">
-                <td class="selectable" data-group="c2_cx" data-val="0">0</td><td class="selectable" data-group="c2_cx" data-val="0.5">0.5</td>
-                <td class="selectable" data-group="c2_cx" data-val="1">1</td><td class="selectable" data-group="c2_cx" data-val="1.5">1.5</td>
-                <td class="selectable" data-group="c2_cx" data-val="2">2</td><td class="selectable" data-group="c2_cx" data-val="2.5">2.5</td>
-                <td class="selectable" data-group="c2_cx" data-val="3">3</td><td class="selectable" data-group="c2_cx" data-val="3.5">3.5</td>
-                <td class="selectable active" data-group="c2_cx" data-val="4">4</td><td id="score-adv-c2" class="score-badge">4</td>
+                <td class="selectable toggleable" data-group="c2_cx" data-val="0">0</td>
+                <td class="selectable toggleable" data-group="c2_cx" data-val="0.5">0.5</td>
+                <td class="selectable toggleable" data-group="c2_cx" data-val="1">1</td>
+                <td class="selectable toggleable" data-group="c2_cx" data-val="1.5">1.5</td>
+                <td class="selectable toggleable" data-group="c2_cx" data-val="2">2</td>
+                <td class="selectable toggleable" data-group="c2_cx" data-val="2.5">2.5</td>
+                <td class="selectable toggleable" data-group="c2_cx" data-val="3">3</td>
+                <td class="selectable toggleable" data-group="c2_cx" data-val="3.5">3.5</td>
+                <td class="selectable toggleable" data-group="c2_cx" data-val="4">4</td>
+                <td id="score-adv-c2" class="score-badge">0</td>
               </tr>
             </tbody>
           </table>
@@ -589,11 +600,16 @@
             <thead><tr><th>0</th><th>0.5</th><th>1</th><th>1.5</th><th>2</th><th>2.5</th><th>3</th><th>3.5</th><th>4</th><th>得分</th></tr></thead>
             <tbody>
               <tr id="row-adv-c3">
-                <td class="selectable" data-group="c3_t1" data-val="0">0</td><td class="selectable" data-group="c3_t1" data-val="0.5">0.5</td>
-                <td class="selectable" data-group="c3_t1" data-val="1">1</td><td class="selectable" data-group="c3_t1" data-val="1.5">1.5</td>
-                <td class="selectable" data-group="c3_t1" data-val="2">2</td><td class="selectable" data-group="c3_t1" data-val="2.5">2.5</td>
-                <td class="selectable" data-group="c3_t1" data-val="3">3</td><td class="selectable" data-group="c3_t1" data-val="3.5">3.5</td>
-                <td class="selectable active" data-group="c3_t1" data-val="4">4</td><td id="score-adv-c3" class="score-badge">4</td>
+                <td class="selectable toggleable" data-group="c3_t1" data-val="0">0</td>
+                <td class="selectable toggleable" data-group="c3_t1" data-val="0.5">0.5</td>
+                <td class="selectable toggleable" data-group="c3_t1" data-val="1">1</td>
+                <td class="selectable toggleable" data-group="c3_t1" data-val="1.5">1.5</td>
+                <td class="selectable toggleable" data-group="c3_t1" data-val="2">2</td>
+                <td class="selectable toggleable" data-group="c3_t1" data-val="2.5">2.5</td>
+                <td class="selectable toggleable" data-group="c3_t1" data-val="3">3</td>
+                <td class="selectable toggleable" data-group="c3_t1" data-val="3.5">3.5</td>
+                <td class="selectable toggleable" data-group="c3_t1" data-val="4">4</td>
+                <td id="score-adv-c3" class="score-badge">0</td>
               </tr>
             </tbody>
           </table>
@@ -605,35 +621,48 @@
             <thead><tr><th>0</th><th>0.5</th><th>1</th><th>1.5</th><th>2</th><th>2.5</th><th>3</th><th>3.5</th><th>4</th><th>得分</th></tr></thead>
             <tbody>
               <tr id="row-adv-c4">
-                <td class="selectable" data-group="c4_t2" data-val="0">0</td><td class="selectable" data-group="c4_t2" data-val="0.5">0.5</td>
-                <td class="selectable" data-group="c4_t2" data-val="1">1</td><td class="selectable" data-group="c4_t2" data-val="1.5">1.5</td>
-                <td class="selectable" data-group="c4_t2" data-val="2">2</td><td class="selectable" data-group="c4_t2" data-val="2.5">2.5</td>
-                <td class="selectable" data-group="c4_t2" data-val="3">3</td><td class="selectable" data-group="c4_t2" data-val="3.5">3.5</td>
-                <td class="selectable active" data-group="c4_t2" data-val="4">4</td><td id="score-adv-c4" class="score-badge">4</td>
+                <td class="selectable toggleable" data-group="c4_t2" data-val="0">0</td>
+                <td class="selectable toggleable" data-group="c4_t2" data-val="0.5">0.5</td>
+                <td class="selectable toggleable" data-group="c4_t2" data-val="1">1</td>
+                <td class="selectable toggleable" data-group="c4_t2" data-val="1.5">1.5</td>
+                <td class="selectable toggleable" data-group="c4_t2" data-val="2">2</td>
+                <td class="selectable toggleable" data-group="c4_t2" data-val="2.5">2.5</td>
+                <td class="selectable toggleable" data-group="c4_t2" data-val="3">3</td>
+                <td class="selectable toggleable" data-group="c4_t2" data-val="3.5">3.5</td>
+                <td class="selectable toggleable" data-group="c4_t2" data-val="4">4</td>
+                <td id="score-adv-c4" class="score-badge">0</td>
               </tr>
-              <tr class="big-footer-row"><td colspan="10">創意關卡合計：<span id="score-adv-creative-total" class="score-badge" style="font-size:20px;">16</span> / 16 分</td></tr>
+              <tr class="big-footer-row"><td colspan="10">創意關卡合計：<span id="score-adv-creative-total" class="score-badge" style="font-size:20px;">0</span> / 16 分</td></tr>
             </tbody>
           </table>
         </div>
       </div>
 
+      <!-- 第四張表：預設無勾選，可點選與反點取消 -->
       <div id="adv-block-sheet4">
         <div style="background: #ede7f6; padding: 6px 12px; border-radius: 4px; font-weight: bold; color: #4a148c; margin: 18px 0 8px 0;">
           【第四張評分表】整體機構設計 (選手不需簽名，多位評審自動平均)
         </div>
         <div class="section-title">整體機構設計(8 分)：</div>
+        
         <div class="sub-title">1. 故事性(6分)</div>
         <div class="table-responsive">
           <table>
             <thead><tr><th>0</th><th>0.5</th><th>1</th><th>1.5</th><th>2</th><th>2.5</th><th>3</th><th>3.5</th><th>4</th><th>4.5</th><th>6</th><th>得分</th></tr></thead>
             <tbody>
               <tr id="row-adv-d1">
-                <td class="selectable" data-group="d1_st" data-val="0">0</td><td class="selectable" data-group="d1_st" data-val="0.5">0.5</td>
-                <td class="selectable" data-group="d1_st" data-val="1">1</td><td class="selectable" data-group="d1_st" data-val="1.5">1.5</td>
-                <td class="selectable" data-group="d1_st" data-val="2">2</td><td class="selectable" data-group="d1_st" data-val="2.5">2.5</td>
-                <td class="selectable" data-group="d1_st" data-val="3">3</td><td class="selectable" data-group="d1_st" data-val="3.5">3.5</td>
-                <td class="selectable" data-group="d1_st" data-val="4">4</td><td class="selectable" data-group="d1_st" data-val="4.5">4.5</td>
-                <td class="selectable active" data-group="d1_st" data-val="6">6</td><td id="score-adv-d1" class="score-badge">6</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="0">0</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="0.5">0.5</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="1">1</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="1.5">1.5</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="2">2</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="2.5">2.5</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="3">3</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="3.5">3.5</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="4">4</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="4.5">4.5</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="6">6</td>
+                <td id="score-adv-d1" class="score-badge">0</td>
               </tr>
             </tbody>
           </table>
@@ -645,11 +674,14 @@
             <thead><tr><th>0</th><th>0.5</th><th>1</th><th>1.5</th><th>2</th><th>得分</th></tr></thead>
             <tbody>
               <tr id="row-adv-d2">
-                <td class="selectable" data-group="d2_en" data-val="0">0</td><td class="selectable" data-group="d2_en" data-val="0.5">0.5</td>
-                <td class="selectable" data-group="d2_en" data-val="1">1</td><td class="selectable" data-group="d2_en" data-val="1.5">1.5</td>
-                <td class="selectable active" data-group="d2_en" data-val="2">2</td><td id="score-adv-d2" class="score-badge">2</td>
+                <td class="selectable toggleable" data-group="d2_en" data-val="0">0</td>
+                <td class="selectable toggleable" data-group="d2_en" data-val="0.5">0.5</td>
+                <td class="selectable toggleable" data-group="d2_en" data-val="1">1</td>
+                <td class="selectable toggleable" data-group="d2_en" data-val="1.5">1.5</td>
+                <td class="selectable toggleable" data-group="d2_en" data-val="2">2</td>
+                <td id="score-adv-d2" class="score-badge">0</td>
               </tr>
-              <tr class="big-footer-row"><td colspan="6">整體機構設計合計：<span id="score-adv-design-total" class="score-badge" style="font-size:20px;">8</span> / 8 分</td></tr>
+              <tr class="big-footer-row"><td colspan="6">整體機構設計合計：<span id="score-adv-design-total" class="score-badge" style="font-size:20px;">0</span> / 8 分</td></tr>
             </tbody>
           </table>
         </div>
