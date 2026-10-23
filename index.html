@@ -47,6 +47,9 @@
       width: 90%; max-width: 480px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
       max-height: 90vh; overflow-y: auto;
     }
+    .modal-card-large {
+      max-width: 860px !important; width: 95% !important;
+    }
     .form-group { margin-bottom: 12px; }
     .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
     .form-group input, .form-group select {
@@ -187,7 +190,7 @@
     </div>
   </div>
 
-  <!-- 管理員：評審向度與隊伍勾選指派模態框 -->
+  <!-- 管理員：評審向度與隊伍指派模態框 -->
   <div id="modal-assign-judge" class="modal-overlay" style="display: none;">
     <div class="modal-card">
       <h3 style="margin-top:0; text-align:center;">⚙️ 評審向度與隊伍指派</h3>
@@ -223,6 +226,25 @@
       <div style="display:flex; gap:10px; margin-top:14px;">
         <button class="btn btn-secondary" style="flex:1;" id="btn-cancel-assign">取消</button>
         <button class="btn btn-success" style="flex:1;" id="btn-save-assign">儲存指派</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 管理員：評審指派工作分配總檢表模態框 (全隊涵蓋狀況矩陣) -->
+  <div id="modal-coverage-matrix" class="modal-overlay" style="display: none;">
+    <div class="modal-card modal-card-large">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="margin:0;">📋 評審工作分配檢核表</h3>
+        <button class="btn btn-secondary" id="btn-close-coverage" style="padding:4px 10px;">關閉</button>
+      </div>
+      <p style="font-size:13px; color:#555; margin:0 0 10px 0;">
+        確認目前場次中每一隊伍是否均指派了專責評審。進階組每一隊必須完整包含第 1、2、3、4 張評分表。
+      </p>
+      <div class="table-responsive" style="max-height:60vh; overflow-y:auto;">
+        <table style="width:100% !important;">
+          <thead id="coverage-matrix-thead"></thead>
+          <tbody id="coverage-matrix-tbody"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -271,9 +293,9 @@
         <div style="display: flex; gap: 6px; align-items: center;">
           <span style="font-weight:bold; font-size:14px; color:#1976d2;" id="admin-current-view-title">當前查看賽事</span>
           <button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px; background:#4a148c;" id="btn-open-assign-modal">⚙️ 評審向度與隊伍指派</button>
+          <button class="btn btn-success" style="padding: 5px 10px; font-size: 12px; background:#2e7d32;" id="btn-open-coverage-matrix">📋 檢視評審指派矩陣</button>
         </div>
         <div style="display: flex; gap: 6px; align-items: center;">
-          <!-- 通用代碼：支援基礎組 (GA) 與進階組 (GB) -->
           <button class="btn btn-primary btn-filter-group" data-filter="E" style="padding: 5px 12px; font-size: 13px;" id="btn-group-gae">國小</button>
           <button class="btn btn-secondary btn-filter-group" data-filter="J" style="padding: 5px 12px; font-size: 13px;" id="btn-group-gaj">國中</button>
           <button class="btn btn-secondary btn-filter-group" data-filter="H" style="padding: 5px 12px; font-size: 13px;" id="btn-group-gah">高中</button>
