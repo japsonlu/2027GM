@@ -5,8 +5,8 @@ let currentPass = null;
 let currentUsername = null;
 let isAdminUser = false;
 let currentAssignedSheets = ["sheet1", "sheet2", "sheet3", "sheet4"];
-let currentDivision = "basic"; // 由當前鎖定或管理員點進的場次決定
-let currentSheetId = "";       // 當前場次的試算表 ID
+let currentDivision = "basic";
+let currentSheetId = "";
 let currentTournamentName = "";
 let currentSortMode = "scoreDesc";
 let currentGroupFilter = "GAE";
@@ -92,7 +92,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("click", () => fetchLatestScores(true));
   });
 
-  // 新增賽事按鈕
+  // 新增賽事
   safeBindClick("btn-open-add-region-lobby", () => {
     if (modalAddRegion) modalAddRegion.style.display = "flex";
   });
@@ -109,7 +109,7 @@ document.addEventListener("DOMContentLoaded", () => {
   safeBindClick("btn-save-assign", submitSaveJudgeAssignment);
   if (selectAssignJudge) selectAssignJudge.addEventListener("change", onAssignJudgeSelectChange);
 
-  // 隊伍批次勾選
+  // 隊伍快速批次選取按鈕
   safeBindClick("btn-team-select-all", () => setAllTeamCheckboxes(true));
   safeBindClick("btn-team-clear", () => setAllTeamCheckboxes(false));
   safeBindClick("btn-team-select-gae", () => filterTeamCheckboxesByPrefix("GAE"));
@@ -126,7 +126,6 @@ function safeBindClick(id, handler) {
   if (el) el.addEventListener("click", handler);
 }
 
-// 預先取得目前啟用中的賽事名稱顯示於登入畫面
 async function loadInitialActiveTournament() {
   const el = document.getElementById("login-active-tour-name");
   try {
@@ -135,12 +134,10 @@ async function loadInitialActiveTournament() {
     if (data.success && data.config) {
       allTournamentsList = data.config.tournaments || [];
       const active = data.config.activeTournament;
-      if (active && el) {
-        el.textContent = active.name;
-      }
+      if (active && el) el.textContent = active.name;
     }
   } catch (e) {
-    if (el) el.textContent = "網路連線中...";
+    if (el) el.textContent = "連線中...";
   }
 }
 
@@ -195,12 +192,13 @@ async function handleLogin() {
         renderTeamList();
       }
 
+      // 效能優化：拉長定時同步為 60 秒（避免塞車）
       if (syncTimer) clearInterval(syncTimer);
       syncTimer = setInterval(() => {
         if (pageSummary && pageSummary.classList.contains("active") && currentJudge) {
           fetchLatestScores(false);
         }
-      }, 15000);
+      }, 60000);
 
     } else {
       alert("登入失敗：" + (data.message || "帳號密碼不正確"));
@@ -215,7 +213,6 @@ async function handleLogin() {
   }
 }
 
-// 管理員賽事大廳：條列呈現所有增列的比賽
 async function loadAdminTournamentsLobby() {
   const container = document.getElementById("tournaments-cards-container");
   if (!container) return;
@@ -269,7 +266,6 @@ async function loadAdminTournamentsLobby() {
   }
 }
 
-// 管理員鎖定指定場次
 async function adminLockTournament(sheetId) {
   if (!confirm("確定要將現場所有評審端鎖定到這個場次嗎？")) return;
   try {
@@ -290,7 +286,6 @@ async function adminLockTournament(sheetId) {
   }
 }
 
-// 管理員進入特定賽事查看成績
 async function adminEnterTournament(sheetId, name, division) {
   currentSheetId = sheetId;
   currentTournamentName = name;
@@ -400,7 +395,6 @@ async function submitCreateTournament() {
   }
 }
 
-// 評審指派視窗
 async function openAssignModal() {
   if (!modalAssignJudge) return;
   modalAssignJudge.style.display = "flex";
@@ -408,7 +402,7 @@ async function openAssignModal() {
   if (assignTeamsContainer) assignTeamsContainer.innerHTML = "<div style='color:#666;'>載入隊伍清單中...</div>";
 
   try {
-    const res = await fetch(`${API_URL}?action=getJudgeAssignments&sheetId=${encodeURIComponent(currentSheetId)}&division=${encodeURIComponent(currentDivision)}&_t=${Date.now()}`);
+    const res = await fetch(`${API_URL}?action=getJudgeAssignments&sheetId=${encodeURIComponent(currentSheetId)}&_t=${Date.now()}`);
     const data = await res.json();
 
     if (data.success) {
@@ -550,7 +544,7 @@ async function submitSaveJudgeAssignment() {
     });
     const result = await res.json();
     if (result.success) {
-      alert("【儲存成功】該評審向度與指派隊伍已更新！");
+      alert("【儲存成功】評審指派設定已更新！");
       if (modalAssignJudge) modalAssignJudge.style.display = "none";
       await fetchLatestScores(false);
     } else {
@@ -566,7 +560,6 @@ async function submitSaveJudgeAssignment() {
   }
 }
 
-// 同步成績：評審不會被全校隊伍名單洗掉
 async function fetchLatestScores(showNotice = false) {
   if (!currentJudge) return;
 
@@ -579,7 +572,6 @@ async function fetchLatestScores(showNotice = false) {
     const data = await res.json();
 
     if (data.success) {
-      // 關鍵修復：僅管理員查看總表時才更新全隊列表；一般評審永久保留指派隊伍
       if (isAdminUser && data.teams) {
         assignedTeams = data.teams;
       } else if (data.teams && assignedTeams.length === 0) {
@@ -610,6 +602,7 @@ function getDisplayScore(valStr, isHidden) {
   return isHidden ? "***" : valStr;
 }
 
+// 渲染總表：完全移除「評分者 / 評審」欄位
 function renderTeamList() {
   const isAdv = (currentDivision === "advanced");
 
@@ -630,8 +623,7 @@ function renderTeamList() {
           <th>創意<br>關卡</th>
           <th>整體<br>機構設計</th>
           <th>總分</th>
-          ${isAdminUser ? "<th>名次</th>" : '<th class="th-hide-score">隱藏</th>'}
-          <th id="th-last-action">${isAdminUser ? "評分評審" : "操作"}</th>
+          ${isAdminUser ? "<th>名次</th>" : '<th class="th-hide-score">隱藏</th><th>操作</th>'}
         </tr>
       `;
     } else {
@@ -647,8 +639,7 @@ function renderTeamList() {
           <th>規範<br>(21)</th>
           <th>任務<br>(33)</th>
           <th>總分<br>(100)</th>
-          ${isAdminUser ? "<th>名次</th>" : '<th class="th-hide-score">隱藏</th>'}
-          <th id="th-last-action">${isAdminUser ? "評審" : "操作"}</th>
+          ${isAdminUser ? "<th>名次</th>" : '<th class="th-hide-score">隱藏</th><th>操作</th>'}
         </tr>
       `;
     }
@@ -763,9 +754,11 @@ function renderTeamList() {
       `;
     }
 
-    const rankOrHideCol = isAdminUser 
-      ? `<td style="font-weight:bold; color:#d32f2f;">${rankMap[team.teamId] || "-"}</td>`
-      : `
+    let endColsHtml = "";
+    if (isAdminUser) {
+      endColsHtml = `<td style="font-weight:bold; color:#d32f2f;">${rankMap[team.teamId] || "-"}</td>`;
+    } else {
+      endColsHtml = `
         <td>
           <button class="btn ${isHidden ? "btn-primary" : "btn-secondary"}" 
                   style="padding: 4px 6px; font-size:11px;" 
@@ -774,15 +767,6 @@ function renderTeamList() {
             ${isHidden ? "顯示" : "隱藏"}
           </button>
         </td>
-      `;
-
-    let lastCol = "";
-    if (isAdminUser) {
-      const judgeName = score.judgeName || "未評分";
-      const isMulti = score.judgeCount && score.judgeCount > 1;
-      lastCol = `<td style="font-size:12px; color:${isMulti ? '#1565c0' : '#444'}; font-weight:${isMulti ? 'bold' : 'normal'};">${judgeName}</td>`;
-    } else {
-      lastCol = `
         <td>
           <button class="btn ${isScored ? "btn-danger" : "btn-success"}" 
                   style="padding: 5px 8px; font-size:12px;" 
@@ -799,8 +783,7 @@ function renderTeamList() {
       <td>${team.school}</td>
       <td>${team.teamName}</td>
       ${midColsHtml}
-      ${rankOrHideCol}
-      ${lastCol}
+      ${endColsHtml}
     `;
 
     teamListBody.appendChild(tr);
@@ -876,7 +859,6 @@ function showAllScores() {
   });
 }
 
-// 開啟評分：支援「重評自動回填先前分數」
 window.openScoring = function(teamId) {
   currentTeam = assignedTeams.find(t => t.teamId === teamId);
   const infoEl = document.getElementById("current-team-info");
