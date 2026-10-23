@@ -113,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
   safeBindClick("btn-save-assign", submitSaveJudgeAssignment);
   if (selectAssignJudge) selectAssignJudge.addEventListener("change", onAssignJudgeSelectChange);
 
-  // 檢視評審指派工作分配表 (Matrix)
+  // 檢視評審指派視窗
   safeBindClick("btn-open-coverage-matrix", openCoverageMatrixModal);
   safeBindClick("btn-close-coverage", () => {
     if (modalCoverageMatrix) modalCoverageMatrix.style.display = "none";
@@ -408,7 +408,7 @@ async function openAssignModal() {
   if (!modalAssignJudge) return;
   modalAssignJudge.style.display = "flex";
 
-  // 打開指派視窗時：預設先全部取消勾選（絕不主動帶出藍勾勾）
+  // 1. 預設先完全清空向度核取方塊（無藍勾勾）
   document.querySelectorAll(".chk-assign-sheet").forEach(c => c.checked = false);
 
   if (selectAssignJudge) selectAssignJudge.innerHTML = "<option>載入評審中...</option>";
@@ -456,9 +456,8 @@ function renderTeamAssignmentCheckboxes() {
   });
 }
 
-// 評審工作分配切換：預設完全清空勾選，僅依試算表已填寫內容回填
 function onAssignJudgeSelectChange() {
-  // 1. 先強制把向度所有藍勾勾清空
+  // 切換評審時：先強制把所有向度與隊伍的藍勾勾清空
   document.querySelectorAll(".chk-assign-sheet").forEach(chk => chk.checked = false);
   document.querySelectorAll(".chk-assign-team").forEach(chk => chk.checked = false);
 
@@ -503,7 +502,7 @@ function parseLocalTeamRange(rawStr) {
       const numStart = parseInt(rangeMatch[2], 10);
       const prefixEnd = rangeMatch[3].toUpperCase();
       const numEnd = parseInt(rangeMatch[4], 10);
-      const padLen = rangeMatch[2].length;
+      var padLen = rangeMatch[2].length;
 
       if (prefixStart === prefixEnd && numStart <= numEnd) {
         for (let n = numStart; n <= numEnd; n++) {
@@ -582,9 +581,7 @@ async function submitSaveJudgeAssignment() {
   }
 }
 
-// -------------------------------------------------------------
-// 3. 評審指派工作分配檢核矩陣（Coverage Matrix）
-// -------------------------------------------------------------
+// 檢視評審指派視窗 (Matrix)
 async function openCoverageMatrixModal() {
   if (!modalCoverageMatrix) return;
   modalCoverageMatrix.style.display = "flex";
@@ -603,7 +600,6 @@ async function openCoverageMatrixModal() {
     const teams = data.allTeams || [];
     const isAdv = (currentDivision === "advanced");
 
-    // 建立 評審 -> 隊伍及負責表單 的映射
     const judgeMap = judges.map(j => {
       const assignedTeams = parseLocalTeamRange(j.teams);
       const rawSheets = String(j.assignedSheets || "").toLowerCase().trim();
@@ -671,7 +667,6 @@ async function openCoverageMatrixModal() {
         coverageMatrixTbody.appendChild(tr);
       });
     } else {
-      // 基礎組
       coverageMatrixThead.innerHTML = `
         <tr>
           <th>隊伍編號</th>
@@ -747,7 +742,7 @@ function getDisplayScore(valStr, isHidden) {
   return isHidden ? "***" : valStr;
 }
 
-// 總表渲染：基礎組與進階組均完全移除「名次」欄位
+// 總表渲染：徹底拔除所有「名次」欄位
 function renderTeamList() {
   const isAdv = (currentDivision === "advanced");
 
