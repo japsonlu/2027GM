@@ -120,15 +120,34 @@
       padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-top: 6px;
     }
 
+    /* 條列式賽事清單樣式 */
     .tournament-grid {
-      display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 14px;
+      width: 100%;
     }
     .tournament-card {
-      background: #fff; border-radius: 8px; padding: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-      border: 1px solid #e0e0e0; display: flex; flex-direction: column; justify-content: space-between;
+      background: #fff;
+      border-radius: 8px;
+      padding: 12px 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      border: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      transition: all 0.2s ease;
+    }
+    .tournament-card:hover {
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     .tournament-card.active-tour {
-      border: 2px solid #2e7d32; background: #f1f8e9;
+      border: 2px solid #2e7d32;
+      background: #f1f8e9;
     }
 
     @page { size: landscape; margin: 5mm; }
@@ -545,7 +564,7 @@
         </div>
       </div>
 
-      <!-- 第三張表：預設無勾選，可點選與反點取消 -->
+      <!-- 第三張表：預設白色無勾選，可點選與反點取消 -->
       <div id="adv-block-sheet3">
         <div style="background: #fff3e0; padding: 6px 12px; border-radius: 4px; font-weight: bold; color: #e65100; margin: 18px 0 8px 0;">
           【第三張評分表】創意關卡 (選手不需簽名，多位評審自動平均)
@@ -638,7 +657,7 @@
         </div>
       </div>
 
-      <!-- 第四張表：預設無勾選，可點選與反點取消 -->
+      <!-- 第四張表：預設白色無勾選，可點選與反點取消 -->
       <div id="adv-block-sheet4">
         <div style="background: #ede7f6; padding: 6px 12px; border-radius: 4px; font-weight: bold; color: #4a148c; margin: 18px 0 8px 0;">
           【第四張評分表】整體機構設計 (選手不需簽名，多位評審自動平均)
