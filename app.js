@@ -4,7 +4,7 @@ let currentJudge = null;
 let currentPass = null;
 let currentUsername = null;
 let isAdminUser = false;
-let currentAssignedSheets = []; // 預設為空，由試算表指派設定決定
+let currentAssignedSheets = [];
 let currentDivision = "basic";
 let currentSheetId = "";
 let currentTournamentName = "";
@@ -38,6 +38,10 @@ const modalAssignJudge = document.getElementById("modal-assign-judge");
 const selectAssignJudge = document.getElementById("select-assign-judge");
 const assignTeamsContainer = document.getElementById("assign-teams-container");
 
+const modalCoverageMatrix = document.getElementById("modal-coverage-matrix");
+const coverageMatrixThead = document.getElementById("coverage-matrix-thead");
+const coverageMatrixTbody = document.getElementById("coverage-matrix-tbody");
+
 const canvas = document.getElementById("sign-pad");
 const ctx = canvas ? canvas.getContext("2d") : null;
 let isDrawing = false;
@@ -62,10 +66,10 @@ document.addEventListener("DOMContentLoaded", () => {
   safeBindClick("btn-hide-all", hideAllScores);
   safeBindClick("btn-show-all", showAllScores);
 
-  // 年段篩選按鈕 (支援 GAE/GBE, GAJ/GBJ, GAH/GBH)
+  // 年段篩選 (E/J/H)
   document.querySelectorAll(".btn-filter-group").forEach(btn => {
     btn.addEventListener("click", function() {
-      currentGroupFilter = this.dataset.filter; // "E" 或 "J" 或 "H"
+      currentGroupFilter = this.dataset.filter;
       document.querySelectorAll(".btn-filter-group").forEach(b => {
         b.className = "btn btn-secondary btn-filter-group";
       });
@@ -109,7 +113,13 @@ document.addEventListener("DOMContentLoaded", () => {
   safeBindClick("btn-save-assign", submitSaveJudgeAssignment);
   if (selectAssignJudge) selectAssignJudge.addEventListener("change", onAssignJudgeSelectChange);
 
-  // 隊伍批次勾選（自動依據基礎組 GA 或進階組 GB 對應）
+  // 檢視評審指派工作分配表 (Matrix)
+  safeBindClick("btn-open-coverage-matrix", openCoverageMatrixModal);
+  safeBindClick("btn-close-coverage", () => {
+    if (modalCoverageMatrix) modalCoverageMatrix.style.display = "none";
+  });
+
+  // 隊伍快速勾選
   safeBindClick("btn-team-select-all", () => setAllTeamCheckboxes(true));
   safeBindClick("btn-team-clear", () => setAllTeamCheckboxes(false));
   safeBindClick("btn-team-select-gae", () => filterTeamCheckboxesByLevel("E"));
@@ -397,6 +407,10 @@ async function submitCreateTournament() {
 async function openAssignModal() {
   if (!modalAssignJudge) return;
   modalAssignJudge.style.display = "flex";
+
+  // 打開指派視窗時：預設先全部取消勾選（絕不主動帶出藍勾勾）
+  document.querySelectorAll(".chk-assign-sheet").forEach(c => c.checked = false);
+
   if (selectAssignJudge) selectAssignJudge.innerHTML = "<option>載入評審中...</option>";
   if (assignTeamsContainer) assignTeamsContainer.innerHTML = "<div style='color:#666;'>載入隊伍清單中...</div>";
 
@@ -442,8 +456,12 @@ function renderTeamAssignmentCheckboxes() {
   });
 }
 
-// 評審工作分配：預設不勾選向度，依試算表實際值回填
+// 評審工作分配切換：預設完全清空勾選，僅依試算表已填寫內容回填
 function onAssignJudgeSelectChange() {
+  // 1. 先強制把向度所有藍勾勾清空
+  document.querySelectorAll(".chk-assign-sheet").forEach(chk => chk.checked = false);
+  document.querySelectorAll(".chk-assign-team").forEach(chk => chk.checked = false);
+
   if (!selectAssignJudge) return;
   const selectedUser = selectAssignJudge.value;
   const judgeObj = cachedAdminJudges.find(j => j.username === selectedUser);
@@ -454,15 +472,18 @@ function onAssignJudgeSelectChange() {
     if (groupSheets) groupSheets.style.display = "block";
     const rawSheets = String(judgeObj.assignedSheets || "").toLowerCase().trim();
 
-    // 核心調整：預設不要全勾。僅當試算表有明確記錄時才勾選
-    const activeSheets = rawSheets.split(/[\s,，、]+/);
-    document.querySelectorAll(".chk-assign-sheet").forEach(chk => {
-      chk.checked = (rawSheets === "all") || (activeSheets.indexOf(chk.value) !== -1);
-    });
+    // 只有在試算表真的寫了 "all" 或包含該代碼才勾選
+    if (rawSheets) {
+      const activeSheets = rawSheets.split(/[\s,，、]+/);
+      document.querySelectorAll(".chk-assign-sheet").forEach(chk => {
+        chk.checked = (rawSheets === "all") || (activeSheets.indexOf(chk.value) !== -1);
+      });
+    }
   } else {
     if (groupSheets) groupSheets.style.display = "none";
   }
 
+  // 回填隊伍勾選
   const assignedTeamTokens = parseLocalTeamRange(judgeObj.teams);
   document.querySelectorAll(".chk-assign-team").forEach(chk => {
     chk.checked = assignedTeamTokens.indexOf(chk.value) !== -1;
@@ -504,7 +525,6 @@ function setAllTeamCheckboxes(checked) {
   document.querySelectorAll(".chk-assign-team").forEach(c => c.checked = checked);
 }
 
-// 支援基礎組 (GA) 與進階組 (GB) 年段代碼快速勾選
 function filterTeamCheckboxesByLevel(levelCode) {
   const prefix = (currentDivision === "advanced") ? `GB${levelCode}` : `GA${levelCode}`;
   document.querySelectorAll(".chk-assign-team").forEach(c => {
@@ -562,6 +582,129 @@ async function submitSaveJudgeAssignment() {
   }
 }
 
+// -------------------------------------------------------------
+// 3. 評審指派工作分配檢核矩陣（Coverage Matrix）
+// -------------------------------------------------------------
+async function openCoverageMatrixModal() {
+  if (!modalCoverageMatrix) return;
+  modalCoverageMatrix.style.display = "flex";
+  if (coverageMatrixThead) coverageMatrixThead.innerHTML = "";
+  if (coverageMatrixTbody) coverageMatrixTbody.innerHTML = `<tr><td colspan="7" style="padding:20px;">分析隊伍指派中...</td></tr>`;
+
+  try {
+    const res = await fetch(`${API_URL}?action=getJudgeAssignments&sheetId=${encodeURIComponent(currentSheetId)}&_t=${Date.now()}`);
+    const data = await res.json();
+    if (!data.success) {
+      coverageMatrixTbody.innerHTML = `<tr><td colspan="7" style="color:red; padding:20px;">無法取得指派名單：${data.message}</td></tr>`;
+      return;
+    }
+
+    const judges = data.judges || [];
+    const teams = data.allTeams || [];
+    const isAdv = (currentDivision === "advanced");
+
+    // 建立 評審 -> 隊伍及負責表單 的映射
+    const judgeMap = judges.map(j => {
+      const assignedTeams = parseLocalTeamRange(j.teams);
+      const rawSheets = String(j.assignedSheets || "").toLowerCase().trim();
+      let sheets = [];
+      if (rawSheets === "all") sheets = ["sheet1", "sheet2", "sheet3", "sheet4"];
+      else if (rawSheets) sheets = rawSheets.split(/[\s,，、]+/);
+      return {
+        username: j.username,
+        name: j.name,
+        teams: assignedTeams,
+        sheets: sheets
+      };
+    });
+
+    if (isAdv) {
+      coverageMatrixThead.innerHTML = `
+        <tr>
+          <th>隊伍編號</th>
+          <th>學校 - 隊名</th>
+          <th>第一張 (關卡/流暢)</th>
+          <th>第二張 (綠能/科學)</th>
+          <th>第三張 (創意關卡)</th>
+          <th>第四張 (機構設計)</th>
+          <th>涵蓋狀態</th>
+        </tr>
+      `;
+
+      coverageMatrixTbody.innerHTML = "";
+      teams.forEach(t => {
+        let s1Judges = [];
+        let s2Judges = [];
+        let s3Judges = [];
+        let s4Judges = [];
+
+        judgeMap.forEach(j => {
+          if (j.teams.indexOf(t.teamId) !== -1) {
+            if (j.sheets.indexOf("sheet1") !== -1) s1Judges.push(j.name);
+            if (j.sheets.indexOf("sheet2") !== -1) s2Judges.push(j.name);
+            if (j.sheets.indexOf("sheet3") !== -1) s3Judges.push(j.name);
+            if (j.sheets.indexOf("sheet4") !== -1) s4Judges.push(j.name);
+          }
+        });
+
+        const missing = [];
+        if (s1Judges.length === 0) missing.push("表1");
+        if (s2Judges.length === 0) missing.push("表2");
+        if (s3Judges.length === 0) missing.push("表3");
+        if (s4Judges.length === 0) missing.push("表4");
+
+        const isComplete = (missing.length === 0);
+        const statusHtml = isComplete 
+          ? `<span style="color:#2e7d32; font-weight:bold;">✅ 完整</span>`
+          : `<span style="color:#d32f2f; font-weight:bold;">⚠️ 缺${missing.join("、")}</span>`;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="font-weight:bold;">${t.teamId}</td>
+          <td style="text-align:left; font-size:12px;">${t.school} - ${t.teamName}</td>
+          <td>${s1Judges.join("、") || '<span style="color:#bbb;">未指派</span>'}</td>
+          <td>${s2Judges.join("、") || '<span style="color:#bbb;">未指派</span>'}</td>
+          <td>${s3Judges.join("、") || '<span style="color:#bbb;">未指派</span>'}</td>
+          <td>${s4Judges.join("、") || '<span style="color:#bbb;">未指派</span>'}</td>
+          <td>${statusHtml}</td>
+        `;
+        coverageMatrixTbody.appendChild(tr);
+      });
+    } else {
+      // 基礎組
+      coverageMatrixThead.innerHTML = `
+        <tr>
+          <th>隊伍編號</th>
+          <th>學校 - 隊名</th>
+          <th>負責評審</th>
+          <th>指派狀態</th>
+        </tr>
+      `;
+
+      coverageMatrixTbody.innerHTML = "";
+      teams.forEach(t => {
+        let assignedJ = [];
+        judgeMap.forEach(j => {
+          if (j.teams.indexOf(t.teamId) !== -1) assignedJ.push(j.name);
+        });
+
+        const hasJudge = assignedJ.length > 0;
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td style="font-weight:bold;">${t.teamId}</td>
+          <td style="text-align:left; font-size:12px;">${t.school} - ${t.teamName}</td>
+          <td>${assignedJ.join("、") || '<span style="color:#bbb;">未指派</span>'}</td>
+          <td>${hasJudge ? '<span style="color:#2e7d32; font-weight:bold;">✅ 已指派</span>' : '<span style="color:#d32f2f; font-weight:bold;">⚠️ 未指派</span>'}</td>
+        `;
+        coverageMatrixTbody.appendChild(tr);
+      });
+    }
+
+  } catch(e) {
+    coverageMatrixTbody.innerHTML = `<tr><td colspan="7" style="color:red; padding:20px;">載入指派檢核錯誤：${e.message}</td></tr>`;
+  }
+}
+
 async function fetchLatestScores(showNotice = false) {
   if (!currentJudge) return;
 
@@ -604,7 +747,7 @@ function getDisplayScore(valStr, isHidden) {
   return isHidden ? "***" : valStr;
 }
 
-// 支援 GAE/GBE(國小)、GAJ/GBJ(國中)、GAH/GBH(高中) 年段篩選
+// 總表渲染：基礎組與進階組均完全移除「名次」欄位
 function renderTeamList() {
   const isAdv = (currentDivision === "advanced");
 
@@ -625,7 +768,7 @@ function renderTeamList() {
           <th>創意<br>關卡</th>
           <th>整體<br>機構設計</th>
           <th>總分</th>
-          ${isAdminUser ? "<th>名次</th>" : '<th class="th-hide-score">隱藏</th><th>操作</th>'}
+          ${isAdminUser ? "" : '<th class="th-hide-score">隱藏</th><th>操作</th>'}
         </tr>
       `;
     } else {
@@ -641,7 +784,7 @@ function renderTeamList() {
           <th>規範<br>(21)</th>
           <th>任務<br>(33)</th>
           <th>總分<br>(100)</th>
-          ${isAdminUser ? "<th>名次</th>" : '<th class="th-hide-score">隱藏</th><th>操作</th>'}
+          ${isAdminUser ? "" : '<th class="th-hide-score">隱藏</th><th>操作</th>'}
         </tr>
       `;
     }
@@ -657,7 +800,6 @@ function renderTeamList() {
 
   let filteredTeams = assignedTeams;
   if (isAdminUser) {
-    // 依據目前組別 (GA/GB) 與選擇的年段 (E/J/H) 篩選
     const targetPrefix = isAdv ? `GB${currentGroupFilter}` : `GA${currentGroupFilter}`;
     filteredTeams = assignedTeams.filter(t => String(t.teamId).toUpperCase().startsWith(targetPrefix));
   }
@@ -687,20 +829,6 @@ function renderTeamList() {
       const bScored = (bTotal !== null);
       if (aScored === bScored) return a.teamId.localeCompare(b.teamId, undefined, { numeric: true });
       return aScored ? 1 : -1;
-    }
-  });
-
-  const rankMap = {};
-  const scoredTeamsForRank = [...sortedTeams]
-    .map(t => ({ teamId: t.teamId, total: (scoresCache[t.teamId] && scoresCache[t.teamId].totalScore !== undefined && scoresCache[t.teamId].totalScore !== "") ? parseFloat(scoresCache[t.teamId].totalScore) : null }))
-    .filter(t => t.total !== null)
-    .sort((a, b) => b.total - a.total);
-
-  scoredTeamsForRank.forEach((item, idx) => {
-    if (idx > 0 && item.total === scoredTeamsForRank[idx - 1].total) {
-      rankMap[item.teamId] = rankMap[scoredTeamsForRank[idx - 1].teamId];
-    } else {
-      rankMap[item.teamId] = idx + 1;
     }
   });
 
@@ -759,9 +887,7 @@ function renderTeamList() {
     }
 
     let endColsHtml = "";
-    if (isAdminUser) {
-      endColsHtml = `<td style="font-weight:bold; color:#d32f2f;">${rankMap[team.teamId] || "-"}</td>`;
-    } else {
+    if (!isAdminUser) {
       endColsHtml = `
         <td>
           <button class="btn ${isHidden ? "btn-primary" : "btn-secondary"}" 
