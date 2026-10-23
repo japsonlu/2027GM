@@ -113,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
   safeBindClick("btn-save-assign", submitSaveJudgeAssignment);
   if (selectAssignJudge) selectAssignJudge.addEventListener("change", onAssignJudgeSelectChange);
 
-  // 檢視評審指派視窗綁定
+  // 檢視評審指派視窗
   safeBindClick("btn-open-coverage-matrix", openCoverageMatrixModal);
   safeBindClick("btn-close-coverage", () => {
     if (modalCoverageMatrix) modalCoverageMatrix.style.display = "none";
@@ -222,6 +222,7 @@ async function handleLogin() {
   }
 }
 
+// 賽事大廳：排除「預設」賽事，並改以單行條列呈現
 async function loadAdminTournamentsLobby() {
   const container = document.getElementById("tournaments-cards-container");
   if (!container) return;
@@ -236,33 +237,33 @@ async function loadAdminTournamentsLobby() {
       const activeTour = data.config.activeTournament;
       container.innerHTML = "";
 
-      if (allTournamentsList.length === 0) {
-        container.innerHTML = "<div style='color:#999;'>尚無任何賽事，請點擊上方按鈕新增！</div>";
+      const displayList = allTournamentsList.filter(t => !t.name.includes("預設"));
+
+      if (displayList.length === 0) {
+        container.innerHTML = "<div style='color:#999; padding:20px; text-align:center;'>尚無正式賽事，請點擊上方按鈕新增比賽！</div>";
         return;
       }
 
-      allTournamentsList.forEach(t => {
+      displayList.forEach(t => {
         const isLocked = activeTour && (activeTour.sheetId === t.sheetId);
         const card = document.createElement("div");
         card.className = `tournament-card ${isLocked ? "active-tour" : ""}`;
 
         const divBadge = (t.division === "basic")
-          ? `<span style="background:#e8f5e9; color:#2e7d32; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:12px;">🟢 基礎組</span>`
-          : `<span style="background:#e3f2fd; color:#1565c0; padding:3px 8px; border-radius:4px; font-weight:bold; font-size:12px;">🔵 進階組</span>`;
+          ? `<span style="background:#e8f5e9; color:#2e7d32; padding:4px 10px; border-radius:4px; font-weight:bold; font-size:12px; white-space:nowrap;">🟢 基礎組</span>`
+          : `<span style="background:#e3f2fd; color:#1565c0; padding:4px 10px; border-radius:4px; font-weight:bold; font-size:12px; white-space:nowrap;">🔵 進階組</span>`;
 
         card.innerHTML = `
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              ${divBadge}
-              ${isLocked ? '<span style="color:#2e7d32; font-weight:bold; font-size:12px;">🔒 現場鎖定中</span>' : ''}
-            </div>
-            <h3 style="margin:0 0 10px 0; font-size:17px; color:#222;">${t.name}</h3>
+          <div style="display:flex; align-items:center; gap:14px; flex:1; min-width:260px;">
+            ${divBadge}
+            <span style="font-size:16px; font-weight:bold; color:#222;">${t.name}</span>
+            ${isLocked ? '<span style="color:#2e7d32; font-weight:bold; font-size:12px; background:#dcedc8; padding:2px 8px; border-radius:12px;">🔒 現場鎖定中</span>' : ''}
           </div>
-          <div style="display:flex; gap:8px; margin-top:14px;">
-            <button class="btn btn-secondary" style="flex:1; padding:6px 8px; font-size:12px;" onclick="adminLockTournament('${t.sheetId}')">
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button class="btn btn-secondary" style="padding:6px 14px; font-size:13px;" onclick="adminLockTournament('${t.sheetId}')">
               ${isLocked ? "重新鎖定" : "🔒 鎖定此場"}
             </button>
-            <button class="btn btn-primary" style="flex:1; padding:6px 8px; font-size:12px;" onclick="adminEnterTournament('${t.sheetId}', '${t.name}', '${t.division}')">
+            <button class="btn btn-primary" style="padding:6px 14px; font-size:13px;" onclick="adminEnterTournament('${t.sheetId}', '${t.name}', '${t.division}')">
               📊 查看成績
             </button>
           </div>
@@ -740,7 +741,7 @@ function getDisplayScore(valStr, isHidden) {
   return isHidden ? "***" : valStr;
 }
 
-// 總表渲染：完全不輸出「名次」欄位
+// 總表渲染：徹底拔除所有「名次」欄位
 function renderTeamList() {
   const isAdv = (currentDivision === "advanced");
 
