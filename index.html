@@ -117,7 +117,6 @@
       padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-top: 6px;
     }
 
-    /* 賽事卡片列表樣式 */
     .tournament-grid {
       display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; margin-top: 14px;
     }
@@ -132,7 +131,7 @@
     @page { size: landscape; margin: 5mm; }
     @media print {
       header, .modal-overlay, #admin-actions-bar, #judge-actions, .btn,
-      #page-scoring, #page-admin-tournaments, .th-hide-score, #th-last-action, #summary-table td:last-child {
+      #page-scoring, #page-admin-tournaments, .th-hide-score, #summary-table th:last-child, #summary-table td:last-child {
         display: none !important;
       }
       .pdf-title-banner { display: block !important; }
@@ -147,7 +146,7 @@
 </head>
 <body>
 
-  <!-- 登入模態框 (評審直接帳密登入，無需選組別) -->
+  <!-- 登入模態框 -->
   <div id="login-view" class="modal-overlay">
     <div class="modal-card">
       <h3 style="margin-top:0; text-align:center;">評審登入</h3>
@@ -228,7 +227,7 @@
     </div>
   </div>
 
-  <!-- 頂部資訊列 (無組別切換) -->
+  <!-- 頂部資訊列 -->
   <header>
     <div style="display:flex; align-items:center; gap:8px;">
       <span id="judge-display" style="font-weight:bold; font-size:15px;">未登入</span>
@@ -238,13 +237,12 @@
     </div>
 
     <div style="display:flex; align-items:center; gap:8px;">
-      <!-- admin 返回賽事大廳按鈕 -->
       <button class="btn btn-primary" id="btn-back-to-tournaments" style="display:none; padding:5px 12px; font-size:13px; background:#4a148c;">🏢 賽事總覽大廳</button>
       <button class="btn btn-secondary" id="btn-logout" style="padding:5px 12px; font-size:13px;">登出</button>
     </div>
   </header>
 
-  <!-- 頁面 0：管理員賽事總覽大廳 (Admin 專屬入口) -->
+  <!-- 頁面 0：管理員賽事總覽大廳 -->
   <div id="page-admin-tournaments" class="page">
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
       <div>
@@ -275,9 +273,10 @@
           <button class="btn btn-primary" style="padding: 5px 10px; font-size: 12px; background:#4a148c;" id="btn-open-assign-modal">⚙️ 評審向度與隊伍指派</button>
         </div>
         <div style="display: flex; gap: 6px; align-items: center;">
-          <button class="btn btn-primary btn-filter-group" data-filter="GAE" style="padding: 5px 12px; font-size: 13px;" id="btn-group-gae">國小</button>
-          <button class="btn btn-secondary btn-filter-group" data-filter="GAJ" style="padding: 5px 12px; font-size: 13px;" id="btn-group-gaj">國中</button>
-          <button class="btn btn-secondary btn-filter-group" data-filter="GAH" style="padding: 5px 12px; font-size: 13px;" id="btn-group-gah">高中</button>
+          <!-- 通用代碼：支援基礎組 (GA) 與進階組 (GB) -->
+          <button class="btn btn-primary btn-filter-group" data-filter="E" style="padding: 5px 12px; font-size: 13px;" id="btn-group-gae">國小</button>
+          <button class="btn btn-secondary btn-filter-group" data-filter="J" style="padding: 5px 12px; font-size: 13px;" id="btn-group-gaj">國中</button>
+          <button class="btn btn-secondary btn-filter-group" data-filter="H" style="padding: 5px 12px; font-size: 13px;" id="btn-group-gah">高中</button>
           <button class="btn btn-danger" style="padding: 5px 12px; font-size: 13px; margin-left: 6px;" id="btn-export-pdf">📄 匯出 PDF</button>
         </div>
         <div style="display: flex; gap: 6px; align-items: center;">
