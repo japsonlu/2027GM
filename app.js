@@ -21,6 +21,7 @@ let cachedAdminAllTeams = [];
 
 const teamDisplayState = {};
 
+// DOM 元素快取
 const loginView = document.getElementById("login-view");
 const pageAdminTournaments = document.getElementById("page-admin-tournaments");
 const pageSummary = document.getElementById("page-summary");
@@ -48,8 +49,55 @@ let isDrawing = false;
 let hasSignature = false;
 let syncTimer = null;
 
+// ==================== 基礎組賽道資料結構 ====================
+const rounds = {
+  1: { base: 0, bonus: 0, selectedNodeId: null, desc: '' },
+  2: { base: 0, bonus: 0, selectedNodeId: null, desc: '' },
+  3: { base: 0, bonus: 0, selectedNodeId: null, desc: '' }
+};
+let activeModalRound = 1;
+
+const trackDots = [
+  // 1. 左側界外 (3 個點)
+  { id: 'out-top', cx: 34, cy: 118, score: 5, label: '界外·上方', isCenterTarget: false },
+  { id: 'out-mid', cx: 34, cy: 195, score: 6, label: '界外·中方', isCenterTarget: false },
+  { id: 'out-bottom', cx: 34, cy: 272, score: 5, label: '界外·下方', isCenterTarget: false },
+
+  // 2. 目標區 (黃底)
+  { id: 't-left', cx: 80, cy: 195, score: 7, label: '目標區·左框', isCenterTarget: false },
+  { id: 't-top', cx: 177, cy: 118, score: 7, label: '目標區·上框', isCenterTarget: false },
+  { id: 't-center', cx: 177, cy: 195, score: 8, label: '目標區·中心點', isCenterTarget: true }, // ★ 彈出加分
+  { id: 't-bottom', cx: 177, cy: 272, score: 7, label: '目標區·下框', isCenterTarget: false },
+  { id: 'tf-mid', cx: 274, cy: 195, score: 7, label: '目標區/F·交界', isCenterTarget: false },
+
+  // 3. F 區
+  { id: 'f-top', cx: 371, cy: 118, score: 5, label: 'F區·上框', isCenterTarget: false },
+  { id: 'f-mid', cx: 371, cy: 195, score: 6, label: 'F區·中心', isCenterTarget: false },
+  { id: 'f-bottom', cx: 371, cy: 272, score: 5, label: 'F區·下框', isCenterTarget: false },
+
+  // 4. F / G 交界
+  { id: 'fg-mid', cx: 468, cy: 195, score: 5, label: 'F/G·交界', isCenterTarget: false },
+
+  // 5. G 區
+  { id: 'g-top', cx: 565, cy: 118, score: 3, label: 'G區·上框', isCenterTarget: false },
+  { id: 'g-mid', cx: 565, cy: 195, score: 4, label: 'G區·中心', isCenterTarget: false },
+  { id: 'g-bottom', cx: 565, cy: 272, score: 3, label: 'G區·下框', isCenterTarget: false },
+
+  // 6. G / H 交界
+  { id: 'gh-mid', cx: 662, cy: 195, score: 3, label: 'G/H·交界', isCenterTarget: false },
+
+  // 7. H 區
+  { id: 'h-top', cx: 759, cy: 118, score: 1, label: 'H區·上框', isCenterTarget: false },
+  { id: 'h-mid', cx: 759, cy: 195, score: 2, label: 'H區·中心', isCenterTarget: false },
+  { id: 'h-bottom', cx: 759, cy: 272, score: 1, label: 'H區·下框', isCenterTarget: false },
+
+  // 8. H 區最右邊界
+  { id: 'h-right', cx: 856, cy: 195, score: 0, label: 'H區·右邊界', isCenterTarget: false }
+];
+
 document.addEventListener("DOMContentLoaded", () => {
   setupSelectionHandlers();
+  initTracks();
   loadInitialActiveTournament();
 
   safeBindClick("btn-login", handleLogin);
@@ -66,7 +114,6 @@ document.addEventListener("DOMContentLoaded", () => {
   safeBindClick("btn-hide-all", hideAllScores);
   safeBindClick("btn-show-all", showAllScores);
 
-  // 年段篩選 (E/J/H)
   document.querySelectorAll(".btn-filter-group").forEach(btn => {
     btn.addEventListener("click", function() {
       currentGroupFilter = this.dataset.filter;
@@ -78,7 +125,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // 排序
   safeBindClick("btn-sort-teamid", () => {
     currentSortMode = "teamId";
     renderTeamList();
@@ -88,15 +134,12 @@ document.addEventListener("DOMContentLoaded", () => {
     renderTeamList();
   });
 
-  // 匯出 PDF
   safeBindClick("btn-export-pdf", exportSummaryToPdf);
 
-  // 同步成績
   document.querySelectorAll(".btn-sync-cloud").forEach(btn => {
     btn.addEventListener("click", () => fetchLatestScores(true));
   });
 
-  // 新增賽事
   safeBindClick("btn-open-add-region-lobby", () => {
     if (modalAddRegion) modalAddRegion.style.display = "flex";
   });
@@ -105,7 +148,6 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   safeBindClick("btn-confirm-add-region", submitCreateTournament);
 
-  // 評審指派視窗
   safeBindClick("btn-open-assign-modal", openAssignModal);
   safeBindClick("btn-cancel-assign", () => {
     if (modalAssignJudge) modalAssignJudge.style.display = "none";
@@ -113,13 +155,11 @@ document.addEventListener("DOMContentLoaded", () => {
   safeBindClick("btn-save-assign", submitSaveJudgeAssignment);
   if (selectAssignJudge) selectAssignJudge.addEventListener("change", onAssignJudgeSelectChange);
 
-  // 檢視評審指派視窗
   safeBindClick("btn-open-coverage-matrix", openCoverageMatrixModal);
   safeBindClick("btn-close-coverage", () => {
     if (modalCoverageMatrix) modalCoverageMatrix.style.display = "none";
   });
 
-  // 隊伍快速勾選
   safeBindClick("btn-team-select-all", () => setAllTeamCheckboxes(true));
   safeBindClick("btn-team-clear", () => setAllTeamCheckboxes(false));
   safeBindClick("btn-team-select-gae", () => filterTeamCheckboxesByLevel("E"));
@@ -129,6 +169,16 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("resize", () => {
     if (pageScoring && pageScoring.classList.contains("active")) resizeCanvas(hasSignature);
   });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeBonusModal();
+  });
+  const bonusModalEl = document.getElementById("bonusModal");
+  if (bonusModalEl) {
+    bonusModalEl.addEventListener("click", (e) => {
+      if (e.target.id === "bonusModal") closeBonusModal();
+    });
+  }
 });
 
 function safeBindClick(id, handler) {
@@ -136,6 +186,157 @@ function safeBindClick(id, handler) {
   if (el) el.addEventListener("click", handler);
 }
 
+// ==================== 賽道 SVG 繪製與互動邏輯 ====================
+function renderTrackRow(roundNum) {
+  const dotsSvg = trackDots.map(dot => `
+    <g id="dot-${roundNum}-${dot.id}" class="blue-dot" 
+       onclick="selectTrackDot(${roundNum}, '${dot.id}', ${dot.score}, '${dot.label}', ${dot.isCenterTarget})">
+      <circle id="ring-${roundNum}-${dot.id}" cx="${dot.cx}" cy="${dot.cy}" r="18" class="selected-ring hidden" />
+      <circle cx="${dot.cx}" cy="${dot.cy}" r="13" fill="#3B82F6" stroke="#1D4ED8" stroke-width="2.5" class="main-circle" />
+    </g>
+  `).join('');
+
+  return `
+    <div style="width:100%; display:flex; justify-content:center;">
+      <svg viewBox="0 0 1180 330" style="width:100%; max-width:980px; height:auto; user-select:none; overflow:visible;">
+        <text x="177" y="72" text-anchor="middle" font-size="34" font-weight="900" fill="#000000">目標區</text>
+        <text x="371" y="72" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">F</text>
+        <text x="565" y="72" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">G</text>
+        <text x="759" y="72" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">H</text>
+
+        <!-- 目標區 (黃底 + 黑框) -->
+        <rect x="80" y="118" width="194" height="154" fill="#FFFF00" stroke="#000000" stroke-width="7" />
+        <circle cx="110" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="132" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="154" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="177" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="200" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="222" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="244" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="110" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="132" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="154" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="177" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="200" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="222" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="244" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+
+        <rect x="274" y="118" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
+        <rect x="468" y="118" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
+        <rect x="662" y="118" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
+
+        ${dotsSvg}
+
+        <g transform="translate(895, 145)" class="score-label-font">
+          <text x="0" y="0" font-size="28" font-weight="600" fill="#000000" letter-spacing="2">區域得分：</text>
+          <text x="145" y="0" font-size="28" font-weight="900" fill="#1D4ED8" id="svgBaseScore-${roundNum}">0</text>
+          <text x="0" y="48" font-size="28" font-weight="600" fill="#000000" letter-spacing="2">加分得分：</text>
+          <text x="145" y="48" font-size="28" font-weight="900" fill="#B45309" id="svgBonusScore-${roundNum}">0</text>
+          <text x="0" y="96" font-size="28" font-weight="600" fill="#000000">合&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;計：</text>
+          <text x="145" y="96" font-size="30" font-weight="900" fill="#059669" id="svgTotalScore-${roundNum}">0</text>
+        </g>
+      </svg>
+    </div>
+  `;
+}
+
+function initTracks() {
+  const t1 = document.getElementById('svgTrack-1');
+  const t2 = document.getElementById('svgTrack-2');
+  const t3 = document.getElementById('svgTrack-3');
+  if (t1) t1.innerHTML = renderTrackRow(1);
+  if (t2) t2.innerHTML = renderTrackRow(2);
+  if (t3) t3.innerHTML = renderTrackRow(3);
+}
+
+window.selectTrackDot = function(roundNum, dotId, score, label, isCenterTarget) {
+  rounds[roundNum].base = score;
+  rounds[roundNum].selectedNodeId = dotId;
+  highlightSelectedDot(roundNum, dotId);
+
+  if (isCenterTarget) {
+    rounds[roundNum].desc = `${label} (加分中)`;
+    updateScoresUI(roundNum, rounds[roundNum].base, rounds[roundNum].bonus, rounds[roundNum].desc);
+    openBonusModal(roundNum);
+  } else {
+    rounds[roundNum].bonus = 0;
+    rounds[roundNum].desc = label;
+    updateScoresUI(roundNum, rounds[roundNum].base, 0, label);
+  }
+  calculateAllScores();
+};
+
+window.openBonusModal = function(roundNum) {
+  activeModalRound = roundNum;
+  const t = document.getElementById('modalRoundTitle');
+  if (t) t.innerText = `🎯 目標區加分頁面（第 ${roundNum} 次評分）`;
+  const m = document.getElementById('bonusModal');
+  if (m) m.classList.remove('hidden');
+};
+
+window.closeBonusModal = function() {
+  const m = document.getElementById('bonusModal');
+  if (m) m.classList.add('hidden');
+};
+
+window.confirmBonusScore = function(bonusScore, colIndex) {
+  const r = activeModalRound;
+  rounds[r].bonus = bonusScore;
+
+  const descText = colIndex > 0 
+    ? `${rounds[r].desc.split('＋')[0]} ＋ 欄${colIndex}(+${bonusScore})`
+    : `${rounds[r].desc.split('＋')[0]} (無加分)`;
+
+  rounds[r].desc = descText;
+  updateScoresUI(r, rounds[r].base, bonusScore, descText);
+  closeBonusModal();
+  calculateAllScores();
+};
+
+function highlightSelectedDot(roundNum, activeDotId) {
+  trackDots.forEach(d => {
+    const ring = document.getElementById(`ring-${roundNum}-${d.id}`);
+    if (ring) {
+      if (d.id === activeDotId) ring.classList.remove('hidden');
+      else ring.classList.add('hidden');
+    }
+  });
+}
+
+function formatScoreDisplay(num) {
+  return Number.isInteger(num) ? num.toString() : num.toFixed(1);
+}
+
+function updateScoresUI(roundNum, base, bonus, desc) {
+  const total = base + bonus;
+  const bEl = document.getElementById(`svgBaseScore-${roundNum}`);
+  const boEl = document.getElementById(`svgBonusScore-${roundNum}`);
+  const toEl = document.getElementById(`svgTotalScore-${roundNum}`);
+  const dEl = document.getElementById(`selectedDesc-${roundNum}`);
+
+  if (bEl) bEl.textContent = formatScoreDisplay(base);
+  if (boEl) boEl.textContent = formatScoreDisplay(bonus);
+  if (toEl) toEl.textContent = formatScoreDisplay(total);
+  if (dEl && desc) dEl.textContent = desc;
+}
+
+window.clearRound = function(roundNum) {
+  rounds[roundNum] = { base: 0, bonus: 0, selectedNodeId: null, desc: '' };
+  updateScoresUI(roundNum, 0, 0, '尚未選定點位');
+  trackDots.forEach(d => {
+    const ring = document.getElementById(`ring-${roundNum}-${d.id}`);
+    if (ring) ring.classList.add('hidden');
+  });
+  calculateAllScores();
+};
+
+window.resetAllRounds = function() {
+  clearRound(1);
+  clearRound(2);
+  clearRound(3);
+};
+
+// ==================== 賽事登入與資料通訊 ====================
 async function loadInitialActiveTournament() {
   const el = document.getElementById("login-active-tour-name");
   try {
@@ -222,7 +423,6 @@ async function handleLogin() {
   }
 }
 
-// 賽事大廳：排除「預設」賽事，並改以單行條列呈現
 async function loadAdminTournamentsLobby() {
   const container = document.getElementById("tournaments-cards-container");
   if (!container) return;
@@ -315,7 +515,6 @@ function updateUserDisplayInfo() {
   if (judgeDisplay) {
     judgeDisplay.textContent = isAdminUser ? `系統管理員：${currentJudge}` : `評審：${currentJudge}`;
   }
-  
   if (regionTag) {
     if (currentTournamentName) {
       regionTag.textContent = currentTournamentName;
@@ -324,12 +523,10 @@ function updateUserDisplayInfo() {
       regionTag.style.display = "none";
     }
   }
-
   if (divisionTag) {
     divisionTag.textContent = (currentDivision === "basic") ? "基礎組" : "進階組";
     divisionTag.style.display = "inline-block";
   }
-
   if (roleTag) {
     if (currentDivision === "advanced" && !isAdminUser) {
       const sheetLabels = currentAssignedSheets.map(s => {
@@ -408,8 +605,6 @@ async function submitCreateTournament() {
 async function openAssignModal() {
   if (!modalAssignJudge) return;
   modalAssignJudge.style.display = "flex";
-
-  // 預設先完全清空向度核取方塊（無藍勾勾）
   document.querySelectorAll(".chk-assign-sheet").forEach(c => c.checked = false);
 
   if (selectAssignJudge) selectAssignJudge.innerHTML = "<option>載入評審中...</option>";
@@ -458,7 +653,6 @@ function renderTeamAssignmentCheckboxes() {
 }
 
 function onAssignJudgeSelectChange() {
-  // 切換評審時：先強制把所有向度與隊伍的藍勾勾清空
   document.querySelectorAll(".chk-assign-sheet").forEach(chk => chk.checked = false);
   document.querySelectorAll(".chk-assign-team").forEach(chk => chk.checked = false);
 
@@ -471,7 +665,6 @@ function onAssignJudgeSelectChange() {
   if (currentDivision === "advanced") {
     if (groupSheets) groupSheets.style.display = "block";
     const rawSheets = String(judgeObj.assignedSheets || "").toLowerCase().trim();
-
     if (rawSheets) {
       const activeSheets = rawSheets.split(/[\s,，、]+/);
       document.querySelectorAll(".chk-assign-sheet").forEach(chk => {
@@ -580,7 +773,6 @@ async function submitSaveJudgeAssignment() {
   }
 }
 
-// 檢視評審指派視窗
 async function openCoverageMatrixModal() {
   if (!modalCoverageMatrix) return;
   modalCoverageMatrix.style.display = "flex";
@@ -605,34 +797,19 @@ async function openCoverageMatrixModal() {
       let sheets = [];
       if (rawSheets === "all") sheets = ["sheet1", "sheet2", "sheet3", "sheet4"];
       else if (rawSheets) sheets = rawSheets.split(/[\s,，、]+/);
-      return {
-        username: j.username,
-        name: j.name,
-        teams: assignedTeams,
-        sheets: sheets
-      };
+      return { username: j.username, name: j.name, teams: assignedTeams, sheets: sheets };
     });
 
     if (isAdv) {
       coverageMatrixThead.innerHTML = `
         <tr>
-          <th>隊伍編號</th>
-          <th>學校 - 隊名</th>
-          <th>第一張 (關卡/流暢)</th>
-          <th>第二張 (綠能/科學)</th>
-          <th>第三張 (創意關卡)</th>
-          <th>第四張 (機構設計)</th>
-          <th>涵蓋狀態</th>
+          <th>隊伍編號</th><th>學校 - 隊名</th><th>第一張 (關卡/流暢)</th>
+          <th>第二張 (綠能/科學)</th><th>第三張 (創意關卡)</th><th>第四張 (機構設計)</th><th>涵蓋狀態</th>
         </tr>
       `;
-
       coverageMatrixTbody.innerHTML = "";
       teams.forEach(t => {
-        let s1Judges = [];
-        let s2Judges = [];
-        let s3Judges = [];
-        let s4Judges = [];
-
+        let s1Judges = [], s2Judges = [], s3Judges = [], s4Judges = [];
         judgeMap.forEach(j => {
           if (j.teams.indexOf(t.teamId) !== -1) {
             if (j.sheets.indexOf("sheet1") !== -1) s1Judges.push(j.name);
@@ -667,14 +844,8 @@ async function openCoverageMatrixModal() {
       });
     } else {
       coverageMatrixThead.innerHTML = `
-        <tr>
-          <th>隊伍編號</th>
-          <th>學校 - 隊名</th>
-          <th>負責評審</th>
-          <th>指派狀態</th>
-        </tr>
+        <tr><th>隊伍編號</th><th>學校 - 隊名</th><th>負責評審</th><th>指派狀態</th></tr>
       `;
-
       coverageMatrixTbody.innerHTML = "";
       teams.forEach(t => {
         let assignedJ = [];
@@ -693,7 +864,6 @@ async function openCoverageMatrixModal() {
         coverageMatrixTbody.appendChild(tr);
       });
     }
-
   } catch(e) {
     coverageMatrixTbody.innerHTML = `<tr><td colspan="7" style="color:red; padding:20px;">載入指派檢核錯誤：${e.message}</td></tr>`;
   }
@@ -711,11 +881,9 @@ async function fetchLatestScores(showNotice = false) {
     const data = await res.json();
 
     if (data.success) {
-      if (isAdminUser && data.teams) {
-        assignedTeams = data.teams;
-      } else if (data.teams && assignedTeams.length === 0) {
-        assignedTeams = data.teams;
-      }
+      if (isAdminUser && data.teams) assignedTeams = data.teams;
+      else if (data.teams && assignedTeams.length === 0) assignedTeams = data.teams;
+
       scoresCache = data.existingScores || data.scores || {};
       renderTeamList();
       if (showNotice) alert("【同步成功】已重新取得最新評分數據！");
@@ -741,7 +909,6 @@ function getDisplayScore(valStr, isHidden) {
   return isHidden ? "***" : valStr;
 }
 
-// 總表渲染：徹底拔除所有「名次」欄位
 function renderTeamList() {
   const isAdv = (currentDivision === "advanced");
 
@@ -749,35 +916,19 @@ function renderTeamList() {
     if (isAdv) {
       summaryThead.innerHTML = `
         <tr>
-          <th>組別</th>
-          <th>隊伍<br>編號</th>
-          <th>學校名稱</th>
-          <th>隊伍名稱</th>
-          <th>關卡<br>數量</th>
-          <th>流暢<br>加權</th>
-          <th>科學<br>概念</th>
-          <th>綠能<br>一</th>
-          <th>綠能<br>二</th>
-          <th>綠能<br>三</th>
-          <th>創意<br>關卡</th>
-          <th>整體<br>機構設計</th>
-          <th>總分</th>
+          <th>組別</th><th>隊伍<br>編號</th><th>學校名稱</th><th>隊伍名稱</th>
+          <th>關卡<br>數量</th><th>流暢<br>加權</th><th>科學<br>概念</th>
+          <th>綠能<br>一</th><th>綠能<br>二</th><th>綠能<br>三</th>
+          <th>創意<br>關卡</th><th>整體<br>機構設計</th><th>總分</th>
           ${isAdminUser ? "" : '<th class="th-hide-score">隱藏</th><th>操作</th>'}
         </tr>
       `;
     } else {
       summaryThead.innerHTML = `
         <tr>
-          <th>組別</th>
-          <th>隊伍<br>編號</th>
-          <th>學校名稱</th>
-          <th>隊伍名稱</th>
-          <th>關卡<br>(16)</th>
-          <th>流暢度<br>(20)</th>
-          <th>內容<br>(10)</th>
-          <th>規範<br>(21)</th>
-          <th>任務<br>(33)</th>
-          <th>總分<br>(100)</th>
+          <th>組別</th><th>隊伍<br>編號</th><th>學校名稱</th><th>隊伍名稱</th>
+          <th>關卡<br>(16)</th><th>流暢度<br>(20)</th><th>內容<br>(10)</th>
+          <th>規範<br>(21)</th><th>任務<br>(33)</th><th>總分<br>(100)</th>
           ${isAdminUser ? "" : '<th class="th-hide-score">隱藏</th><th>操作</th>'}
         </tr>
       `;
@@ -920,7 +1071,6 @@ function exportSummaryToPdf() {
   else if (currentGroupFilter === "H") groupName = "高中組";
 
   const fullTitle = `${currentTournamentName}${groupName}`;
-
   const banner = document.getElementById("print-header-banner");
   if (banner) banner.textContent = fullTitle;
 
@@ -1072,16 +1222,15 @@ function resetFormToDefaults() {
     });
 
     document.querySelectorAll('#row-mission-std-basic .selectable[data-val="2.3333"], #row-mission-std-basic .selectable[data-val="2.3334"]').forEach(c => c.classList.add("active"));
+    resetAllRounds();
 
   } else {
-    // 第一張表預設
     const advSt = document.querySelector('#row-adv-stage .selectable[data-val="8"]');
     if (advSt) advSt.classList.add("active");
 
     const advFl = document.querySelector('#row-adv-fluency .selectable[data-val="0"]');
     if (advFl) advFl.classList.add("active");
 
-    // 第二張表預設
     ["row-adv-green1", "row-adv-green2", "row-adv-green3"].forEach(rowId => {
       const row = document.getElementById(rowId);
       if (row) {
@@ -1094,8 +1243,6 @@ function resetFormToDefaults() {
 
     const advSci = document.querySelector('#row-adv-science .selectable[data-val="16"]');
     if (advSci) advSci.classList.add("active");
-
-    // 第三張表與第四張表：預設全部白色不選取，不主動添加 active
   }
 }
 
@@ -1146,10 +1293,8 @@ function setupSelectionHandlers() {
 
       if (isToggleable) {
         if (this.classList.contains("active")) {
-          // 點擊已選中的格子：變回白色取消選取
           this.classList.remove("active");
         } else {
-          // 點擊未選中的格子：清除同組其他格子，選中當前格子
           if (group) {
             parentRow.querySelectorAll(`.selectable[data-group="${group}"]`).forEach(c => c.classList.remove("active"));
           } else {
@@ -1218,19 +1363,14 @@ function calculateBasicScores() {
   const stdSumEl = document.getElementById("score-mission-std-sum-basic");
   if (stdSumEl) stdSumEl.textContent = stdTotal;
 
-  let zoneSum = 0;
-  ["row-zone-basic-1", "row-zone-basic-2", "row-zone-basic-3"].forEach(rowId => {
-    const row = document.getElementById(rowId);
-    if (!row) return;
-    let rowScore = 0;
-    row.querySelectorAll(".selectable.active").forEach(c => rowScore += parseFloat(c.dataset.val));
-    const zTot = row.querySelector(".zone-row-total-basic");
-    if (zTot) zTot.textContent = rowScore;
-    zoneSum += rowScore;
-  });
-  const missionScoreTotal = Number(zoneSum.toFixed(2));
+  // ★ 連動 SVG 三次評分加總 (33分) ★
+  const t1 = rounds[1].base + rounds[1].bonus;
+  const t2 = rounds[2].base + rounds[2].bonus;
+  const t3 = rounds[3].base + rounds[3].bonus;
+  const missionScoreTotal = Number((t1 + t2 + t3).toFixed(1));
+
   const misTotEl = document.getElementById("score-mission-total-basic");
-  if (misTotEl) misTotEl.textContent = missionScoreTotal;
+  if (misTotEl) misTotEl.textContent = formatScoreDisplay(missionScoreTotal);
 
   const total = Number((stageScore + fluencyWeighted + taskTotal + stdTotal + missionScoreTotal).toFixed(2));
   const finTotEl = document.getElementById("final-total-score");
@@ -1278,7 +1418,6 @@ function calculateAdvancedScores() {
   const advSciEl = document.getElementById("score-adv-science");
   if (advSciEl) advSciEl.textContent = sciScore;
 
-  // 第 3 張表計算：未選時回傳 0，分數徽章同步顯示當前選取值
   function getSingleVal(rowId) {
     const el = document.querySelector(`#${rowId} .selectable.active`);
     return el ? parseFloat(el.dataset.val) : 0;
@@ -1299,7 +1438,6 @@ function calculateAdvancedScores() {
   const cTotEl = document.getElementById("score-adv-creative-total");
   if (cTotEl) cTotEl.textContent = creativeTotal;
 
-  // 第 4 張表計算：未選時回傳 0，分數徽章同步顯示當前選取值
   const d1 = getSingleVal("row-adv-d1");
   const d2 = getSingleVal("row-adv-d2");
   const d1El = document.getElementById("score-adv-d1");
@@ -1326,6 +1464,7 @@ function calculateAdvancedScores() {
   if (finTotEl) finTotEl.textContent = Number(subtotal.toFixed(2));
 }
 
+// ==================== 簽名板功能 ====================
 function resizeCanvas(preserveExisting = false) {
   if (!canvas) return;
   const container = canvas.parentElement;
@@ -1402,6 +1541,7 @@ function clearCanvas() {
   hasSignature = false;
 }
 
+// ==================== 送出成績 ====================
 async function submitScore() {
   const isAdv = (currentDivision === "advanced");
   const sheets = currentAssignedSheets;
