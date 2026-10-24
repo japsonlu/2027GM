@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>機關王評分系統</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;900&family=Noto+Sans+TC:wght@400;600;700;900&display=swap" rel="stylesheet">
   <style>
     :root {
       --primary: #1976d2;
@@ -17,7 +20,7 @@
     body, html {
       margin: 0; padding: 0;
       width: 100vw; min-height: 100vh;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Microsoft JhengHei", sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
       background: var(--bg);
       color: var(--text);
       -webkit-tap-highlight-color: transparent;
@@ -120,35 +123,32 @@
       padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-top: 6px;
     }
 
-    /* 條列式賽事清單樣式 */
     .tournament-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      margin-top: 14px;
-      width: 100%;
+      display: flex; flex-direction: column; gap: 10px; margin-top: 14px; width: 100%;
     }
     .tournament-card {
-      background: #fff;
-      border-radius: 8px;
-      padding: 12px 18px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-      border: 1px solid #e0e0e0;
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      gap: 12px;
-      transition: all 0.2s ease;
+      background: #fff; border-radius: 8px; padding: 12px 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06); border: 1px solid #e0e0e0;
+      display: flex; flex-direction: row; justify-content: space-between;
+      align-items: center; flex-wrap: wrap; gap: 12px; transition: all 0.2s ease;
     }
-    .tournament-card:hover {
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    .tournament-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .tournament-card.active-tour { border: 2px solid #2e7d32; background: #f1f8e9; }
+
+    /* 圖形賽道專屬樣式 */
+    .score-label-font { font-family: 'Noto Serif TC', 'Songti TC', 'SimSun', serif; }
+    .track-card {
+      background: #fff; border-radius: 12px; padding: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 12px;
     }
-    .tournament-card.active-tour {
-      border: 2px solid #2e7d32;
-      background: #f1f8e9;
-    }
+    .blue-dot { cursor: pointer; transition: fill 0.15s ease, stroke 0.15s ease; }
+    .blue-dot:hover circle.main-circle { fill: #1d4ed8; stroke: #1e3a8a; }
+    .selected-ring { stroke: #e11d48; stroke-width: 3.5; fill: none; }
+    .dashed-green-line { stroke: #059669; stroke-width: 3; stroke-dasharray: 6 6; }
+    .bonus-column { cursor: pointer; transition: opacity 0.15s ease; }
+    .bonus-column:hover { opacity: 0.82; }
+    .bonus-column:hover circle { stroke-width: 3.5; stroke: #7f1d1d; }
+    .hidden { display: none !important; }
 
     @page { size: landscape; margin: 5mm; }
     @media print {
@@ -292,7 +292,6 @@
       </div>
       <button class="btn btn-success" id="btn-open-add-region-lobby">➕ 新增比賽賽事</button>
     </div>
-
     <div id="tournaments-cards-container" class="tournament-grid"></div>
   </div>
 
@@ -306,7 +305,6 @@
       <button class="btn btn-success btn-sync-cloud" style="padding: 5px 10px; font-size: 13px;">🔄 同步雲端成績</button>
     </div>
 
-    <!-- 管理員工具列 -->
     <div id="admin-actions-bar" style="display: none; flex-direction: column; gap: 8px; margin-bottom: 12px;">
       <div style="display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 8px 12px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); flex-wrap: wrap; gap: 8px;">
         <div style="display: flex; gap: 6px; align-items: center;">
@@ -328,7 +326,6 @@
       </div>
     </div>
 
-    <!-- 總成績表格 -->
     <div class="table-responsive">
       <table id="summary-table">
         <thead id="summary-thead"></thead>
@@ -434,34 +431,39 @@
         </table>
       </div>
 
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr><th rowspan="2">次數</th><th colspan="9">區域分數</th><th colspan="6">加分</th><th rowspan="2">合計</th></tr>
-            <tr><th>8</th><th>7</th><th>6</th><th>5</th><th>4</th><th>3</th><th>2</th><th>1</th><th>0</th><th>3</th><th>2.5</th><th>2</th><th>1.5</th><th>1</th><th>0.5</th></tr>
-          </thead>
-          <tbody>
-            <tr id="row-zone-basic-1">
-              <td>第一次</td>
-              <td class="selectable toggleable" data-group="bz1" data-val="8">8</td><td class="selectable toggleable" data-group="bz1" data-val="7">7</td><td class="selectable toggleable" data-group="bz1" data-val="6">6</td><td class="selectable toggleable" data-group="bz1" data-val="5">5</td><td class="selectable toggleable" data-group="bz1" data-val="4">4</td><td class="selectable toggleable" data-group="bz1" data-val="3">3</td><td class="selectable toggleable" data-group="bz1" data-val="2">2</td><td class="selectable toggleable" data-group="bz1" data-val="1">1</td><td class="selectable toggleable" data-group="bz1" data-val="0">0</td>
-              <td class="selectable toggleable" data-group="bb1" data-val="3">3</td><td class="selectable toggleable" data-group="bb1" data-val="2.5">2.5</td><td class="selectable toggleable" data-group="bb1" data-val="2">2</td><td class="selectable toggleable" data-group="bb1" data-val="1.5">1.5</td><td class="selectable toggleable" data-group="bb1" data-val="1">1</td><td class="selectable toggleable" data-group="bb1" data-val="0.5">0.5</td>
-              <td class="score-badge zone-row-total-basic">0</td>
-            </tr>
-            <tr id="row-zone-basic-2">
-              <td>第二次</td>
-              <td class="selectable toggleable" data-group="bz2" data-val="8">8</td><td class="selectable toggleable" data-group="bz2" data-val="7">7</td><td class="selectable toggleable" data-group="bz2" data-val="6">6</td><td class="selectable toggleable" data-group="bz2" data-val="5">5</td><td class="selectable toggleable" data-group="bz2" data-val="4">4</td><td class="selectable toggleable" data-group="bz2" data-val="3">3</td><td class="selectable toggleable" data-group="bz2" data-val="2">2</td><td class="selectable toggleable" data-group="bz2" data-val="1">1</td><td class="selectable toggleable" data-group="bz2" data-val="0">0</td>
-              <td class="selectable toggleable" data-group="bb2" data-val="3">3</td><td class="selectable toggleable" data-group="bb2" data-val="2.5">2.5</td><td class="selectable toggleable" data-group="bb2" data-val="2">2</td><td class="selectable toggleable" data-group="bb2" data-val="1.5">1.5</td><td class="selectable toggleable" data-group="bb2" data-val="1">1</td><td class="selectable toggleable" data-group="bb2" data-val="0.5">0.5</td>
-              <td class="score-badge zone-row-total-basic">0</td>
-            </tr>
-            <tr id="row-zone-basic-3">
-              <td>第三次</td>
-              <td class="selectable toggleable" data-group="bz3" data-val="8">8</td><td class="selectable toggleable" data-group="bz3" data-val="7">7</td><td class="selectable toggleable" data-group="bz3" data-val="6">6</td><td class="selectable toggleable" data-group="bz3" data-val="5">5</td><td class="selectable toggleable" data-group="bz3" data-val="4">4</td><td class="selectable toggleable" data-group="bz3" data-val="3">3</td><td class="selectable toggleable" data-group="bz3" data-val="2">2</td><td class="selectable toggleable" data-group="bz3" data-val="1">1</td><td class="selectable toggleable" data-group="bz3" data-val="0">0</td>
-              <td class="selectable toggleable" data-group="bb3" data-val="3">3</td><td class="selectable toggleable" data-group="bb3" data-val="2.5">2.5</td><td class="selectable toggleable" data-group="bb3" data-val="2">2</td><td class="selectable toggleable" data-group="bb3" data-val="1.5">1.5</td><td class="selectable toggleable" data-group="bb3" data-val="1">1</td><td class="selectable toggleable" data-group="bb3" data-val="0.5">0.5</td>
-              <td class="score-badge zone-row-total-basic">0</td>
-            </tr>
-            <tr class="big-footer-row"><td colspan="17">任務得分總分：<span id="score-mission-total-basic" class="score-badge" style="font-size:20px;">0</span> / 33</td></tr>
-          </tbody>
-        </table>
+      <!-- ★ 整合後的 3 次評分圖形賽道區域 (33 分) ★ -->
+      <div class="section-title" style="color:#1d4ed8; display:flex; justify-content:space-between; align-items:center;">
+        <span>🎯 三次指定任務賽道評分 (33 分)：</span>
+        <button type="button" class="btn btn-secondary" onclick="resetAllRounds()" style="padding:4px 10px; font-size:12px;">重置三次賽道</button>
+      </div>
+
+      <div class="track-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <div style="font-weight:bold; font-size:13px; color:#1d4ed8;">第 1 次評分：<span id="selectedDesc-1" style="color:#666; font-weight:normal;">尚未選定點位</span></div>
+          <button type="button" class="btn btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="clearRound(1)">清除此局</button>
+        </div>
+        <div id="svgTrack-1" style="width:100%; overflow-x:auto;"></div>
+      </div>
+
+      <div class="track-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <div style="font-weight:bold; font-size:13px; color:#4338ca;">第 2 次評分：<span id="selectedDesc-2" style="color:#666; font-weight:normal;">尚未選定點位</span></div>
+          <button type="button" class="btn btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="clearRound(2)">清除此局</button>
+        </div>
+        <div id="svgTrack-2" style="width:100%; overflow-x:auto;"></div>
+      </div>
+
+      <div class="track-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+          <div style="font-weight:bold; font-size:13px; color:#6b21a8;">第 3 次評分：<span id="selectedDesc-3" style="color:#666; font-weight:normal;">尚未選定點位</span></div>
+          <button type="button" class="btn btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="clearRound(3)">清除此局</button>
+        </div>
+        <div id="svgTrack-3" style="width:100%; overflow-x:auto;"></div>
+      </div>
+
+      <div style="background:#fff; border:1px solid #ddd; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+        <span style="font-weight:bold; font-size:15px;">三次任務得分合計：</span>
+        <span><strong id="score-mission-total-basic" class="score-badge" style="font-size:24px; color:#d32f2f;">0.0</strong> / 33 分</span>
       </div>
     </div>
 
@@ -564,7 +566,6 @@
         </div>
       </div>
 
-      <!-- 第三張表：預設白色無勾選，可點選與反點取消 -->
       <div id="adv-block-sheet3">
         <div style="background: #fff3e0; padding: 6px 12px; border-radius: 4px; font-weight: bold; color: #e65100; margin: 18px 0 8px 0;">
           【第三張評分表】創意關卡 (選手不需簽名，多位評審自動平均)
@@ -657,7 +658,6 @@
         </div>
       </div>
 
-      <!-- 第四張表：預設白色無勾選，可點選與反點取消 -->
       <div id="adv-block-sheet4">
         <div style="background: #ede7f6; padding: 6px 12px; border-radius: 4px; font-weight: bold; color: #4a148c; margin: 18px 0 8px 0;">
           【第四張評分表】整體機構設計 (選手不需簽名，多位評審自動平均)
@@ -727,6 +727,90 @@
           <button class="btn btn-secondary" id="btn-clear-sign">清除重簽</button>
           <button class="btn btn-success" style="flex: 1;" id="btn-submit">確認並送出成績</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 目標區加分彈窗 Modal ==================== -->
+  <div id="bonusModal" class="modal-overlay hidden">
+    <div class="modal-card" style="max-width: 680px; width: 95%; padding: 0; overflow: hidden; border-radius: 16px;">
+      <div style="background: #fbc02d; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f57f17;">
+        <div>
+          <h3 id="modalRoundTitle" style="margin:0; font-size: 16px; font-weight: 900; color: #3e2723;">🎯 目標區加分頁面（第 1 次評分）</h3>
+          <p style="margin:2px 0 0 0; font-size: 11px; color: #4e342e;">點擊任意紅點或底部數字即可完成加分</p>
+        </div>
+        <button onclick="closeBonusModal()" style="border:none; background:rgba(0,0,0,0.1); width:28px; height:28px; border-radius:50%; cursor:pointer; font-weight:bold;">✕</button>
+      </div>
+
+      <div style="padding: 16px; background: #fafafa; display: flex; flex-direction: column; align-items: center;">
+        <div style="width: 100%; max-width: 540px; background: #fff; padding: 10px; border-radius: 12px; border: 1px solid #e0e0e0;">
+          <svg viewBox="0 0 700 560" style="width:100%; height:auto; user-select:none; overflow:visible;">
+            <text x="350" y="45" text-anchor="middle" font-size="34" font-weight="900" fill="#000000">目標區</text>
+            <rect x="40" y="70" width="620" height="380" fill="#FFFF00" stroke="#000000" stroke-width="8" />
+
+            <line x1="110" y1="40" x2="110" y2="480" class="dashed-green-line" />
+            <line x1="190" y1="40" x2="190" y2="480" class="dashed-green-line" />
+            <line x1="270" y1="40" x2="270" y2="480" class="dashed-green-line" />
+            <line x1="350" y1="40" x2="350" y2="480" class="dashed-green-line" />
+            <line x1="430" y1="40" x2="430" y2="480" class="dashed-green-line" />
+            <line x1="510" y1="40" x2="510" y2="480" class="dashed-green-line" />
+            <line x1="590" y1="40" x2="590" y2="480" class="dashed-green-line" />
+
+            <!-- 7 欄紅點 -->
+            <g class="bonus-column" onclick="confirmBonusScore(3, 1)">
+              <circle cx="110" cy="115" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+              <circle cx="110" cy="405" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+            </g>
+            <g class="bonus-column" onclick="confirmBonusScore(3, 2)">
+              <circle cx="190" cy="115" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+              <circle cx="190" cy="405" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+            </g>
+            <g class="bonus-column" onclick="confirmBonusScore(2.5, 3)">
+              <circle cx="270" cy="115" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+              <circle cx="270" cy="405" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+            </g>
+            <g class="bonus-column" onclick="confirmBonusScore(2, 4)">
+              <circle cx="350" cy="115" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+              <circle cx="350" cy="405" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+            </g>
+            <g class="bonus-column" onclick="confirmBonusScore(1.5, 5)">
+              <circle cx="430" cy="115" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+              <circle cx="430" cy="405" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+            </g>
+            <g class="bonus-column" onclick="confirmBonusScore(1, 6)">
+              <circle cx="510" cy="115" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+              <circle cx="510" cy="405" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+            </g>
+            <g class="bonus-column" onclick="confirmBonusScore(0.5, 7)">
+              <circle cx="590" cy="115" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+              <circle cx="590" cy="405" r="16" fill="#FF0000" stroke="#000" stroke-width="2.5" />
+            </g>
+
+            <text x="50" y="525" text-anchor="middle" font-size="28" font-weight="900" fill="#000">加分</text>
+            <text x="110" y="525" text-anchor="middle" font-size="30" font-weight="900" fill="#000" style="cursor:pointer;" onclick="confirmBonusScore(3, 1)">3</text>
+            <text x="190" y="525" text-anchor="middle" font-size="30" font-weight="900" fill="#000" style="cursor:pointer;" onclick="confirmBonusScore(3, 2)">3</text>
+            <text x="270" y="525" text-anchor="middle" font-size="30" font-weight="900" fill="#000" style="cursor:pointer;" onclick="confirmBonusScore(2.5, 3)">2.5</text>
+            <text x="350" y="525" text-anchor="middle" font-size="30" font-weight="900" fill="#000" style="cursor:pointer;" onclick="confirmBonusScore(2, 4)">2</text>
+            <text x="430" y="525" text-anchor="middle" font-size="30" font-weight="900" fill="#000" style="cursor:pointer;" onclick="confirmBonusScore(1.5, 5)">1.5</text>
+            <text x="510" y="525" text-anchor="middle" font-size="30" font-weight="900" fill="#000" style="cursor:pointer;" onclick="confirmBonusScore(1, 6)">1</text>
+            <text x="590" y="525" text-anchor="middle" font-size="30" font-weight="900" fill="#000" style="cursor:pointer;" onclick="confirmBonusScore(0.5, 7)">0.5</text>
+          </svg>
+        </div>
+
+        <div style="margin-top: 10px; width: 100%; max-width: 540px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;">
+          <button type="button" class="btn" style="background:#fff59d; color:#333; padding:6px 0;" onclick="confirmBonusScore(3, 1)">+3</button>
+          <button type="button" class="btn" style="background:#fff59d; color:#333; padding:6px 0;" onclick="confirmBonusScore(3, 2)">+3</button>
+          <button type="button" class="btn" style="background:#fff59d; color:#333; padding:6px 0;" onclick="confirmBonusScore(2.5, 3)">+2.5</button>
+          <button type="button" class="btn" style="background:#fff59d; color:#333; padding:6px 0;" onclick="confirmBonusScore(2, 4)">+2</button>
+          <button type="button" class="btn" style="background:#fff59d; color:#333; padding:6px 0;" onclick="confirmBonusScore(1.5, 5)">+1.5</button>
+          <button type="button" class="btn" style="background:#fff59d; color:#333; padding:6px 0;" onclick="confirmBonusScore(1, 6)">+1</button>
+          <button type="button" class="btn" style="background:#fff59d; color:#333; padding:6px 0;" onclick="confirmBonusScore(0.5, 7)">+0.5</button>
+        </div>
+      </div>
+
+      <div style="padding: 10px 16px; background: #eee; border-top: 1px solid #ddd; display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" onclick="confirmBonusScore(0, 0)" style="background:none; border:none; color:#666; text-decoration:underline; cursor:pointer; font-size:12px;">無加分 (加 0 分)</button>
+        <button type="button" class="btn btn-secondary" onclick="closeBonusModal()" style="padding:4px 12px; font-size:12px;">關閉</button>
       </div>
     </div>
   </div>
