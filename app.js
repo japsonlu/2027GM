@@ -50,7 +50,7 @@ let hasSignature = false;
 let syncTimer = null;
 
 // ==================== 基礎組賽道與任務規範資料結構 ====================
-// 自動 2分, 距離 2分, 未觸碰 3分
+// 自動 2分, 距離 2分, 未觸碰 3分 (滿分7分)
 const rounds = {
   1: { base: 0, bonus: 0, selectedNodeId: null, desc: '', auto: 2, dist: 2, untouched: 3 },
   2: { base: 0, bonus: 0, selectedNodeId: null, desc: '', auto: 2, dist: 2, untouched: 3 },
@@ -199,61 +199,13 @@ function renderTrackRow(roundNum) {
 
   return `
     <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
-      <svg viewBox="0 0 1180 340" style="width:100%; max-width:980px; height:auto; user-select:none; overflow:visible;">
-        <!-- 目標區 (黃底 + 黑框) -->
-        <rect x="80" y="75" width="194" height="154" fill="#FFFF00" stroke="#000000" stroke-width="7" />
-        <circle cx="110" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="132" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="154" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="177" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="200" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="222" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="244" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="110" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="132" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="154" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="177" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="200" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="222" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="244" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-
-        <rect x="274" y="75" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
-        <rect x="468" y="75" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
-        <rect x="662" y="75" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
-
-        ${dotsSvg}
-
-        <!-- 任務區、FGH 文字移到圖的下方 -->
-        <text x="177" y="275" text-anchor="middle" font-size="34" font-weight="900" fill="#000000">目標區</text>
-        <text x="371" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">F</text>
-        <text x="565" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">G</text>
-        <text x="759" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">H</text>
-
-        <!-- 右側分數即時顯示方框 -->
-        <g transform="translate(895, 80)" class="score-label-font">
-          <rect x="-10" y="-12" width="280" height="200" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
-          <text x="5" y="28" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">區域得分：</text>
-          <text x="145" y="28" font-size="24" font-weight="900" fill="#1D4ED8" id="svgBaseScore-${roundNum}">0</text>
-
-          <text x="5" y="68" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">加分得分：</text>
-          <text x="145" y="68" font-size="24" font-weight="900" fill="#B45309" id="svgBonusScore-${roundNum}">0</text>
-
-          <text x="5" y="108" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">任務規範：</text>
-          <text x="145" y="108" font-size="24" font-weight="900" fill="#2E7D32" id="svgStdScore-${roundNum}">7</text>
-
-          <line x1="0" y1="126" x2="260" y2="126" stroke="#94A3B8" stroke-width="1.5" />
-
-          <text x="5" y="160" font-size="24" font-weight="900" fill="#000000">本局合計：</text>
-          <text x="145" y="160" font-size="28" font-weight="900" fill="#059669" id="svgTotalScore-${roundNum}">7</text>
-        </g>
-      </svg>
-
-      <!-- 任務規範配置：自動 2分, 距離 2分, 未觸碰 3分 (滿分7分) -->
-      <div style="width:100%; max-width:980px; margin-top:4px; padding:10px 14px; background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-        <div style="font-weight:bold; font-size:14px; color:#9f1239;">
+      
+      <!-- ★ 任務規範上拉至賽道上方 ★ -->
+      <div style="width:100%; max-width:980px; margin-bottom:10px; padding:8px 14px; background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="font-weight:bold; font-size:13px; color:#9f1239;">
           📋 第 ${roundNum} 次任務規範 (共 7 分)：
         </div>
-        <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+        <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
           <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-size:13px; font-weight:bold;">自動 (2分)：</span>
             <div class="std-btn-group">
@@ -279,6 +231,57 @@ function renderTrackRow(roundNum) {
           </div>
         </div>
       </div>
+
+      <!-- 賽道與分數框 -->
+      <svg viewBox="0 0 1180 340" style="width:100%; max-width:980px; height:auto; user-select:none; overflow:visible;">
+        <!-- 目標區 (黃底 + 黑框) -->
+        <rect x="80" y="75" width="194" height="154" fill="#FFFF00" stroke="#000000" stroke-width="7" />
+        <circle cx="110" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="132" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="154" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="177" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="200" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="222" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="244" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="110" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="132" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="154" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="177" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="200" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="222" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="244" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+
+        <rect x="274" y="75" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
+        <rect x="468" y="75" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
+        <rect x="662" y="75" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
+
+        ${dotsSvg}
+
+        <!-- 任務區、FGH 文字位於圖的下方 -->
+        <text x="177" y="275" text-anchor="middle" font-size="34" font-weight="900" fill="#000000">目標區</text>
+        <text x="371" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">F</text>
+        <text x="565" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">G</text>
+        <text x="759" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">H</text>
+
+        <!-- ★ 右側計分方框順序調整：任務規範拉至首項，接著為區域得分與加分得分 ★ -->
+        <g transform="translate(895, 80)" class="score-label-font">
+          <rect x="-10" y="-12" width="280" height="200" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+
+          <text x="5" y="28" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">任務規範：</text>
+          <text x="145" y="28" font-size="24" font-weight="900" fill="#2E7D32" id="svgStdScore-${roundNum}">7</text>
+
+          <text x="5" y="68" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">區域得分：</text>
+          <text x="145" y="68" font-size="24" font-weight="900" fill="#1D4ED8" id="svgBaseScore-${roundNum}">0</text>
+
+          <text x="5" y="108" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">加分得分：</text>
+          <text x="145" y="108" font-size="24" font-weight="900" fill="#B45309" id="svgBonusScore-${roundNum}">0</text>
+
+          <line x1="0" y1="126" x2="260" y2="126" stroke="#94A3B8" stroke-width="1.5" />
+
+          <text x="5" y="160" font-size="24" font-weight="900" fill="#000000">本局合計：</text>
+          <text x="145" y="160" font-size="28" font-weight="900" fill="#059669" id="svgTotalScore-${roundNum}">7</text>
+        </g>
+      </svg>
     </div>
   `;
 }
