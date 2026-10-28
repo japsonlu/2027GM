@@ -49,50 +49,51 @@ let isDrawing = false;
 let hasSignature = false;
 let syncTimer = null;
 
-// ==================== 基礎組賽道資料結構 ====================
+// ==================== 基礎組賽道與任務規範資料結構 ====================
+// 自動 2分, 距離 2分, 未觸碰 3分
 const rounds = {
-  1: { base: 0, bonus: 0, selectedNodeId: null, desc: '' },
-  2: { base: 0, bonus: 0, selectedNodeId: null, desc: '' },
-  3: { base: 0, bonus: 0, selectedNodeId: null, desc: '' }
+  1: { base: 0, bonus: 0, selectedNodeId: null, desc: '', auto: 2, dist: 2, untouched: 3 },
+  2: { base: 0, bonus: 0, selectedNodeId: null, desc: '', auto: 2, dist: 2, untouched: 3 },
+  3: { base: 0, bonus: 0, selectedNodeId: null, desc: '', auto: 2, dist: 2, untouched: 3 }
 };
 let activeModalRound = 1;
 
 const trackDots = [
   // 1. 左側界外 (3 個點)
-  { id: 'out-top', cx: 34, cy: 118, score: 5, label: '界外·上方', isCenterTarget: false },
-  { id: 'out-mid', cx: 34, cy: 195, score: 6, label: '界外·中方', isCenterTarget: false },
-  { id: 'out-bottom', cx: 34, cy: 272, score: 5, label: '界外·下方', isCenterTarget: false },
+  { id: 'out-top', cx: 34, cy: 75, score: 5, label: '界外·上方', isCenterTarget: false },
+  { id: 'out-mid', cx: 34, cy: 152, score: 6, label: '界外·中方', isCenterTarget: false },
+  { id: 'out-bottom', cx: 34, cy: 229, score: 5, label: '界外·下方', isCenterTarget: false },
 
   // 2. 目標區 (黃底)
-  { id: 't-left', cx: 80, cy: 195, score: 7, label: '目標區·左框', isCenterTarget: false },
-  { id: 't-top', cx: 177, cy: 118, score: 7, label: '目標區·上框', isCenterTarget: false },
-  { id: 't-center', cx: 177, cy: 195, score: 8, label: '目標區·中心點', isCenterTarget: true }, // ★ 彈出加分
-  { id: 't-bottom', cx: 177, cy: 272, score: 7, label: '目標區·下框', isCenterTarget: false },
-  { id: 'tf-mid', cx: 274, cy: 195, score: 7, label: '目標區/F·交界', isCenterTarget: false },
+  { id: 't-left', cx: 80, cy: 152, score: 7, label: '目標區·左框', isCenterTarget: false },
+  { id: 't-top', cx: 177, cy: 75, score: 7, label: '目標區·上框', isCenterTarget: false },
+  { id: 't-center', cx: 177, cy: 152, score: 8, label: '目標區·中心點', isCenterTarget: true }, // 彈出加分
+  { id: 't-bottom', cx: 177, cy: 229, score: 7, label: '目標區·下框', isCenterTarget: false },
+  { id: 'tf-mid', cx: 274, cy: 152, score: 7, label: '目標區/F·交界', isCenterTarget: false },
 
   // 3. F 區
-  { id: 'f-top', cx: 371, cy: 118, score: 5, label: 'F區·上框', isCenterTarget: false },
-  { id: 'f-mid', cx: 371, cy: 195, score: 6, label: 'F區·中心', isCenterTarget: false },
-  { id: 'f-bottom', cx: 371, cy: 272, score: 5, label: 'F區·下框', isCenterTarget: false },
+  { id: 'f-top', cx: 371, cy: 75, score: 5, label: 'F區·上框', isCenterTarget: false },
+  { id: 'f-mid', cx: 371, cy: 152, score: 6, label: 'F區·中心', isCenterTarget: false },
+  { id: 'f-bottom', cx: 371, cy: 229, score: 5, label: 'F區·下框', isCenterTarget: false },
 
   // 4. F / G 交界
-  { id: 'fg-mid', cx: 468, cy: 195, score: 5, label: 'F/G·交界', isCenterTarget: false },
+  { id: 'fg-mid', cx: 468, cy: 152, score: 5, label: 'F/G·交界', isCenterTarget: false },
 
   // 5. G 區
-  { id: 'g-top', cx: 565, cy: 118, score: 3, label: 'G區·上框', isCenterTarget: false },
-  { id: 'g-mid', cx: 565, cy: 195, score: 4, label: 'G區·中心', isCenterTarget: false },
-  { id: 'g-bottom', cx: 565, cy: 272, score: 3, label: 'G區·下框', isCenterTarget: false },
+  { id: 'g-top', cx: 565, cy: 75, score: 3, label: 'G區·上框', isCenterTarget: false },
+  { id: 'g-mid', cx: 565, cy: 152, score: 4, label: 'G區·中心', isCenterTarget: false },
+  { id: 'g-bottom', cx: 565, cy: 229, score: 3, label: 'G區·下框', isCenterTarget: false },
 
   // 6. G / H 交界
-  { id: 'gh-mid', cx: 662, cy: 195, score: 3, label: 'G/H·交界', isCenterTarget: false },
+  { id: 'gh-mid', cx: 662, cy: 152, score: 3, label: 'G/H·交界', isCenterTarget: false },
 
   // 7. H 區
-  { id: 'h-top', cx: 759, cy: 118, score: 1, label: 'H區·上框', isCenterTarget: false },
-  { id: 'h-mid', cx: 759, cy: 195, score: 2, label: 'H區·中心', isCenterTarget: false },
-  { id: 'h-bottom', cx: 759, cy: 272, score: 1, label: 'H區·下框', isCenterTarget: false },
+  { id: 'h-top', cx: 759, cy: 75, score: 1, label: 'H區·上框', isCenterTarget: false },
+  { id: 'h-mid', cx: 759, cy: 152, score: 2, label: 'H區·中心', isCenterTarget: false },
+  { id: 'h-bottom', cx: 759, cy: 229, score: 1, label: 'H區·下框', isCenterTarget: false },
 
   // 8. H 區最右邊界
-  { id: 'h-right', cx: 856, cy: 195, score: 0, label: 'H區·右邊界', isCenterTarget: false }
+  { id: 'h-right', cx: 856, cy: 152, score: 0, label: 'H區·右邊界', isCenterTarget: false }
 ];
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -197,45 +198,87 @@ function renderTrackRow(roundNum) {
   `).join('');
 
   return `
-    <div style="width:100%; display:flex; justify-content:center;">
-      <svg viewBox="0 0 1180 330" style="width:100%; max-width:980px; height:auto; user-select:none; overflow:visible;">
-        <text x="177" y="72" text-anchor="middle" font-size="34" font-weight="900" fill="#000000">目標區</text>
-        <text x="371" y="72" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">F</text>
-        <text x="565" y="72" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">G</text>
-        <text x="759" y="72" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">H</text>
-
+    <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
+      <svg viewBox="0 0 1180 340" style="width:100%; max-width:980px; height:auto; user-select:none; overflow:visible;">
         <!-- 目標區 (黃底 + 黑框) -->
-        <rect x="80" y="118" width="194" height="154" fill="#FFFF00" stroke="#000000" stroke-width="7" />
-        <circle cx="110" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="132" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="154" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="177" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="200" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="222" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="244" cy="138" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="110" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="132" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="154" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="177" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="200" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="222" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
-        <circle cx="244" cy="252" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <rect x="80" y="75" width="194" height="154" fill="#FFFF00" stroke="#000000" stroke-width="7" />
+        <circle cx="110" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="132" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="154" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="177" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="200" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="222" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="244" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="110" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="132" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="154" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="177" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="200" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="222" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
+        <circle cx="244" cy="209" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
 
-        <rect x="274" y="118" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
-        <rect x="468" y="118" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
-        <rect x="662" y="118" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
+        <rect x="274" y="75" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
+        <rect x="468" y="75" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
+        <rect x="662" y="75" width="194" height="154" fill="#F3F4F6" stroke="#000000" stroke-width="7" />
 
         ${dotsSvg}
 
-        <g transform="translate(895, 145)" class="score-label-font">
-          <text x="0" y="0" font-size="28" font-weight="600" fill="#000000" letter-spacing="2">區域得分：</text>
-          <text x="145" y="0" font-size="28" font-weight="900" fill="#1D4ED8" id="svgBaseScore-${roundNum}">0</text>
-          <text x="0" y="48" font-size="28" font-weight="600" fill="#000000" letter-spacing="2">加分得分：</text>
-          <text x="145" y="48" font-size="28" font-weight="900" fill="#B45309" id="svgBonusScore-${roundNum}">0</text>
-          <text x="0" y="96" font-size="28" font-weight="600" fill="#000000">合&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;計：</text>
-          <text x="145" y="96" font-size="30" font-weight="900" fill="#059669" id="svgTotalScore-${roundNum}">0</text>
+        <!-- 任務區、FGH 文字移到圖的下方 -->
+        <text x="177" y="275" text-anchor="middle" font-size="34" font-weight="900" fill="#000000">目標區</text>
+        <text x="371" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">F</text>
+        <text x="565" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">G</text>
+        <text x="759" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">H</text>
+
+        <!-- 右側分數即時顯示方框 -->
+        <g transform="translate(895, 80)" class="score-label-font">
+          <rect x="-10" y="-12" width="280" height="200" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+          <text x="5" y="28" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">區域得分：</text>
+          <text x="145" y="28" font-size="24" font-weight="900" fill="#1D4ED8" id="svgBaseScore-${roundNum}">0</text>
+
+          <text x="5" y="68" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">加分得分：</text>
+          <text x="145" y="68" font-size="24" font-weight="900" fill="#B45309" id="svgBonusScore-${roundNum}">0</text>
+
+          <text x="5" y="108" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">任務規範：</text>
+          <text x="145" y="108" font-size="24" font-weight="900" fill="#2E7D32" id="svgStdScore-${roundNum}">7</text>
+
+          <line x1="0" y1="126" x2="260" y2="126" stroke="#94A3B8" stroke-width="1.5" />
+
+          <text x="5" y="160" font-size="24" font-weight="900" fill="#000000">本局合計：</text>
+          <text x="145" y="160" font-size="28" font-weight="900" fill="#059669" id="svgTotalScore-${roundNum}">7</text>
         </g>
       </svg>
+
+      <!-- 任務規範配置：自動 2分, 距離 2分, 未觸碰 3分 (滿分7分) -->
+      <div style="width:100%; max-width:980px; margin-top:4px; padding:10px 14px; background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+        <div style="font-weight:bold; font-size:14px; color:#9f1239;">
+          📋 第 ${roundNum} 次任務規範 (共 7 分)：
+        </div>
+        <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:13px; font-weight:bold;">自動 (2分)：</span>
+            <div class="std-btn-group">
+              <button type="button" class="std-btn" id="btn-std-${roundNum}-auto-0" onclick="setRoundStd(${roundNum}, 'auto', 0)">否 (0)</button>
+              <button type="button" class="std-btn active" id="btn-std-${roundNum}-auto-1" onclick="setRoundStd(${roundNum}, 'auto', 2)">是 (2)</button>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:13px; font-weight:bold;">距離 (2分)：</span>
+            <div class="std-btn-group">
+              <button type="button" class="std-btn" id="btn-std-${roundNum}-dist-0" onclick="setRoundStd(${roundNum}, 'dist', 0)">否 (0)</button>
+              <button type="button" class="std-btn active" id="btn-std-${roundNum}-dist-1" onclick="setRoundStd(${roundNum}, 'dist', 2)">是 (2)</button>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:13px; font-weight:bold;">未觸碰 (3分)：</span>
+            <div class="std-btn-group">
+              <button type="button" class="std-btn" id="btn-std-${roundNum}-untouched-0" onclick="setRoundStd(${roundNum}, 'untouched', 0)">否 (0)</button>
+              <button type="button" class="std-btn active" id="btn-std-${roundNum}-untouched-1" onclick="setRoundStd(${roundNum}, 'untouched', 3)">是 (3)</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -248,6 +291,24 @@ function initTracks() {
   if (t2) t2.innerHTML = renderTrackRow(2);
   if (t3) t3.innerHTML = renderTrackRow(3);
 }
+
+window.setRoundStd = function(roundNum, type, val) {
+  rounds[roundNum][type] = val;
+  const isYes = val > 0;
+  const btn0 = document.getElementById(`btn-std-${roundNum}-${type}-0`);
+  const btn1 = document.getElementById(`btn-std-${roundNum}-${type}-1`);
+  if (btn0 && btn1) {
+    if (isYes) {
+      btn0.classList.remove('active');
+      btn1.classList.add('active');
+    } else {
+      btn0.classList.add('active');
+      btn1.classList.remove('active');
+    }
+  }
+  updateScoresUI(roundNum, rounds[roundNum].base, rounds[roundNum].bonus, rounds[roundNum].desc);
+  calculateAllScores();
+};
 
 window.selectTrackDot = function(roundNum, dotId, score, label, isCenterTarget) {
   rounds[roundNum].base = score;
@@ -308,20 +369,31 @@ function formatScoreDisplay(num) {
 }
 
 function updateScoresUI(roundNum, base, bonus, desc) {
-  const total = base + bonus;
+  const r = rounds[roundNum];
+  const std = (r.auto || 0) + (r.dist || 0) + (r.untouched || 0);
+  const total = base + bonus + std;
+
   const bEl = document.getElementById(`svgBaseScore-${roundNum}`);
   const boEl = document.getElementById(`svgBonusScore-${roundNum}`);
+  const sEl = document.getElementById(`svgStdScore-${roundNum}`);
   const toEl = document.getElementById(`svgTotalScore-${roundNum}`);
   const dEl = document.getElementById(`selectedDesc-${roundNum}`);
 
   if (bEl) bEl.textContent = formatScoreDisplay(base);
   if (boEl) boEl.textContent = formatScoreDisplay(bonus);
+  if (sEl) sEl.textContent = formatScoreDisplay(std);
   if (toEl) toEl.textContent = formatScoreDisplay(total);
   if (dEl && desc) dEl.textContent = desc;
 }
 
 window.clearRound = function(roundNum) {
-  rounds[roundNum] = { base: 0, bonus: 0, selectedNodeId: null, desc: '' };
+  rounds[roundNum] = { base: 0, bonus: 0, selectedNodeId: null, desc: '', auto: 2, dist: 2, untouched: 3 };
+  ['auto', 'dist', 'untouched'].forEach(type => {
+    const b0 = document.getElementById(`btn-std-${roundNum}-${type}-0`);
+    const b1 = document.getElementById(`btn-std-${roundNum}-${type}-1`);
+    if (b0) b0.classList.remove('active');
+    if (b1) b1.classList.add('active');
+  });
   updateScoresUI(roundNum, 0, 0, '尚未選定點位');
   trackDots.forEach(d => {
     const ring = document.getElementById(`ring-${roundNum}-${d.id}`);
@@ -920,7 +992,8 @@ function renderTeamList() {
           <th>關卡<br>數量</th><th>流暢<br>加權</th><th>科學<br>概念</th>
           <th>綠能<br>一</th><th>綠能<br>二</th><th>綠能<br>三</th>
           <th>創意<br>關卡</th><th>整體<br>機構設計</th><th>總分</th>
-          ${isAdminUser ? "" : '<th class="th-hide-score">隱藏</th><th>操作</th>'}
+          <th>備註</th>
+          ${isAdminUser ? "" : '<th class="th-hide-score">隱藏</th><th class="col-action">操作</th>'}
         </tr>
       `;
     } else {
@@ -929,7 +1002,8 @@ function renderTeamList() {
           <th>組別</th><th>隊伍<br>編號</th><th>學校名稱</th><th>隊伍名稱</th>
           <th>關卡<br>(16)</th><th>流暢度<br>(20)</th><th>內容<br>(10)</th>
           <th>規範<br>(21)</th><th>任務<br>(33)</th><th>總分<br>(100)</th>
-          ${isAdminUser ? "" : '<th class="th-hide-score">隱藏</th><th>操作</th>'}
+          <th>備註</th>
+          ${isAdminUser ? "" : '<th class="th-hide-score">隱藏</th><th class="col-action">操作</th>'}
         </tr>
       `;
     }
@@ -939,7 +1013,7 @@ function renderTeamList() {
   teamListBody.innerHTML = "";
 
   if (assignedTeams.length === 0) {
-    teamListBody.innerHTML = `<tr><td colspan="15" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認該組別試算表！</td></tr>`;
+    teamListBody.innerHTML = `<tr><td colspan="16" style="color:#d32f2f; padding: 24px;">查無可評分的隊伍，請確認該組別試算表！</td></tr>`;
     return;
   }
 
@@ -950,7 +1024,7 @@ function renderTeamList() {
   }
 
   if (filteredTeams.length === 0) {
-    teamListBody.innerHTML = `<tr><td colspan="15" style="color:#666; padding: 24px;">查無此年段之隊伍！</td></tr>`;
+    teamListBody.innerHTML = `<tr><td colspan="16" style="color:#666; padding: 24px;">查無此年段之隊伍！</td></tr>`;
     return;
   }
 
@@ -1008,6 +1082,7 @@ function renderTeamList() {
         <td class="score-col" data-val="${crVal}">${getDisplayScore(crVal, isHidden)}</td>
         <td class="score-col" data-val="${dsVal}">${getDisplayScore(dsVal, isHidden)}</td>
         <td class="score-col" data-val="${totVal}" style="font-weight:bold; color:var(--primary);">${getDisplayScore(totVal, isHidden)}</td>
+        <td class="note-col" style="min-width:70px;"></td>
       `;
     } else {
       let stdRaw = score.stdScore;
@@ -1028,13 +1103,14 @@ function renderTeamList() {
         <td class="score-col" data-val="${stdVal}">${getDisplayScore(stdVal, isHidden)}</td>
         <td class="score-col" data-val="${misVal}">${getDisplayScore(misVal, isHidden)}</td>
         <td class="score-col" data-val="${totVal}" style="font-weight:bold; color:var(--primary);">${getDisplayScore(totVal, isHidden)}</td>
+        <td class="note-col" style="min-width:70px;"></td>
       `;
     }
 
     let endColsHtml = "";
     if (!isAdminUser) {
       endColsHtml = `
-        <td>
+        <td class="col-action">
           <button class="btn ${isHidden ? "btn-primary" : "btn-secondary"}" 
                   style="padding: 4px 6px; font-size:11px;" 
                   id="btn-toggle-${team.teamId}" 
@@ -1042,7 +1118,7 @@ function renderTeamList() {
             ${isHidden ? "顯示" : "隱藏"}
           </button>
         </td>
-        <td>
+        <td class="col-action">
           <button class="btn ${isScored ? "btn-danger" : "btn-success"}" 
                   style="padding: 5px 8px; font-size:12px;" 
                   onclick="openScoring('${team.teamId}')">
@@ -1221,7 +1297,6 @@ function resetFormToDefaults() {
       }
     });
 
-    document.querySelectorAll('#row-mission-std-basic .selectable[data-val="2.3333"], #row-mission-std-basic .selectable[data-val="2.3334"]').forEach(c => c.classList.add("active"));
     resetAllRounds();
 
   } else {
@@ -1325,12 +1400,14 @@ function calculateAllScores() {
 }
 
 function calculateBasicScores() {
+  // 關卡數量 (滿分16分)
   const stageEl = document.querySelector("#row-stage-basic .selectable.active");
   const stageCount = stageEl ? parseFloat(stageEl.dataset.val) : 8;
   const stageScore = stageCount * 2;
   const sStage = document.getElementById("score-stage-basic");
   if (sStage) sStage.textContent = stageScore;
 
+  // 流暢度加權修正：(20 - 次數*2) * 關卡數量 / 8
   const fluencyEl = document.querySelector("#row-fluency-basic .selectable.active");
   let fluencyRaw = 20;
   let fluencyWeighted = 20;
@@ -1344,6 +1421,7 @@ function calculateBasicScores() {
   if (flRawEl) flRawEl.textContent = fluencyRaw;
   if (flWeightEl) flWeightEl.textContent = fluencyWeighted;
 
+  // 關卡任務 (10 分)
   let taskTotal = 0;
   ["row-task-1", "row-task-2"].forEach(rowId => {
     const row = document.getElementById(rowId);
@@ -1357,22 +1435,30 @@ function calculateBasicScores() {
   const tTotEl = document.getElementById("score-task-total");
   if (tTotEl) tTotEl.textContent = taskTotal;
 
-  let stdSum = 0;
-  document.querySelectorAll("#row-mission-std-basic .selectable.active").forEach(c => stdSum += parseFloat(c.dataset.val));
-  const stdTotal = Math.round(stdSum);
+  // 任務規範：自動 2分, 距離 2分, 未觸碰 3分 (共 21 分)
+  const stdR1 = (rounds[1].auto || 0) + (rounds[1].dist || 0) + (rounds[1].untouched || 0);
+  const stdR2 = (rounds[2].auto || 0) + (rounds[2].dist || 0) + (rounds[2].untouched || 0);
+  const stdR3 = (rounds[3].auto || 0) + (rounds[3].dist || 0) + (rounds[3].untouched || 0);
+  const stdTotal = stdR1 + stdR2 + stdR3;
   const stdSumEl = document.getElementById("score-mission-std-sum-basic");
   if (stdSumEl) stdSumEl.textContent = stdTotal;
 
-  // ★ 連動 SVG 三次評分加總 (33分) ★
-  const t1 = rounds[1].base + rounds[1].bonus;
-  const t2 = rounds[2].base + rounds[2].bonus;
-  const t3 = rounds[3].base + rounds[3].bonus;
-  const missionScoreTotal = Number((t1 + t2 + t3).toFixed(1));
+  // 賽道得分加總 (滿分 33 分)
+  const track1 = rounds[1].base + rounds[1].bonus;
+  const track2 = rounds[2].base + rounds[2].bonus;
+  const track3 = rounds[3].base + rounds[3].bonus;
+  const missionTrackTotal = Number((track1 + track2 + track3).toFixed(1));
 
   const misTotEl = document.getElementById("score-mission-total-basic");
-  if (misTotEl) misTotEl.textContent = formatScoreDisplay(missionScoreTotal);
+  if (misTotEl) misTotEl.textContent = formatScoreDisplay(missionTrackTotal);
 
-  const total = Number((stageScore + fluencyWeighted + taskTotal + stdTotal + missionScoreTotal).toFixed(2));
+  // 指定任務 54 分加總 (規範 21 + 賽道 33)
+  const missionGrand = Number((stdTotal + missionTrackTotal).toFixed(1));
+  const misGrandEl = document.getElementById("score-mission-grand-basic");
+  if (misGrandEl) misGrandEl.textContent = formatScoreDisplay(missionGrand);
+
+  // 總分 (100分)
+  const total = Number((stageScore + fluencyWeighted + taskTotal + stdTotal + missionTrackTotal).toFixed(2));
   const finTotEl = document.getElementById("final-total-score");
   if (finTotEl) finTotEl.textContent = total;
 }
@@ -1384,6 +1470,7 @@ function calculateAdvancedScores() {
   const advStEl = document.getElementById("score-adv-stage");
   if (advStEl) advStEl.textContent = stageScore;
 
+  // 流暢度加權公式：(20 - 次數*2) * 關卡數量 / 8
   const flEl = document.querySelector("#row-adv-fluency .selectable.active");
   let flDrops = flEl ? parseFloat(flEl.dataset.val) : 0;
   let flRaw = Math.max(0, 20 - flDrops * 2);
