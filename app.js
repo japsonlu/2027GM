@@ -200,40 +200,45 @@ function renderTrackRow(roundNum) {
   return `
     <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
       
-      <!-- ★ 任務規範上拉至賽道上方 ★ -->
+      <!-- ★ 任務規範上拉至上方：移除按鈕內數字，後面直接顯示規範加總 ★ -->
       <div style="width:100%; max-width:980px; margin-bottom:10px; padding:8px 14px; background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <div style="font-weight:bold; font-size:13px; color:#9f1239;">
-          📋 第 ${roundNum} 次任務規範 (共 7 分)：
+        <div style="font-weight:bold; font-size:14px; color:#9f1239;">
+          📋 第 ${roundNum} 次任務規範：
         </div>
-        <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+        <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
           <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-size:13px; font-weight:bold;">自動 (2分)：</span>
             <div class="std-btn-group">
-              <button type="button" class="std-btn" id="btn-std-${roundNum}-auto-0" onclick="setRoundStd(${roundNum}, 'auto', 0)">否 (0)</button>
-              <button type="button" class="std-btn active" id="btn-std-${roundNum}-auto-1" onclick="setRoundStd(${roundNum}, 'auto', 2)">是 (2)</button>
+              <button type="button" class="std-btn" id="btn-std-${roundNum}-auto-0" onclick="setRoundStd(${roundNum}, 'auto', 0)">否</button>
+              <button type="button" class="std-btn active" id="btn-std-${roundNum}-auto-1" onclick="setRoundStd(${roundNum}, 'auto', 2)">是</button>
             </div>
           </div>
 
           <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-size:13px; font-weight:bold;">距離 (2分)：</span>
             <div class="std-btn-group">
-              <button type="button" class="std-btn" id="btn-std-${roundNum}-dist-0" onclick="setRoundStd(${roundNum}, 'dist', 0)">否 (0)</button>
-              <button type="button" class="std-btn active" id="btn-std-${roundNum}-dist-1" onclick="setRoundStd(${roundNum}, 'dist', 2)">是 (2)</button>
+              <button type="button" class="std-btn" id="btn-std-${roundNum}-dist-0" onclick="setRoundStd(${roundNum}, 'dist', 0)">否</button>
+              <button type="button" class="std-btn active" id="btn-std-${roundNum}-dist-1" onclick="setRoundStd(${roundNum}, 'dist', 2)">是</button>
             </div>
           </div>
 
           <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-size:13px; font-weight:bold;">未觸碰 (3分)：</span>
             <div class="std-btn-group">
-              <button type="button" class="std-btn" id="btn-std-${roundNum}-untouched-0" onclick="setRoundStd(${roundNum}, 'untouched', 0)">否 (0)</button>
-              <button type="button" class="std-btn active" id="btn-std-${roundNum}-untouched-1" onclick="setRoundStd(${roundNum}, 'untouched', 3)">是 (3)</button>
+              <button type="button" class="std-btn" id="btn-std-${roundNum}-untouched-0" onclick="setRoundStd(${roundNum}, 'untouched', 0)">否</button>
+              <button type="button" class="std-btn active" id="btn-std-${roundNum}-untouched-1" onclick="setRoundStd(${roundNum}, 'untouched', 3)">是</button>
             </div>
+          </div>
+
+          <!-- 規範加總直接放在後面 -->
+          <div style="background:#fff; border:1px solid #fda4af; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; color:#be123c;">
+            規範得分：<span id="std-header-score-${roundNum}" style="font-size:16px;">7</span> / 7
           </div>
         </div>
       </div>
 
-      <!-- 賽道與分數框 -->
-      <svg viewBox="0 0 1180 340" style="width:100%; max-width:980px; height:auto; user-select:none; overflow:visible;">
+      <!-- 賽道與右側獨立任務計分方框 -->
+      <svg viewBox="0 0 1180 320" style="width:100%; max-width:980px; height:auto; user-select:none; overflow:visible;">
         <!-- 目標區 (黃底 + 黑框) -->
         <rect x="80" y="75" width="194" height="154" fill="#FFFF00" stroke="#000000" stroke-width="7" />
         <circle cx="110" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
@@ -257,31 +262,40 @@ function renderTrackRow(roundNum) {
 
         ${dotsSvg}
 
-        <!-- 任務區、FGH 文字位於圖的下方 -->
+        <!-- 任務區、FGH 文字移到圖的下方 -->
         <text x="177" y="275" text-anchor="middle" font-size="34" font-weight="900" fill="#000000">目標區</text>
         <text x="371" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">F</text>
         <text x="565" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">G</text>
         <text x="759" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">H</text>
 
-        <!-- ★ 右側計分方框順序調整：任務規範拉至首項，接著為區域得分與加分得分 ★ -->
-        <g transform="translate(895, 80)" class="score-label-font">
-          <rect x="-10" y="-12" width="280" height="200" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
+        <!-- ★ 任務得分獨立方框 (包含區域得分、加分得分與任務得分小計) ★ -->
+        <g transform="translate(895, 75)" class="score-label-font">
+          <rect x="-10" y="-10" width="280" height="175" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
 
-          <text x="5" y="28" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">任務規範：</text>
-          <text x="145" y="28" font-size="24" font-weight="900" fill="#2E7D32" id="svgStdScore-${roundNum}">7</text>
+          <text x="8" y="32" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">區域得分：</text>
+          <text x="145" y="32" font-size="24" font-weight="900" fill="#1D4ED8" id="svgBaseScore-${roundNum}">0</text>
 
-          <text x="5" y="68" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">區域得分：</text>
-          <text x="145" y="68" font-size="24" font-weight="900" fill="#1D4ED8" id="svgBaseScore-${roundNum}">0</text>
+          <text x="8" y="75" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">加分得分：</text>
+          <text x="145" y="75" font-size="24" font-weight="900" fill="#B45309" id="svgBonusScore-${roundNum}">0</text>
 
-          <text x="5" y="108" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">加分得分：</text>
-          <text x="145" y="108" font-size="24" font-weight="900" fill="#B45309" id="svgBonusScore-${roundNum}">0</text>
+          <line x1="0" y1="96" x2="260" y2="96" stroke="#94A3B8" stroke-width="1.5" />
 
-          <line x1="0" y1="126" x2="260" y2="126" stroke="#94A3B8" stroke-width="1.5" />
-
-          <text x="5" y="160" font-size="24" font-weight="900" fill="#000000">本局合計：</text>
-          <text x="145" y="160" font-size="28" font-weight="900" fill="#059669" id="svgTotalScore-${roundNum}">7</text>
+          <text x="8" y="135" font-size="24" font-weight="900" fill="#1e40af">任務得分：</text>
+          <text x="145" y="135" font-size="28" font-weight="900" fill="#1e40af" id="svgTrackSubtotal-${roundNum}">0</text>
         </g>
       </svg>
+
+      <!-- ★ 本局合計放在下方，改成本次合計 ★ -->
+      <div style="width:100%; max-width:980px; margin-top:10px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:10px 18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <span style="font-size:15px; font-weight:bold; color:#166534;">
+          本次合計（第 ${roundNum} 次）：
+        </span>
+        <span style="font-size:15px; color:#374151;">
+          規範 <strong id="foot-std-${roundNum}" style="color:#be123c;">7</strong> 分 ＋ 
+          任務 <strong id="foot-track-${roundNum}" style="color:#1e40af;">0</strong> 分 ＝ 
+          <strong id="foot-total-${roundNum}" style="font-size:22px; color:#059669; margin-left:4px;">7</strong> 分
+        </span>
+      </div>
     </div>
   `;
 }
@@ -374,19 +388,31 @@ function formatScoreDisplay(num) {
 function updateScoresUI(roundNum, base, bonus, desc) {
   const r = rounds[roundNum];
   const std = (r.auto || 0) + (r.dist || 0) + (r.untouched || 0);
-  const total = base + bonus + std;
+  const trackScore = base + bonus;
+  const total = std + trackScore;
 
+  // 上方規範得分即時加總
+  const hStdEl = document.getElementById(`std-header-score-${roundNum}`);
+  if (hStdEl) hStdEl.textContent = formatScoreDisplay(std);
+
+  // 右側任務獨立計分方框
   const bEl = document.getElementById(`svgBaseScore-${roundNum}`);
   const boEl = document.getElementById(`svgBonusScore-${roundNum}`);
-  const sEl = document.getElementById(`svgStdScore-${roundNum}`);
-  const toEl = document.getElementById(`svgTotalScore-${roundNum}`);
+  const trackSubEl = document.getElementById(`svgTrackSubtotal-${roundNum}`);
   const dEl = document.getElementById(`selectedDesc-${roundNum}`);
 
   if (bEl) bEl.textContent = formatScoreDisplay(base);
   if (boEl) boEl.textContent = formatScoreDisplay(bonus);
-  if (sEl) sEl.textContent = formatScoreDisplay(std);
-  if (toEl) toEl.textContent = formatScoreDisplay(total);
+  if (trackSubEl) trackSubEl.textContent = formatScoreDisplay(trackScore);
   if (dEl && desc) dEl.textContent = desc;
+
+  // 下方「本次合計」
+  const fStd = document.getElementById(`foot-std-${roundNum}`);
+  const fTrk = document.getElementById(`foot-track-${roundNum}`);
+  const fTot = document.getElementById(`foot-total-${roundNum}`);
+  if (fStd) fStd.textContent = formatScoreDisplay(std);
+  if (fTrk) fTrk.textContent = formatScoreDisplay(trackScore);
+  if (fTot) fTot.textContent = formatScoreDisplay(total);
 }
 
 window.clearRound = function(roundNum) {
