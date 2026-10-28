@@ -139,7 +139,7 @@
     .score-label-font { font-family: 'Noto Serif TC', 'Songti TC', 'SimSun', serif; }
     .track-card {
       background: #fff; border-radius: 12px; padding: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 14px;
     }
     .blue-dot { cursor: pointer; transition: fill 0.15s ease, stroke 0.15s ease; }
     .blue-dot:hover circle.main-circle { fill: #1d4ed8; stroke: #1e3a8a; }
@@ -150,10 +150,36 @@
     .bonus-column:hover circle { stroke-width: 3.5; stroke: #7f1d1d; }
     .hidden { display: none !important; }
 
+    /* 整合式指定任務規範開關按鈕組樣式 */
+    .std-btn-group {
+      display: inline-flex;
+      background: #eef2f6;
+      border-radius: 6px;
+      padding: 2px;
+      gap: 2px;
+      border: 1px solid #cbd5e1;
+    }
+    .std-btn {
+      padding: 3px 10px;
+      font-size: 12px;
+      font-weight: bold;
+      border: none;
+      background: transparent;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #475569;
+      transition: all 0.15s ease;
+    }
+    .std-btn.active {
+      background: #1976d2;
+      color: #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+
     @page { size: landscape; margin: 5mm; }
     @media print {
       header, .modal-overlay, #admin-actions-bar, #judge-actions, .btn,
-      #page-scoring, #page-admin-tournaments, .th-hide-score, #summary-table th:last-child, #summary-table td:last-child {
+      #page-scoring, #page-admin-tournaments, .th-hide-score, .col-action {
         display: none !important;
       }
       .pdf-title-banner { display: block !important; }
@@ -362,7 +388,7 @@
       </div>
 
       <div class="section-title">流暢度(20 分)：</div>
-      <div class="sub-title">手動或掉落次數</div>
+      <div class="sub-title">手動或掉落次數 (公式：(20 - 次數*2) * 關卡數 / 8)</div>
       <div class="table-responsive">
         <table>
           <thead><tr><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th><th>得分</th></tr></thead>
@@ -389,13 +415,13 @@
           </thead>
           <tbody>
             <tr id="row-task-1">
-              <td>任務一</td>
+              <td style="font-weight:bold;">任務一 (小球凌空飛越30公分)</td>
               <td class="selectable active" data-group="c1" data-val="3">3</td><td class="selectable" data-group="c1" data-val="1">1</td><td class="selectable" data-group="c1" data-val="0">0</td>
               <td class="selectable active" data-group="o1" data-val="2">2</td><td class="selectable" data-group="o1" data-val="0">0</td>
               <td class="score-badge task-row-total">5</td>
             </tr>
             <tr id="row-task-2">
-              <td>任務二</td>
+              <td style="font-weight:bold;">任務二 (小球垂直上升30公分)</td>
               <td class="selectable active" data-group="c2" data-val="3">3</td><td class="selectable" data-group="c2" data-val="1">1</td><td class="selectable" data-group="c2" data-val="0">0</td>
               <td class="selectable active" data-group="o2" data-val="2">2</td><td class="selectable" data-group="o2" data-val="0">0</td>
               <td class="score-badge task-row-total">5</td>
@@ -405,65 +431,52 @@
         </table>
       </div>
 
-      <div class="section-title" style="color:#2e7d32;">【基礎組】指定任務(54 分)：</div>
-      <div class="table-responsive">
-        <table>
-          <thead>
-            <tr><th colspan="18">基礎組任務標準規範分數 (21分)</th></tr>
-            <tr><th colspan="6">第一次</th><th colspan="6">第二次</th><th colspan="6">第三次</th></tr>
-            <tr><th colspan="2">自動</th><th colspan="2">距離</th><th colspan="2">未觸碰</th><th colspan="2">自動</th><th colspan="2">距離</th><th colspan="2">未觸碰</th><th colspan="2">自動</th><th colspan="2">距離</th><th colspan="2">未觸碰</th></tr>
-            <tr><th>否</th><th>是</th><th>否</th><th>是</th><th>否</th><th>是</th><th>否</th><th>是</th><th>否</th><th>是</th><th>否</th><th>是</th><th>否</th><th>是</th><th>否</th><th>是</th><th>否</th><th>是</th></tr>
-          </thead>
-          <tbody>
-            <tr id="row-mission-std-basic">
-              <td class="selectable" data-group="b_m1_1" data-val="0">否</td><td class="selectable active" data-group="b_m1_1" data-val="2.3333">是</td>
-              <td class="selectable" data-group="b_m1_2" data-val="0">否</td><td class="selectable active" data-group="b_m1_2" data-val="2.3333">是</td>
-              <td class="selectable" data-group="b_m1_3" data-val="0">否</td><td class="selectable active" data-group="b_m1_3" data-val="2.3334">是</td>
-              <td class="selectable" data-group="b_m2_1" data-val="0">否</td><td class="selectable active" data-group="b_m2_1" data-val="2.3333">是</td>
-              <td class="selectable" data-group="b_m2_2" data-val="0">否</td><td class="selectable active" data-group="b_m2_2" data-val="2.3333">是</td>
-              <td class="selectable" data-group="b_m2_3" data-val="0">否</td><td class="selectable active" data-group="b_m2_3" data-val="2.3334">是</td>
-              <td class="selectable" data-group="b_m3_1" data-val="0">否</td><td class="selectable active" data-group="b_m3_1" data-val="2.3333">是</td>
-              <td class="selectable" data-group="b_m3_2" data-val="0">否</td><td class="selectable active" data-group="b_m3_2" data-val="2.3333">是</td>
-              <td class="selectable" data-group="b_m3_3" data-val="0">否</td><td class="selectable active" data-group="b_m3_3" data-val="2.3334">是</td>
-            </tr>
-            <tr class="big-footer-row"><td colspan="18">任務規範總分：<span id="score-mission-std-sum-basic" class="score-badge" style="font-size:20px;">21</span> / 21</td></tr>
-          </tbody>
-        </table>
+      <!-- ★ 整合後的指定任務 (54 分 = 任務規範 21分 + 賽道評分 33分) ★ -->
+      <div class="section-title" style="color:#2e7d32; display:flex; justify-content:space-between; align-items:center;">
+        <span>🎯 【基礎組】指定任務 (54 分)：規範評分 (21 分) ＋ 賽道得分 (33 分)</span>
+        <button type="button" class="btn btn-secondary" onclick="resetAllRounds()" style="padding:4px 10px; font-size:12px;">重置三次評分</button>
       </div>
 
-      <!-- ★ 整合後的 3 次評分圖形賽道區域 (33 分) ★ -->
-      <div class="section-title" style="color:#1d4ed8; display:flex; justify-content:space-between; align-items:center;">
-        <span>🎯 三次指定任務賽道評分 (33 分)：</span>
-        <button type="button" class="btn btn-secondary" onclick="resetAllRounds()" style="padding:4px 10px; font-size:12px;">重置三次賽道</button>
-      </div>
-
+      <!-- 第 1 次評分卡片 -->
       <div class="track-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <div style="font-weight:bold; font-size:13px; color:#1d4ed8;">第 1 次評分：<span id="selectedDesc-1" style="color:#666; font-weight:normal;">尚未選定點位</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">
+          <div style="font-weight:bold; font-size:14px; color:#1d4ed8;">
+            第 1 次評分：<span id="selectedDesc-1" style="color:#666; font-weight:normal;">尚未選定點位</span>
+          </div>
           <button type="button" class="btn btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="clearRound(1)">清除此局</button>
         </div>
         <div id="svgTrack-1" style="width:100%; overflow-x:auto;"></div>
       </div>
 
+      <!-- 第 2 次評分卡片 -->
       <div class="track-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <div style="font-weight:bold; font-size:13px; color:#4338ca;">第 2 次評分：<span id="selectedDesc-2" style="color:#666; font-weight:normal;">尚未選定點位</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">
+          <div style="font-weight:bold; font-size:14px; color:#4338ca;">
+            第 2 次評分：<span id="selectedDesc-2" style="color:#666; font-weight:normal;">尚未選定點位</span>
+          </div>
           <button type="button" class="btn btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="clearRound(2)">清除此局</button>
         </div>
         <div id="svgTrack-2" style="width:100%; overflow-x:auto;"></div>
       </div>
 
+      <!-- 第 3 次評分卡片 -->
       <div class="track-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-          <div style="font-weight:bold; font-size:13px; color:#6b21a8;">第 3 次評分：<span id="selectedDesc-3" style="color:#666; font-weight:normal;">尚未選定點位</span></div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">
+          <div style="font-weight:bold; font-size:14px; color:#6b21a8;">
+            第 3 次評分：<span id="selectedDesc-3" style="color:#666; font-weight:normal;">尚未選定點位</span>
+          </div>
           <button type="button" class="btn btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="clearRound(3)">清除此局</button>
         </div>
         <div id="svgTrack-3" style="width:100%; overflow-x:auto;"></div>
       </div>
 
-      <div style="background:#fff; border:1px solid #ddd; padding:10px 14px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
-        <span style="font-weight:bold; font-size:15px;">三次任務得分合計：</span>
-        <span><strong id="score-mission-total-basic" class="score-badge" style="font-size:24px; color:#d32f2f;">0.0</strong> / 33 分</span>
+      <div style="background:#fff; border:1px solid #ddd; padding:12px 16px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
+        <span style="font-weight:bold; font-size:15px;">指定任務 (規範 21分 + 賽道 33分) 加總：</span>
+        <span>
+          規範總分：<strong id="score-mission-std-sum-basic" class="score-badge" style="font-size:20px; color:#2e7d32;">21</strong>/21 分 ｜
+          賽道總分：<strong id="score-mission-total-basic" class="score-badge" style="font-size:20px; color:#1d4ed8;">0.0</strong>/33 分 ｜
+          合計：<strong id="score-mission-grand-basic" class="score-badge" style="font-size:24px; color:#d32f2f;">21.0</strong>/54 分
+        </span>
       </div>
     </div>
 
