@@ -95,6 +95,17 @@
     .selectable:hover { background-color: #f0f7ff; }
     .selectable.active { background-color: var(--primary-light) !important; font-weight: bold; }
 
+    .clickable-detail-cell {
+      cursor: pointer;
+      text-decoration: underline dotted #1976d2;
+      color: #1976d2;
+      font-weight: bold;
+      transition: background-color 0.15s;
+    }
+    .clickable-detail-cell:hover {
+      background-color: #e3f2fd !important;
+    }
+
     .big-footer-row td {
       padding: 10px 8px; font-size: 15px; font-weight: bold; text-align: center;
       vertical-align: middle; background-color: #fff;
@@ -135,7 +146,6 @@
     .tournament-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
     .tournament-card.active-tour { border: 2px solid #2e7d32; background: #f1f8e9; }
 
-    /* 圖形賽道專屬樣式 */
     .score-label-font { font-family: 'Noto Serif TC', 'Songti TC', 'SimSun', serif; }
     .track-card {
       background: #fff; border-radius: 12px; padding: 12px;
@@ -150,7 +160,6 @@
     .bonus-column:hover circle { stroke-width: 3.5; stroke: #7f1d1d; }
     .hidden { display: none !important; }
 
-    /* 整合式指定任務規範開關按鈕組樣式 */
     .std-btn-group {
       display: inline-flex;
       background: #eef2f6;
@@ -290,6 +299,35 @@
           <thead id="coverage-matrix-thead"></thead>
           <tbody id="coverage-matrix-tbody"></tbody>
         </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- 管理員：多評審給分明細彈窗 (Modal) -->
+  <div id="modal-judge-details" class="modal-overlay" style="display: none;">
+    <div class="modal-card" style="max-width: 580px; width: 95%;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom: 1px solid #e0e0e0; padding-bottom:8px;">
+        <h3 id="judge-details-title" style="margin:0; font-size:17px; color: var(--primary);">📊 評審評分明細列表</h3>
+        <button class="btn btn-secondary" id="btn-close-judge-details" style="padding:2px 8px; font-size:13px;">✕</button>
+      </div>
+      <div id="judge-details-team-info" style="font-size:13px; color:#333; margin-bottom:12px; background:#f1f8e9; padding:8px 12px; border-radius:6px; line-height:1.4;">
+        隊伍資訊載入中...
+      </div>
+      <div class="table-responsive" style="max-height: 45vh; overflow-y:auto; margin-bottom: 12px;">
+        <table style="width: 100% !important;">
+          <thead>
+            <tr>
+              <th style="width: 35%;">評審委員</th>
+              <th style="width: 35%;">評分時間</th>
+              <th style="width: 30%;">給出分數</th>
+            </tr>
+          </thead>
+          <tbody id="judge-details-tbody"></tbody>
+        </table>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; background:#e3f2fd; padding:10px 14px; border-radius:8px;">
+        <span style="font-weight:bold; font-size:14px; color:#0d47a1;">評審採計平均分數：</span>
+        <span id="judge-details-avg" style="font-size:22px; font-weight:900; color:#1565c0;">0</span>
       </div>
     </div>
   </div>
@@ -677,7 +715,6 @@
         <div class="sub-title">1. 故事性(6分)</div>
         <div class="table-responsive">
           <table>
-            <!-- 補足 5 與 5.5 -->
             <thead><tr><th>0</th><th>0.5</th><th>1</th><th>1.5</th><th>2</th><th>2.5</th><th>3</th><th>3.5</th><th>4</th><th>4.5</th><th>5</th><th>5.5</th><th>6</th><th>得分</th></tr></thead>
             <tbody>
               <tr id="row-adv-d1">
@@ -722,7 +759,6 @@
 
     <hr style="margin: 24px 0; border: none; border-top: 1px solid #ccc;">
 
-    <!-- 總分結算與評審送出區域（分離簽名與送出按鈕） -->
     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
       <div>
         <div style="font-size: 20px; font-weight: bold; margin-bottom: 6px;">
@@ -732,7 +768,6 @@
       </div>
 
       <div style="width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 10px;">
-        <!-- 簽名框區域 (免簽名時隱藏) -->
         <div id="sign-wrapper" style="width: 100%;">
           <label style="display:block; font-weight: bold; margin-bottom: 6px;">選手/評審簽名確認：</label>
           <div class="sign-container">
@@ -743,7 +778,6 @@
           </div>
         </div>
 
-        <!-- 獨立送出按鈕容器 (確保任何情況下都存在並可見) -->
         <div id="submit-wrapper" style="width: 100%;">
           <button class="btn btn-success" style="width: 100%; padding: 12px; font-size: 16px;" id="btn-submit">確認並送出成績</button>
         </div>
