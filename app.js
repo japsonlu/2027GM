@@ -43,6 +43,13 @@ const modalCoverageMatrix = document.getElementById("modal-coverage-matrix");
 const coverageMatrixThead = document.getElementById("coverage-matrix-thead");
 const coverageMatrixTbody = document.getElementById("coverage-matrix-tbody");
 
+// 評審細項查看彈窗
+const modalJudgeDetails = document.getElementById("modal-judge-details");
+const judgeDetailsTitle = document.getElementById("judge-details-title");
+const judgeDetailsTeamInfo = document.getElementById("judge-details-team-info");
+const judgeDetailsTbody = document.getElementById("judge-details-tbody");
+const judgeDetailsAvg = document.getElementById("judge-details-avg");
+
 const canvas = document.getElementById("sign-pad");
 const ctx = canvas ? canvas.getContext("2d") : null;
 let isDrawing = false;
@@ -152,6 +159,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (modalCoverageMatrix) modalCoverageMatrix.style.display = "none";
   });
 
+  safeBindClick("btn-close-judge-details", () => {
+    if (modalJudgeDetails) modalJudgeDetails.style.display = "none";
+  });
+
   safeBindClick("btn-team-select-all", () => setAllTeamCheckboxes(true));
   safeBindClick("btn-team-clear", () => setAllTeamCheckboxes(false));
   safeBindClick("btn-team-select-gae", () => filterTeamCheckboxesByLevel("E"));
@@ -163,12 +174,21 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeBonusModal();
+    if (e.key === "Escape") {
+      closeBonusModal();
+      if (modalJudgeDetails) modalJudgeDetails.style.display = "none";
+    }
   });
+
   const bonusModalEl = document.getElementById("bonusModal");
   if (bonusModalEl) {
     bonusModalEl.addEventListener("click", (e) => {
       if (e.target.id === "bonusModal") closeBonusModal();
+    });
+  }
+  if (modalJudgeDetails) {
+    modalJudgeDetails.addEventListener("click", (e) => {
+      if (e.target.id === "modal-judge-details") modalJudgeDetails.style.display = "none";
     });
   }
 });
@@ -950,6 +970,46 @@ async function openCoverageMatrixModal() {
   }
 }
 
+// 管理員點擊查看多位評審明細視窗
+window.openScoreDetailsModal = function(teamId, type) {
+  if (!isAdminUser) return;
+  const team = assignedTeams.find(t => t.teamId === teamId);
+  const score = scoresCache[teamId] || {};
+  if (!team || !modalJudgeDetails) return;
+
+  const isCreative = (type === "creative");
+  const dimensionName = isCreative ? "第三張：創意關卡 (滿分16分)" : "第四張：整體機構設計 (滿分8分)";
+  const detailsList = isCreative ? (score.creativeDetails || []) : (score.designDetails || []);
+  const avgScore = isCreative ? (score.creativeScore || "0") : (score.designScore || "0");
+
+  if (judgeDetailsTitle) judgeDetailsTitle.textContent = `📊 ${dimensionName} — 各評審給分明細`;
+  if (judgeDetailsTeamInfo) {
+    judgeDetailsTeamInfo.innerHTML = `<strong>隊伍編號：</strong>${team.teamId} ｜ <strong>學校：</strong>${team.school} ｜ <strong>隊名：</strong>${team.teamName}`;
+  }
+  if (judgeDetailsAvg) judgeDetailsAvg.textContent = `${avgScore} 分`;
+
+  if (judgeDetailsTbody) {
+    judgeDetailsTbody.innerHTML = "";
+    if (detailsList.length === 0) {
+      judgeDetailsTbody.innerHTML = `<tr><td colspan="3" style="color:#888; padding:16px;">尚無評審送出該項向度的評分。</td></tr>`;
+    } else {
+      detailsList.forEach((item, index) => {
+        const tr = document.createElement("tr");
+        const displayName = item.judgeName || item.username || `評審 ${index + 1}`;
+        const timeStr = item.timestamp || "-";
+        tr.innerHTML = `
+          <td style="font-weight:bold;">${displayName}</td>
+          <td style="font-size:12px; color:#555;">${timeStr}</td>
+          <td style="font-weight:bold; font-size:15px; color:#1565c0;">${item.score} 分</td>
+        `;
+        judgeDetailsTbody.appendChild(tr);
+      });
+    }
+  }
+
+  modalJudgeDetails.style.display = "flex";
+};
+
 async function fetchLatestScores(showNotice = false) {
   if (!currentJudge) return;
 
@@ -1077,7 +1137,6 @@ function renderTeamList() {
     let midColsHtml = "";
 
     if (isAdv) {
-      // 評審若不負責該向度，則該欄位留空，僅管理員能看全部
       const stageVal = hasS1 ? formatScoreVal(score.stageCountScore) : "";
       const fluVal = hasS1 ? formatScoreVal(score.fluencyWeighted) : "";
       const sciVal = hasS2 ? formatScoreVal(score.scienceScore) : "";
@@ -1086,7 +1145,14 @@ function renderTeamList() {
       const g3Val = hasS2 ? formatScoreVal(score.green3Score) : "";
       const crVal = hasS3 ? formatScoreVal(score.creativeScore) : "";
       const dsVal = hasS4 ? formatScoreVal(score.designScore) : "";
-      const totVal = isAdminUser ? formatScoreVal(score.totalScore) : formatScoreVal(score.totalScore);
+      const totVal = formatScoreVal(score.totalScore);
+
+      // 管理員模式且有值時，支援點擊彈出明細
+      const crClass = (isAdminUser && crVal) ? "score-col clickable-detail-cell" : "score-col";
+      const crClickAttr = (isAdminUser && crVal) ? `onclick="openScoreDetailsModal('${team.teamId}', 'creative')"` : "";
+
+      const dsClass = (isAdminUser && dsVal) ? "score-col clickable-detail-cell" : "score-col";
+      const dsClickAttr = (isAdminUser && dsVal) ? `onclick="openScoreDetailsModal('${team.teamId}', 'design')"` : "";
 
       midColsHtml = `
         <td class="score-col" data-val="${stageVal}">${getDisplayScore(stageVal, isHidden)}</td>
@@ -1095,8 +1161,8 @@ function renderTeamList() {
         <td class="score-col" data-val="${g1Val}">${getDisplayScore(g1Val, isHidden)}</td>
         <td class="score-col" data-val="${g2Val}">${getDisplayScore(g2Val, isHidden)}</td>
         <td class="score-col" data-val="${g3Val}">${getDisplayScore(g3Val, isHidden)}</td>
-        <td class="score-col" data-val="${crVal}">${getDisplayScore(crVal, isHidden)}</td>
-        <td class="score-col" data-val="${dsVal}">${getDisplayScore(dsVal, isHidden)}</td>
+        <td class="${crClass}" data-val="${crVal}" ${crClickAttr} title="${isAdminUser && crVal ? '點擊查看所有評審給分明細' : ''}">${getDisplayScore(crVal, isHidden)}</td>
+        <td class="${dsClass}" data-val="${dsVal}" ${dsClickAttr} title="${isAdminUser && dsVal ? '點擊查看所有評審給分明細' : ''}">${getDisplayScore(dsVal, isHidden)}</td>
         <td class="score-col" data-val="${totVal}" style="font-weight:bold; color:var(--primary);">${getDisplayScore(totVal, isHidden)}</td>
         <td class="note-col" style="min-width:70px;"></td>
       `;
@@ -1316,7 +1382,6 @@ function resetFormToDefaults() {
     resetAllRounds();
 
   } else {
-    // 預設重置時不預選任何分數，讓第二位評審進來時為乾淨未評分狀態
     const advSt = document.querySelector('#row-adv-stage .selectable[data-val="8"]');
     if (advSt) advSt.classList.add("active");
 
