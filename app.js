@@ -50,7 +50,6 @@ let hasSignature = false;
 let syncTimer = null;
 
 // ==================== 基礎組賽道與任務規範資料結構 ====================
-// 自動 2分, 距離 2分, 未觸碰 3分 (滿分7分)
 const rounds = {
   1: { base: 0, bonus: 0, selectedNodeId: null, desc: '', auto: 2, dist: 2, untouched: 3 },
   2: { base: 0, bonus: 0, selectedNodeId: null, desc: '', auto: 2, dist: 2, untouched: 3 },
@@ -59,40 +58,32 @@ const rounds = {
 let activeModalRound = 1;
 
 const trackDots = [
-  // 1. 左側界外 (3 個點)
   { id: 'out-top', cx: 34, cy: 75, score: 5, label: '界外·上方', isCenterTarget: false },
   { id: 'out-mid', cx: 34, cy: 152, score: 6, label: '界外·中方', isCenterTarget: false },
   { id: 'out-bottom', cx: 34, cy: 229, score: 5, label: '界外·下方', isCenterTarget: false },
 
-  // 2. 目標區 (黃底)
   { id: 't-left', cx: 80, cy: 152, score: 7, label: '目標區·左框', isCenterTarget: false },
   { id: 't-top', cx: 177, cy: 75, score: 7, label: '目標區·上框', isCenterTarget: false },
-  { id: 't-center', cx: 177, cy: 152, score: 8, label: '目標區·中心點', isCenterTarget: true }, // 彈出加分
+  { id: 't-center', cx: 177, cy: 152, score: 8, label: '目標區·中心點', isCenterTarget: true },
   { id: 't-bottom', cx: 177, cy: 229, score: 7, label: '目標區·下框', isCenterTarget: false },
   { id: 'tf-mid', cx: 274, cy: 152, score: 7, label: '目標區/F·交界', isCenterTarget: false },
 
-  // 3. F 區
   { id: 'f-top', cx: 371, cy: 75, score: 5, label: 'F區·上框', isCenterTarget: false },
   { id: 'f-mid', cx: 371, cy: 152, score: 6, label: 'F區·中心', isCenterTarget: false },
   { id: 'f-bottom', cx: 371, cy: 229, score: 5, label: 'F區·下框', isCenterTarget: false },
 
-  // 4. F / G 交界
   { id: 'fg-mid', cx: 468, cy: 152, score: 5, label: 'F/G·交界', isCenterTarget: false },
 
-  // 5. G 區
   { id: 'g-top', cx: 565, cy: 75, score: 3, label: 'G區·上框', isCenterTarget: false },
   { id: 'g-mid', cx: 565, cy: 152, score: 4, label: 'G區·中心', isCenterTarget: false },
   { id: 'g-bottom', cx: 565, cy: 229, score: 3, label: 'G區·下框', isCenterTarget: false },
 
-  // 6. G / H 交界
   { id: 'gh-mid', cx: 662, cy: 152, score: 3, label: 'G/H·交界', isCenterTarget: false },
 
-  // 7. H 區
   { id: 'h-top', cx: 759, cy: 75, score: 1, label: 'H區·上框', isCenterTarget: false },
   { id: 'h-mid', cx: 759, cy: 152, score: 2, label: 'H區·中心', isCenterTarget: false },
   { id: 'h-bottom', cx: 759, cy: 229, score: 1, label: 'H區·下框', isCenterTarget: false },
 
-  // 8. H 區最右邊界
   { id: 'h-right', cx: 856, cy: 152, score: 0, label: 'H區·右邊界', isCenterTarget: false }
 ];
 
@@ -199,8 +190,6 @@ function renderTrackRow(roundNum) {
 
   return `
     <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
-      
-      <!-- ★ 任務規範上拉至上方：移除按鈕內數字，後面直接顯示規範加總 ★ -->
       <div style="width:100%; max-width:980px; margin-bottom:10px; padding:8px 14px; background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <div style="font-weight:bold; font-size:14px; color:#9f1239;">
           📋 第 ${roundNum} 次任務規範：
@@ -230,16 +219,13 @@ function renderTrackRow(roundNum) {
             </div>
           </div>
 
-          <!-- 規範加總直接放在後面 -->
           <div style="background:#fff; border:1px solid #fda4af; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; color:#be123c;">
             規範得分：<span id="std-header-score-${roundNum}" style="font-size:16px;">7</span> / 7
           </div>
         </div>
       </div>
 
-      <!-- 賽道與右側獨立任務計分方框 -->
       <svg viewBox="0 0 1180 320" style="width:100%; max-width:980px; height:auto; user-select:none; overflow:visible;">
-        <!-- 目標區 (黃底 + 黑框) -->
         <rect x="80" y="75" width="194" height="154" fill="#FFFF00" stroke="#000000" stroke-width="7" />
         <circle cx="110" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
         <circle cx="132" cy="95" r="5.5" fill="#FF0000" stroke="#000" stroke-width="1.2"/>
@@ -262,13 +248,11 @@ function renderTrackRow(roundNum) {
 
         ${dotsSvg}
 
-        <!-- 任務區、FGH 文字移到圖的下方 -->
         <text x="177" y="275" text-anchor="middle" font-size="34" font-weight="900" fill="#000000">目標區</text>
         <text x="371" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">F</text>
         <text x="565" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">G</text>
         <text x="759" y="275" text-anchor="middle" font-size="36" font-weight="900" fill="#000000">H</text>
 
-        <!-- ★ 任務得分獨立方框 (包含區域得分、加分得分與任務得分小計) ★ -->
         <g transform="translate(895, 75)" class="score-label-font">
           <rect x="-10" y="-10" width="280" height="175" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
 
@@ -285,7 +269,6 @@ function renderTrackRow(roundNum) {
         </g>
       </svg>
 
-      <!-- ★ 本局合計放在下方，改成本次合計 ★ -->
       <div style="width:100%; max-width:980px; margin-top:10px; background:#f0fdf4; border:1.5px solid #86efac; border-radius:8px; padding:10px 18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
         <span style="font-size:15px; font-weight:bold; color:#166534;">
           本次合計（第 ${roundNum} 次）：
@@ -391,11 +374,9 @@ function updateScoresUI(roundNum, base, bonus, desc) {
   const trackScore = base + bonus;
   const total = std + trackScore;
 
-  // 上方規範得分即時加總
   const hStdEl = document.getElementById(`std-header-score-${roundNum}`);
   if (hStdEl) hStdEl.textContent = formatScoreDisplay(std);
 
-  // 右側任務獨立計分方框
   const bEl = document.getElementById(`svgBaseScore-${roundNum}`);
   const boEl = document.getElementById(`svgBonusScore-${roundNum}`);
   const trackSubEl = document.getElementById(`svgTrackSubtotal-${roundNum}`);
@@ -406,7 +387,6 @@ function updateScoresUI(roundNum, base, bonus, desc) {
   if (trackSubEl) trackSubEl.textContent = formatScoreDisplay(trackScore);
   if (dEl && desc) dEl.textContent = desc;
 
-  // 下方「本次合計」
   const fStd = document.getElementById(`foot-std-${roundNum}`);
   const fTrk = document.getElementById(`foot-track-${roundNum}`);
   const fTot = document.getElementById(`foot-total-${roundNum}`);
@@ -1080,6 +1060,12 @@ function renderTeamList() {
     }
   });
 
+  const sheets = currentAssignedSheets;
+  const hasS1 = isAdminUser || sheets.indexOf("sheet1") !== -1;
+  const hasS2 = isAdminUser || sheets.indexOf("sheet2") !== -1;
+  const hasS3 = isAdminUser || sheets.indexOf("sheet3") !== -1;
+  const hasS4 = isAdminUser || sheets.indexOf("sheet4") !== -1;
+
   sortedTeams.forEach(team => {
     const tr = document.createElement("tr");
     tr.id = `team-row-${team.teamId}`;
@@ -1091,15 +1077,16 @@ function renderTeamList() {
     let midColsHtml = "";
 
     if (isAdv) {
-      const stageVal = formatScoreVal(score.stageCountScore);
-      const fluVal = formatScoreVal(score.fluencyWeighted);
-      const sciVal = formatScoreVal(score.scienceScore);
-      const g1Val = formatScoreVal(score.green1Score);
-      const g2Val = formatScoreVal(score.green2Score);
-      const g3Val = formatScoreVal(score.green3Score);
-      const crVal = formatScoreVal(score.creativeScore);
-      const dsVal = formatScoreVal(score.designScore);
-      const totVal = formatScoreVal(score.totalScore);
+      // 評審若不負責該向度，則該欄位留空，僅管理員能看全部
+      const stageVal = hasS1 ? formatScoreVal(score.stageCountScore) : "";
+      const fluVal = hasS1 ? formatScoreVal(score.fluencyWeighted) : "";
+      const sciVal = hasS2 ? formatScoreVal(score.scienceScore) : "";
+      const g1Val = hasS2 ? formatScoreVal(score.green1Score) : "";
+      const g2Val = hasS2 ? formatScoreVal(score.green2Score) : "";
+      const g3Val = hasS2 ? formatScoreVal(score.green3Score) : "";
+      const crVal = hasS3 ? formatScoreVal(score.creativeScore) : "";
+      const dsVal = hasS4 ? formatScoreVal(score.designScore) : "";
+      const totVal = isAdminUser ? formatScoreVal(score.totalScore) : formatScoreVal(score.totalScore);
 
       midColsHtml = `
         <td class="score-col" data-val="${stageVal}">${getDisplayScore(stageVal, isHidden)}</td>
@@ -1329,6 +1316,7 @@ function resetFormToDefaults() {
     resetAllRounds();
 
   } else {
+    // 預設重置時不預選任何分數，讓第二位評審進來時為乾淨未評分狀態
     const advSt = document.querySelector('#row-adv-stage .selectable[data-val="8"]');
     if (advSt) advSt.classList.add("active");
 
@@ -1370,6 +1358,14 @@ function loadExistingScoresToForm(score) {
       selectVal("row-adv-stage", count);
     }
     if (score.scienceScore) selectVal("row-adv-science", score.scienceScore);
+
+    if (score.c1Score !== undefined) selectVal("row-adv-c1", score.c1Score);
+    if (score.c2Score !== undefined) selectVal("row-adv-c2", score.c2Score);
+    if (score.c3Score !== undefined) selectVal("row-adv-c3", score.c3Score);
+    if (score.c4Score !== undefined) selectVal("row-adv-c4", score.c4Score);
+
+    if (score.d1Score !== undefined) selectVal("row-adv-d1", score.d1Score);
+    if (score.d2Score !== undefined) selectVal("row-adv-d2", score.d2Score);
   }
 }
 
@@ -1429,14 +1425,12 @@ function calculateAllScores() {
 }
 
 function calculateBasicScores() {
-  // 關卡數量 (滿分16分)
   const stageEl = document.querySelector("#row-stage-basic .selectable.active");
   const stageCount = stageEl ? parseFloat(stageEl.dataset.val) : 8;
   const stageScore = stageCount * 2;
   const sStage = document.getElementById("score-stage-basic");
   if (sStage) sStage.textContent = stageScore;
 
-  // 流暢度加權修正：(20 - 次數*2) * 關卡數量 / 8
   const fluencyEl = document.querySelector("#row-fluency-basic .selectable.active");
   let fluencyRaw = 20;
   let fluencyWeighted = 20;
@@ -1450,7 +1444,6 @@ function calculateBasicScores() {
   if (flRawEl) flRawEl.textContent = fluencyRaw;
   if (flWeightEl) flWeightEl.textContent = fluencyWeighted;
 
-  // 關卡任務 (10 分)
   let taskTotal = 0;
   ["row-task-1", "row-task-2"].forEach(rowId => {
     const row = document.getElementById(rowId);
@@ -1464,7 +1457,6 @@ function calculateBasicScores() {
   const tTotEl = document.getElementById("score-task-total");
   if (tTotEl) tTotEl.textContent = taskTotal;
 
-  // 任務規範：自動 2分, 距離 2分, 未觸碰 3分 (共 21 分)
   const stdR1 = (rounds[1].auto || 0) + (rounds[1].dist || 0) + (rounds[1].untouched || 0);
   const stdR2 = (rounds[2].auto || 0) + (rounds[2].dist || 0) + (rounds[2].untouched || 0);
   const stdR3 = (rounds[3].auto || 0) + (rounds[3].dist || 0) + (rounds[3].untouched || 0);
@@ -1472,7 +1464,6 @@ function calculateBasicScores() {
   const stdSumEl = document.getElementById("score-mission-std-sum-basic");
   if (stdSumEl) stdSumEl.textContent = stdTotal;
 
-  // 賽道得分加總 (滿分 33 分)
   const track1 = rounds[1].base + rounds[1].bonus;
   const track2 = rounds[2].base + rounds[2].bonus;
   const track3 = rounds[3].base + rounds[3].bonus;
@@ -1481,12 +1472,10 @@ function calculateBasicScores() {
   const misTotEl = document.getElementById("score-mission-total-basic");
   if (misTotEl) misTotEl.textContent = formatScoreDisplay(missionTrackTotal);
 
-  // 指定任務 54 分加總 (規範 21 + 賽道 33)
   const missionGrand = Number((stdTotal + missionTrackTotal).toFixed(1));
   const misGrandEl = document.getElementById("score-mission-grand-basic");
   if (misGrandEl) misGrandEl.textContent = formatScoreDisplay(missionGrand);
 
-  // 總分 (100分)
   const total = Number((stageScore + fluencyWeighted + taskTotal + stdTotal + missionTrackTotal).toFixed(2));
   const finTotEl = document.getElementById("final-total-score");
   if (finTotEl) finTotEl.textContent = total;
@@ -1499,7 +1488,6 @@ function calculateAdvancedScores() {
   const advStEl = document.getElementById("score-adv-stage");
   if (advStEl) advStEl.textContent = stageScore;
 
-  // 流暢度加權公式：(20 - 次數*2) * 關卡數量 / 8
   const flEl = document.querySelector("#row-adv-fluency .selectable.active");
   let flDrops = flEl ? parseFloat(flEl.dataset.val) : 0;
   let flRaw = Math.max(0, 20 - flDrops * 2);
