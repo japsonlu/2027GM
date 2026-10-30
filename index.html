@@ -431,13 +431,12 @@
         </table>
       </div>
 
-      <!-- ★ 整合後的指定任務 (54 分 = 任務規範 21分 + 賽道評分 33分) ★ -->
+      <!-- 整合後的指定任務 (54 分) -->
       <div class="section-title" style="color:#2e7d32; display:flex; justify-content:space-between; align-items:center;">
         <span>🎯 【基礎組】指定任務 (54 分)：規範評分 (21 分) ＋ 賽道得分 (33 分)</span>
         <button type="button" class="btn btn-secondary" onclick="resetAllRounds()" style="padding:4px 10px; font-size:12px;">重置三次評分</button>
       </div>
 
-      <!-- 第 1 次評分卡片 -->
       <div class="track-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">
           <div style="font-weight:bold; font-size:14px; color:#1d4ed8;">
@@ -448,7 +447,6 @@
         <div id="svgTrack-1" style="width:100%; overflow-x:auto;"></div>
       </div>
 
-      <!-- 第 2 次評分卡片 -->
       <div class="track-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">
           <div style="font-weight:bold; font-size:14px; color:#4338ca;">
@@ -459,7 +457,6 @@
         <div id="svgTrack-2" style="width:100%; overflow-x:auto;"></div>
       </div>
 
-      <!-- 第 3 次評分卡片 -->
       <div class="track-card">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">
           <div style="font-weight:bold; font-size:14px; color:#6b21a8;">
@@ -680,7 +677,8 @@
         <div class="sub-title">1. 故事性(6分)</div>
         <div class="table-responsive">
           <table>
-            <thead><tr><th>0</th><th>0.5</th><th>1</th><th>1.5</th><th>2</th><th>2.5</th><th>3</th><th>3.5</th><th>4</th><th>4.5</th><th>6</th><th>得分</th></tr></thead>
+            <!-- 補足 5 與 5.5 -->
+            <thead><tr><th>0</th><th>0.5</th><th>1</th><th>1.5</th><th>2</th><th>2.5</th><th>3</th><th>3.5</th><th>4</th><th>4.5</th><th>5</th><th>5.5</th><th>6</th><th>得分</th></tr></thead>
             <tbody>
               <tr id="row-adv-d1">
                 <td class="selectable toggleable" data-group="d1_st" data-val="0">0</td>
@@ -693,6 +691,8 @@
                 <td class="selectable toggleable" data-group="d1_st" data-val="3.5">3.5</td>
                 <td class="selectable toggleable" data-group="d1_st" data-val="4">4</td>
                 <td class="selectable toggleable" data-group="d1_st" data-val="4.5">4.5</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="5">5</td>
+                <td class="selectable toggleable" data-group="d1_st" data-val="5.5">5.5</td>
                 <td class="selectable toggleable" data-group="d1_st" data-val="6">6</td>
                 <td id="score-adv-d1" class="score-badge">0</td>
               </tr>
@@ -722,29 +722,36 @@
 
     <hr style="margin: 24px 0; border: none; border-top: 1px solid #ccc;">
 
-    <!-- 總分結算與評審簽名 -->
+    <!-- 總分結算與評審送出區域（分離簽名與送出按鈕） -->
     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
       <div>
         <div style="font-size: 20px; font-weight: bold; margin-bottom: 6px;">
-          本次負責項目評分小計：<span id="final-total-score" style="color: #d32f2f; font-size: 30px;">100</span> 分
+          本次負責項目評分小計：<span id="final-total-score" style="color: #d32f2f; font-size: 30px;">0</span> 分
         </div>
         <p id="scoring-role-hint" style="color: #666; font-size: 13px; margin: 0;">確認成績無誤後送出成績。</p>
       </div>
 
-      <div id="sign-wrapper" style="width: 100%; max-width: 480px;">
-        <label style="display:block; font-weight: bold; margin-bottom: 6px;">選手/評審簽名確認：</label>
-        <div class="sign-container">
-          <canvas id="sign-pad"></canvas>
+      <div style="width: 100%; max-width: 480px; display: flex; flex-direction: column; gap: 10px;">
+        <!-- 簽名框區域 (免簽名時隱藏) -->
+        <div id="sign-wrapper" style="width: 100%;">
+          <label style="display:block; font-weight: bold; margin-bottom: 6px;">選手/評審簽名確認：</label>
+          <div class="sign-container">
+            <canvas id="sign-pad"></canvas>
+          </div>
+          <div class="sign-actions">
+            <button class="btn btn-secondary" id="btn-clear-sign" style="width: 100%;">清除重簽</button>
+          </div>
         </div>
-        <div class="sign-actions">
-          <button class="btn btn-secondary" id="btn-clear-sign">清除重簽</button>
-          <button class="btn btn-success" style="flex: 1;" id="btn-submit">確認並送出成績</button>
+
+        <!-- 獨立送出按鈕容器 (確保任何情況下都存在並可見) -->
+        <div id="submit-wrapper" style="width: 100%;">
+          <button class="btn btn-success" style="width: 100%; padding: 12px; font-size: 16px;" id="btn-submit">確認並送出成績</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ==================== 目標區加分彈窗 Modal ==================== -->
+  <!-- 目標區加分彈窗 Modal -->
   <div id="bonusModal" class="modal-overlay hidden">
     <div class="modal-card" style="max-width: 680px; width: 95%; padding: 0; overflow: hidden; border-radius: 16px;">
       <div style="background: #fbc02d; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f57f17;">
