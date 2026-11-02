@@ -8,7 +8,7 @@ let currentAssignedSheets = [];
 let currentDivision = "basic";
 let currentSheetId = "";
 let currentTournamentName = "";
-let currentSortMode = "scoreDesc";
+let currentSortMode = "scoreDesc"; // "teamId" or "scoreDesc" (依比序)
 let currentGroupFilter = "E"; // E: 國小, J: 國中, H: 高中
 
 let assignedTeams = [];
@@ -97,6 +97,7 @@ const trackDots = [
 document.addEventListener("DOMContentLoaded", () => {
   setupSelectionHandlers();
   initTracks();
+  setupScrollSnapObserver();
   loadInitialActiveTournament();
 
   safeBindClick("btn-login", handleLogin);
@@ -198,23 +199,31 @@ function safeBindClick(id, handler) {
   if (el) el.addEventListener("click", handler);
 }
 
-// ==================== 賽道 SVG 繪製與互動邏輯 ====================
+// ==================== 賽道 SVG 繪製與色彩分流 ====================
 function renderTrackRow(roundNum) {
+  // 色彩分流色標定義
+  const themeColors = {
+    1: { dotMain: "#3B82F6", dotStroke: "#1D4ED8", specBorder: "#bfdbfe", specBg: "#eff6ff", specTitle: "#1e40af", scoreCardText: "#1d4ed8" },
+    2: { dotMain: "#a855f7", dotStroke: "#7e22ce", specBorder: "#ddd6fe", specBg: "#f5f3ff", specTitle: "#5b21b6", scoreCardText: "#6b21a8" },
+    3: { dotMain: "#f59e0b", dotStroke: "#b45309", specBorder: "#fde68a", specBg: "#fffbeb", specTitle: "#92400e", scoreCardText: "#b45309" }
+  };
+  const theme = themeColors[roundNum] || themeColors[1];
+
   const dotsSvg = trackDots.map(dot => `
     <g id="dot-${roundNum}-${dot.id}" class="blue-dot" 
        onclick="selectTrackDot(${roundNum}, '${dot.id}', ${dot.score}, '${dot.label}', ${dot.isCenterTarget})">
       <circle id="ring-${roundNum}-${dot.id}" cx="${dot.cx}" cy="${dot.cy}" r="18" class="selected-ring hidden" />
-      <circle cx="${dot.cx}" cy="${dot.cy}" r="13" fill="#3B82F6" stroke="#1D4ED8" stroke-width="2.5" class="main-circle" />
+      <circle cx="${dot.cx}" cy="${dot.cy}" r="13" fill="${theme.dotMain}" stroke="${theme.dotStroke}" stroke-width="2.5" class="main-circle" />
     </g>
   `).join('');
 
   return `
     <div style="width:100%; display:flex; flex-direction:column; align-items:center;">
-      <div style="width:100%; max-width:980px; margin-bottom:10px; padding:8px 14px; background:#fff1f2; border:1px solid #fecdd3; border-radius:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <div style="font-weight:bold; font-size:14px; color:#9f1239;">
+      <div class="std-spec-box" style="width:100%; max-width:980px; margin-bottom:10px; padding:8px 14px; border:1.5px solid ${theme.specBorder}; background:${theme.specBg}; border-radius:8px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <div style="font-weight:bold; font-size:14px; color:${theme.specTitle};">
           📋 第 ${roundNum} 次任務規範：
         </div>
-        <div style="display:flex; gap:18px; align-items:center; flex-wrap:wrap;">
+        <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
           <div style="display:flex; align-items:center; gap:6px;">
             <span style="font-size:13px; font-weight:bold;">自動 (2分)：</span>
             <div class="std-btn-group">
@@ -239,7 +248,7 @@ function renderTrackRow(roundNum) {
             </div>
           </div>
 
-          <div style="background:#fff; border:1px solid #fda4af; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; color:#be123c;">
+          <div style="background:#fff; border:1px solid ${theme.specBorder}; padding:4px 10px; border-radius:6px; font-size:13px; font-weight:bold; color:${theme.specTitle};">
             規範得分：<span id="std-header-score-${roundNum}" style="font-size:16px;">7</span> / 7
           </div>
         </div>
@@ -277,15 +286,15 @@ function renderTrackRow(roundNum) {
           <rect x="-10" y="-10" width="280" height="175" rx="8" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="2"/>
 
           <text x="8" y="32" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">區域得分：</text>
-          <text x="145" y="32" font-size="24" font-weight="900" fill="#1D4ED8" id="svgBaseScore-${roundNum}">0</text>
+          <text x="145" y="32" font-size="24" font-weight="900" fill="${theme.scoreCardText}" id="svgBaseScore-${roundNum}">0</text>
 
           <text x="8" y="75" font-size="22" font-weight="600" fill="#333333" letter-spacing="1">加分得分：</text>
           <text x="145" y="75" font-size="24" font-weight="900" fill="#B45309" id="svgBonusScore-${roundNum}">0</text>
 
           <line x1="0" y1="96" x2="260" y2="96" stroke="#94A3B8" stroke-width="1.5" />
 
-          <text x="8" y="135" font-size="24" font-weight="900" fill="#1e40af">任務得分：</text>
-          <text x="145" y="135" font-size="28" font-weight="900" fill="#1e40af" id="svgTrackSubtotal-${roundNum}">0</text>
+          <text x="8" y="135" font-size="24" font-weight="900" fill="${theme.scoreCardText}">任務得分：</text>
+          <text x="145" y="135" font-size="28" font-weight="900" fill="${theme.scoreCardText}" id="svgTrackSubtotal-${roundNum}">0</text>
         </g>
       </svg>
 
@@ -294,8 +303,8 @@ function renderTrackRow(roundNum) {
           本次合計（第 ${roundNum} 次）：
         </span>
         <span style="font-size:15px; color:#374151;">
-          規範 <strong id="foot-std-${roundNum}" style="color:#be123c;">7</strong> 分 ＋ 
-          任務 <strong id="foot-track-${roundNum}" style="color:#1e40af;">0</strong> 分 ＝ 
+          規範 <strong id="foot-std-${roundNum}" style="color:${theme.specTitle};">7</strong> 分 ＋ 
+          任務 <strong id="foot-track-${roundNum}" style="color:${theme.scoreCardText};">0</strong> 分 ＝ 
           <strong id="foot-total-${roundNum}" style="font-size:22px; color:#059669; margin-left:4px;">7</strong> 分
         </span>
       </div>
@@ -310,6 +319,31 @@ function initTracks() {
   if (t1) t1.innerHTML = renderTrackRow(1);
   if (t2) t2.innerHTML = renderTrackRow(2);
   if (t3) t3.innerHTML = renderTrackRow(3);
+}
+
+// 支援滾動吸附與指示按鈕聯動
+window.scrollToRound = function(roundNum) {
+  const card = document.getElementById(`round-card-${roundNum}`);
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+};
+
+function setupScrollSnapObserver() {
+  const container = document.getElementById("roundsScrollContainer");
+  if (!container) return;
+
+  const updateActiveIndicator = () => {
+    const scrollLeft = container.scrollLeft;
+    const cardWidth = container.offsetWidth;
+    const activeIndex = Math.min(3, Math.max(1, Math.round(scrollLeft / cardWidth) + 1));
+    document.querySelectorAll(".snap-indicator-btn").forEach((btn, idx) => {
+      if (idx + 1 === activeIndex) btn.classList.add("active");
+      else btn.classList.remove("active");
+    });
+  };
+
+  container.addEventListener("scroll", updateActiveIndicator, { passive: true });
 }
 
 window.setRoundStd = function(roundNum, type, val) {
@@ -1050,6 +1084,13 @@ function getDisplayScore(valStr, isHidden) {
   return isHidden ? "***" : valStr;
 }
 
+// 輔助數值解析函式
+function parseNum(val) {
+  if (val === undefined || val === null || val === "" || isNaN(Number(val))) return 0;
+  return Number(val);
+}
+
+// ==================== 排序與渲染 (含同分比序邏輯) ====================
 function renderTeamList() {
   const isAdv = (currentDivision === "advanced");
 
@@ -1097,26 +1138,85 @@ function renderTeamList() {
     return;
   }
 
+  // 排序核心：若成績同分進行比序
   const sortedTeams = [...filteredTeams].sort((a, b) => {
     const aScore = scoresCache[a.teamId];
     const bScore = scoresCache[b.teamId];
     const aTotal = (aScore && aScore.totalScore !== undefined && aScore.totalScore !== "") ? parseFloat(aScore.totalScore) : null;
     const bTotal = (bScore && bScore.totalScore !== undefined && bScore.totalScore !== "") ? parseFloat(bScore.totalScore) : null;
 
-    if (isAdminUser) {
-      if (currentSortMode === "scoreDesc") {
-        if (aTotal !== null && bTotal !== null) return bTotal - aTotal;
-        if (aTotal !== null && bTotal === null) return -1;
-        if (aTotal === null && bTotal !== null) return 1;
-        return a.teamId.localeCompare(b.teamId, undefined, { numeric: true });
-      } else {
+    if (currentSortMode === "scoreDesc") {
+      // 兩者皆無成績時比隊伍編號
+      if (aTotal === null && bTotal === null) {
         return a.teamId.localeCompare(b.teamId, undefined, { numeric: true });
       }
+      if (aTotal !== null && bTotal === null) return -1;
+      if (aTotal === null && bTotal !== null) return 1;
+
+      // 1. 先比總分
+      if (bTotal !== aTotal) {
+        return bTotal - aTotal;
+      }
+
+      // 總分相同時進入「同分比序」
+      if (!isAdv) {
+        // ========== 基礎組比序：流暢度 > 關卡任務 > 指定任務 ==========
+        const aFlu = parseNum(aScore.fluencyScore);
+        const bFlu = parseNum(bScore.fluencyScore);
+        if (bFlu !== aFlu) return bFlu - aFlu;
+
+        const aTask = parseNum(aScore.taskScore);
+        const bTask = parseNum(bScore.taskScore);
+        if (bTask !== aTask) return bTask - aTask;
+
+        // 指定任務 (規範 + 賽道)
+        let aStd = parseNum(aScore.stdScore || aScore.missionStdScore || aScore.ruleScore);
+        let bStd = parseNum(bScore.stdScore || bScore.missionStdScore || bScore.ruleScore);
+        let aMis = parseNum(aScore.missionScore);
+        let bMis = parseNum(bScore.missionScore);
+        let aMissionTotal = aStd + aMis;
+        let bMissionTotal = bStd + bMis;
+        if (bMissionTotal !== aMissionTotal) return bMissionTotal - aMissionTotal;
+
+      } else {
+        // ========== 進階組比序：流暢度 > 關卡數量 > 綠色能源 > 科學概念 > 創意關卡 > 整體機構設計 ==========
+        // 1. 流暢度
+        const aFlu = parseNum(aScore.fluencyWeighted);
+        const bFlu = parseNum(bScore.fluencyWeighted);
+        if (bFlu !== aFlu) return bFlu - aFlu;
+
+        // 2. 關卡數量
+        const aStage = parseNum(aScore.stageCountScore);
+        const bStage = parseNum(bScore.stageCountScore);
+        if (bStage !== aStage) return bStage - aStage;
+
+        // 3. 綠色能源 (綠能1 + 綠能2 + 綠能3)
+        const aGreen = parseNum(aScore.green1Score) + parseNum(aScore.green2Score) + parseNum(aScore.green3Score);
+        const bGreen = parseNum(bScore.green1Score) + parseNum(bScore.green2Score) + parseNum(bScore.green3Score);
+        if (bGreen !== aGreen) return bGreen - aGreen;
+
+        // 4. 科學概念
+        const aSci = parseNum(aScore.scienceScore);
+        const bSci = parseNum(bScore.scienceScore);
+        if (bSci !== aSci) return bSci - aSci;
+
+        // 5. 創意關卡
+        const aCr = parseNum(aScore.creativeScore);
+        const bCr = parseNum(bScore.creativeScore);
+        if (bCr !== aCr) return bCr - aCr;
+
+        // 6. 整體機構設計
+        const aDs = parseNum(aScore.designScore);
+        const bDs = parseNum(bScore.designScore);
+        if (bDs !== aDs) return bDs - aDs;
+      }
+
+      // 所有同分向度完全相同，最後以隊伍編號排列
+      return a.teamId.localeCompare(b.teamId, undefined, { numeric: true });
+
     } else {
-      const aScored = (aTotal !== null);
-      const bScored = (bTotal !== null);
-      if (aScored === bScored) return a.teamId.localeCompare(b.teamId, undefined, { numeric: true });
-      return aScored ? 1 : -1;
+      // 依編號排序
+      return a.teamId.localeCompare(b.teamId, undefined, { numeric: true });
     }
   });
 
@@ -1147,7 +1247,6 @@ function renderTeamList() {
       const dsVal = hasS4 ? formatScoreVal(score.designScore) : "";
       const totVal = formatScoreVal(score.totalScore);
 
-      // 管理員模式且有值時，支援點擊彈出明細
       const crClass = (isAdminUser && crVal) ? "score-col clickable-detail-cell" : "score-col";
       const crClickAttr = (isAdminUser && crVal) ? `onclick="openScoreDetailsModal('${team.teamId}', 'creative')"` : "";
 
@@ -1310,6 +1409,7 @@ window.openScoring = function(teamId) {
   if (isBasic) {
     if (signWrapper) signWrapper.style.display = "block";
     if (roleHint) roleHint.textContent = "請評審與選手完成簽名後送出。";
+    setTimeout(() => scrollToRound(1), 50);
   } else {
     const sheets = currentAssignedSheets;
     const hasS1 = isAdminUser || sheets.indexOf("sheet1") !== -1;
