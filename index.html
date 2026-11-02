@@ -147,10 +147,75 @@
     .tournament-card.active-tour { border: 2px solid #2e7d32; background: #f1f8e9; }
 
     .score-label-font { font-family: 'Noto Serif TC', 'Songti TC', 'SimSun', serif; }
-    .track-card {
-      background: #fff; border-radius: 12px; padding: 12px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; margin-bottom: 14px;
+
+    /* CSS Scroll Snap 與色系分流樣式 */
+    .snap-nav-wrapper {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 8px; flex-wrap: wrap; gap: 8px;
     }
+    .snap-indicators {
+      display: flex; gap: 8px;
+    }
+    .snap-indicator-btn {
+      padding: 5px 12px; border-radius: 20px; font-size: 13px; font-weight: bold;
+      border: 1.5px solid transparent; cursor: pointer; transition: all 0.2s ease;
+      background: #fff;
+    }
+    .snap-indicator-btn[data-target="round-card-1"] { color: #1d4ed8; border-color: #93c5fd; }
+    .snap-indicator-btn[data-target="round-card-1"].active { background: #1d4ed8; color: #fff; }
+    .snap-indicator-btn[data-target="round-card-2"] { color: #6b21a8; border-color: #d8b4fe; }
+    .snap-indicator-btn[data-target="round-card-2"].active { background: #6b21a8; color: #fff; }
+    .snap-indicator-btn[data-target="round-card-3"] { color: #b45309; border-color: #fde68a; }
+    .snap-indicator-btn[data-target="round-card-3"].active { background: #b45309; color: #fff; }
+
+    .rounds-scroll-container {
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      gap: 16px;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+      scroll-behavior: smooth;
+    }
+    .round-snap-card {
+      flex: 0 0 100%;
+      min-width: 100%;
+      scroll-snap-align: center;
+      scroll-snap-stop: always;
+      background: #fff;
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      border-width: 2px;
+      border-style: solid;
+      box-sizing: border-box;
+    }
+
+    /* 第 1 次色系：藍色 */
+    .round-card-theme-1 {
+      border-color: #93c5fd;
+      background: linear-gradient(180deg, #ffffff 0%, #f0f7ff 100%);
+    }
+    .round-card-theme-1 .round-header { border-bottom: 2px solid #bfdbfe; color: #1d4ed8; }
+    .round-card-theme-1 .std-spec-box { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+
+    /* 第 2 次色系：紫色 */
+    .round-card-theme-2 {
+      border-color: #d8b4fe;
+      background: linear-gradient(180deg, #ffffff 0%, #faf5ff 100%);
+    }
+    .round-card-theme-2 .round-header { border-bottom: 2px solid #e9d5ff; color: #6b21a8; }
+    .round-card-theme-2 .std-spec-box { background: #f5f3ff; border-color: #ddd6fe; color: #5b21b6; }
+
+    /* 第 3 次色系：琥珀/橘色 */
+    .round-card-theme-3 {
+      border-color: #fde68a;
+      background: linear-gradient(180deg, #ffffff 0%, #fffbeb 100%);
+    }
+    .round-card-theme-3 .round-header { border-bottom: 2px solid #fef3c7; color: #b45309; }
+    .round-card-theme-3 .std-spec-box { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+
     .blue-dot { cursor: pointer; transition: fill 0.15s ease, stroke 0.15s ease; }
     .blue-dot:hover circle.main-circle { fill: #1d4ed8; stroke: #1e3a8a; }
     .selected-ring { stroke: #e11d48; stroke-width: 3.5; fill: none; }
@@ -188,7 +253,7 @@
     @page { size: landscape; margin: 5mm; }
     @media print {
       header, .modal-overlay, #admin-actions-bar, #judge-actions, .btn,
-      #page-scoring, #page-admin-tournaments, .th-hide-score, .col-action {
+      #page-scoring, #page-admin-tournaments, .th-hide-score, .col-action, .snap-nav-wrapper {
         display: none !important;
       }
       .pdf-title-banner { display: block !important; }
@@ -352,7 +417,7 @@
     <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
       <div>
         <h2 style="margin:0; font-size:20px;">🏆 賽事管理總覽</h2>
-        <p style="margin:4px 0 0 0; color:#666; font-size:13px;">點擊「🔒 鎖定場次」可將現場評審系統切換至該組別；點擊「查看成績」進入管理總表與排序輸出。</p>
+        <p style="margin:4px 0 0 0; color:#666; font-size:13px;">點擊「🔒 鎖定場次」可將現場評審系統切換至該組別；點擊「查看成績」進入管理總表與同分比序輸出。</p>
       </div>
       <button class="btn btn-success" id="btn-open-add-region-lobby">➕ 新增比賽賽事</button>
     </div>
@@ -384,7 +449,7 @@
         </div>
         <div style="display: flex; gap: 6px; align-items: center;">
           <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px;" id="btn-sort-teamid">🔢 依編號排序</button>
-          <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px; background-color: #673ab7;" id="btn-sort-score">🏆 依總分排序</button>
+          <button class="btn btn-primary" style="padding: 5px 10px; font-size: 13px; background-color: #673ab7;" id="btn-sort-score">🏆 依比序排名</button>
           <button class="btn btn-success btn-sync-cloud" style="padding: 5px 10px; font-size: 13px;">🔄 同步雲端成績</button>
         </div>
       </div>
@@ -469,40 +534,54 @@
         </table>
       </div>
 
-      <!-- 整合後的指定任務 (54 分) -->
+      <!-- 整合後的指定任務 (54 分)：色彩分流 + CSS 滾動吸附 (Scroll Snap) -->
       <div class="section-title" style="color:#2e7d32; display:flex; justify-content:space-between; align-items:center;">
         <span>🎯 【基礎組】指定任務 (54 分)：規範評分 (21 分) ＋ 賽道得分 (33 分)</span>
         <button type="button" class="btn btn-secondary" onclick="resetAllRounds()" style="padding:4px 10px; font-size:12px;">重置三次評分</button>
       </div>
 
-      <div class="track-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">
-          <div style="font-weight:bold; font-size:14px; color:#1d4ed8;">
-            第 1 次評分：<span id="selectedDesc-1" style="color:#666; font-weight:normal;">尚未選定點位</span>
-          </div>
-          <button type="button" class="btn btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="clearRound(1)">清除此局</button>
+      <div class="snap-nav-wrapper">
+        <div class="snap-indicators">
+          <button type="button" class="snap-indicator-btn active" data-target="round-card-1" onclick="scrollToRound(1)">🔵 第 1 次評分</button>
+          <button type="button" class="snap-indicator-btn" data-target="round-card-2" onclick="scrollToRound(2)">🟣 第 2 次評分</button>
+          <button type="button" class="snap-indicator-btn" data-target="round-card-3" onclick="scrollToRound(3)">🟠 第 3 次評分</button>
         </div>
-        <div id="svgTrack-1" style="width:100%; overflow-x:auto;"></div>
+        <span style="font-size:12px; color:#666;">👈 左右滑動切換各次評分 👉</span>
       </div>
 
-      <div class="track-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">
-          <div style="font-weight:bold; font-size:14px; color:#4338ca;">
-            第 2 次評分：<span id="selectedDesc-2" style="color:#666; font-weight:normal;">尚未選定點位</span>
+      <div class="rounds-scroll-container" id="roundsScrollContainer">
+        <!-- 第 1 次評分卡片 (藍色系) -->
+        <div class="round-snap-card round-card-theme-1" id="round-card-1">
+          <div class="round-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px;">
+            <div style="font-weight:bold; font-size:15px;">
+              第 1 次評分：<span id="selectedDesc-1" style="color:#555; font-weight:normal;">尚未選定點位</span>
+            </div>
+            <button type="button" class="btn btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="clearRound(1)">清除此局</button>
           </div>
-          <button type="button" class="btn btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="clearRound(2)">清除此局</button>
+          <div id="svgTrack-1" style="width:100%; overflow-x:auto;"></div>
         </div>
-        <div id="svgTrack-2" style="width:100%; overflow-x:auto;"></div>
-      </div>
 
-      <div class="track-card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">
-          <div style="font-weight:bold; font-size:14px; color:#6b21a8;">
-            第 3 次評分：<span id="selectedDesc-3" style="color:#666; font-weight:normal;">尚未選定點位</span>
+        <!-- 第 2 次評分卡片 (紫色系) -->
+        <div class="round-snap-card round-card-theme-2" id="round-card-2">
+          <div class="round-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px;">
+            <div style="font-weight:bold; font-size:15px;">
+              第 2 次評分：<span id="selectedDesc-2" style="color:#555; font-weight:normal;">尚未選定點位</span>
+            </div>
+            <button type="button" class="btn btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="clearRound(2)">清除此局</button>
           </div>
-          <button type="button" class="btn btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="clearRound(3)">清除此局</button>
+          <div id="svgTrack-2" style="width:100%; overflow-x:auto;"></div>
         </div>
-        <div id="svgTrack-3" style="width:100%; overflow-x:auto;"></div>
+
+        <!-- 第 3 次評分卡片 (琥珀/橘色系) -->
+        <div class="round-snap-card round-card-theme-3" id="round-card-3">
+          <div class="round-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px;">
+            <div style="font-weight:bold; font-size:15px;">
+              第 3 次評分：<span id="selectedDesc-3" style="color:#555; font-weight:normal;">尚未選定點位</span>
+            </div>
+            <button type="button" class="btn btn-secondary" style="padding:2px 8px; font-size:11px;" onclick="clearRound(3)">清除此局</button>
+          </div>
+          <div id="svgTrack-3" style="width:100%; overflow-x:auto;"></div>
+        </div>
       </div>
 
       <div style="background:#fff; border:1px solid #ddd; padding:12px 16px; border-radius:8px; display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;">
@@ -700,10 +779,12 @@
                 <td class="selectable toggleable" data-group="c4_t2" data-val="4">4</td>
                 <td id="score-adv-c4" class="score-badge">0</td>
               </tr>
-              <tr class="big-footer-row"><td colspan="10">創意關卡合計：<span id="score-adv-creative-total" class="score-badge" style="font-size:20px;">0</span> / 16 分</td></tr>
             </tbody>
           </table>
         </div>
+        <table style="width:100%; margin-top:6px;">
+          <tr class="big-footer-row"><td colspan="10">創意關卡合計：<span id="score-adv-creative-total" class="score-badge" style="font-size:20px;">0</span> / 16 分</td></tr>
+        </table>
       </div>
 
       <div id="adv-block-sheet4">
@@ -750,10 +831,12 @@
                 <td class="selectable toggleable" data-group="d2_en" data-val="2">2</td>
                 <td id="score-adv-d2" class="score-badge">0</td>
               </tr>
-              <tr class="big-footer-row"><td colspan="6">整體機構設計合計：<span id="score-adv-design-total" class="score-badge" style="font-size:20px;">0</span> / 8 分</td></tr>
             </tbody>
           </table>
         </div>
+        <table style="width:100%; margin-top:6px;">
+          <tr class="big-footer-row"><td colspan="6">整體機構設計合計：<span id="score-adv-design-total" class="score-badge" style="font-size:20px;">0</span> / 8 分</td></tr>
+        </table>
       </div>
     </div>
 
